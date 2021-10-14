@@ -5,7 +5,7 @@ from rdflib import Graph, Namespace
 from tqdm import tqdm
 import warnings
 
-from globals import movielens_path, rdf_path, save_movie_metadata_to
+from globals import movielens_path, rdf_path, item_metadata_file, train_set_file, val_set_file, test_set_file
 
 
 def load_user_ratings(movielens_data_folder, limit=None) -> pd.DataFrame:
@@ -124,25 +124,46 @@ def load_movie_metadata_features(unique_movies: pd.Series):
     return pd.DataFrame(index=movie_ids, data={'features': features})
 
 
+def save_set(matrix: pd.DataFrame, name: str):
+    matrix.to_csv(name + '.csv', columns=['movieId', 'rating'], mode='w')
+
+
 if __name__ == '__main__':
+    recalculate_metadata = False
+
     # load user ratings (sparse representation of a utility matrix)
     print('Loading movieLens data...')
     utility_matrix = load_user_ratings(movielens_path)
     print(utility_matrix)
 
     # load movie features from RDF only for movies in movieLens (for which we have ratings)
-    print('Loading IMDb data...')
-    unique_movies = pd.Series(index=utility_matrix['movieId'].unique().copy())
-    metadata = load_movie_metadata_features(unique_movies)
-    # TODO: save? Can't use to_csv() because of encapsulated numpy array.
+    if recalculate_metadata:
+        print('Loading IMDb data...')
+        unique_movies = pd.Series(index=utility_matrix['movieId'].unique().copy())
+        metadata = load_movie_metadata_features(unique_movies)
+        print('Saving metadata...')
+        metadata.to_hdf(item_metadata_file + '.h5', key='metadata', mode='w')
+        print('OK!')
+    else:
+        metadata = pd.read_hdf(item_metadata_file + '.h5', key='metadata')
     # Note to check statistics: metadata['features'].sum(axis=0)
 
-    # Note: there can still be movies in ratings for which we have no features -> TODO: ignore them
+    # Note: there can still be movies in ratings for which we have no features
+    # so remove them like this:
+    print('Removing movies for which we have no features...')
+    utility_matrix = utility_matrix[utility_matrix['movieId'].isin(metadata.index)]
 
     # train-val-test split (global temporal splitting)
     print('Calculating splits...')
-    global_val_split = utility_matrix['timestamp'].groupby('userId').quantile(0.8).mean()
-    global_test_split = utility_matrix['timestamp'].groupby('userId').quantile(0.9).mean()
-    # print(f'Global split time percentage: {100.0 * (global_val_split - utility_matrix["timestamp"].min()) / (utility_matrix["timestamp"].max() - utility_matrix["timestamp"].min()):.2f}%')
-    # print(f'Val set percentage of held out set: {100.0 * (global_test_split - global_val_split) / (utility_matrix["timestamp"].max() - global_val_split):.2f}%')
+    global_val_split = utility_matrix['timestamp'].groupby('userId').quantile(0.95).mean()
+    global_test_split = utility_matrix['timestamp'].groupby('userId').quantile(0.98).mean()
 
+    train = utility_matrix[utility_matrix['timestamp'] < global_val_split]
+    val = utility_matrix[(utility_matrix['timestamp'] >= global_val_split) & (utility_matrix['timestamp'] < global_test_split)]
+    test = utility_matrix[utility_matrix['timestamp'] >= global_test_split]
+    print(f'Training shape: {train.shape}, Validation shape: {val.shape}, Test shape: {test.shape}')
+    print('Saving sets...')
+    save_set(train, train_set_file)
+    save_set(val, val_set_file)
+    save_set(test, test_set_file)
+    print('OK!')
