@@ -5,14 +5,14 @@ from rdflib import Graph, Namespace
 from tqdm import tqdm
 import warnings
 
-from globals import movielens_path, rdf_path
+from globals import movielens_path, rdf_path, save_movie_metadata_to
 
 
 def load_user_ratings(movielens_data_folder, limit=None) -> pd.DataFrame:
     # load movielens user reviews data
     user_ratings = pd.read_csv(movielens_data_folder + 'ratings.csv',
                                index_col='userId',
-                               usecols=['userId', 'movieId', 'rating'],
+                               usecols=['userId', 'movieId', 'rating', 'timestamp'],
                                dtype={'userId': np.int32, 'movieId': np.int32, 'rating': np.float32})
     if limit is not None:
         user_ratings = user_ratings[:limit]
@@ -23,10 +23,6 @@ def load_user_ratings(movielens_data_folder, limit=None) -> pd.DataFrame:
                         dtype={'movieId': np.int32, 'imdbId': 'string'})
     user_ratings['movieId'] = 'tt' + user_ratings['movieId'].map(links['imdbId'])
     return user_ratings
-
-# load user ratings (sparse representation of a utility matrix)
-utility_matrix = load_user_ratings(movielens_path)
-print(utility_matrix)
 
 
 def extract_binary_features(actual_values: set, ordered_possible_values: list) -> np.array:
@@ -128,7 +124,25 @@ def load_movie_metadata_features(unique_movies: pd.Series):
     return pd.DataFrame(index=movie_ids, data={'features': features})
 
 
-# load movie features from RDF
-unique_movies = pd.Series(index=utility_matrix['movieId'].unique().copy())
-metadata = load_movie_metadata_features(unique_movies)
-# Note to check statistics: metadata['features'].sum(axis=0)
+if __name__ == '__main__':
+    # load user ratings (sparse representation of a utility matrix)
+    print('Loading movieLens data...')
+    utility_matrix = load_user_ratings(movielens_path)
+    print(utility_matrix)
+
+    # load movie features from RDF only for movies in movieLens (for which we have ratings)
+    print('Loading IMDb data...')
+    unique_movies = pd.Series(index=utility_matrix['movieId'].unique().copy())
+    metadata = load_movie_metadata_features(unique_movies)
+    # TODO: save? Can't use to_csv() because of encapsulated numpy array.
+    # Note to check statistics: metadata['features'].sum(axis=0)
+
+    # Note: there can still be movies in ratings for which we have no features -> TODO: ignore them
+
+    # train-val-test split (global temporal splitting)
+    print('Calculating splits...')
+    global_val_split = utility_matrix['timestamp'].groupby('userId').quantile(0.8).mean()
+    global_test_split = utility_matrix['timestamp'].groupby('userId').quantile(0.9).mean()
+    # print(f'Global split time percentage: {100.0 * (global_val_split - utility_matrix["timestamp"].min()) / (utility_matrix["timestamp"].max() - utility_matrix["timestamp"].min()):.2f}%')
+    # print(f'Val set percentage of held out set: {100.0 * (global_test_split - global_val_split) / (utility_matrix["timestamp"].max() - global_val_split):.2f}%')
+
