@@ -5,7 +5,7 @@ from rdflib import Graph, Namespace
 from tqdm import tqdm
 import warnings
 
-from globals import movielens_path, rdf_path, item_metadata_file, train_set_file, val_set_file, test_set_file
+from globals import movielens_path, rdf_path, item_metadata_file, train_set_file, val_set_file, test_set_file, seed
 
 
 def load_user_ratings(movielens_data_folder, limit=None) -> pd.DataFrame:
@@ -130,6 +130,7 @@ def save_set(matrix: pd.DataFrame, name: str):
 
 if __name__ == '__main__':
     recalculate_metadata = False
+    random_splitting_vs_global_temporal = True
 
     # load user ratings (sparse representation of a utility matrix)
     print('Loading movieLens data...')
@@ -154,16 +155,32 @@ if __name__ == '__main__':
     utility_matrix = utility_matrix[utility_matrix['movieId'].isin(metadata.index)]
 
     # train-val-test split (global temporal splitting)
-    print('Calculating splits...')
-    global_val_split = utility_matrix['timestamp'].groupby('userId').quantile(0.95).mean()
-    global_test_split = utility_matrix['timestamp'].groupby('userId').quantile(0.98).mean()
+    print('Calculating train-val-test split...')
+    if random_splitting_vs_global_temporal:
+        size: int = len(utility_matrix)
+        val_split = int(np.floor(0.15 * size))
+        test_split = val_split + int(np.floor(0.15 * size))
+        indices = list(range(size))
+        np.random.seed(seed)
+        np.random.shuffle(indices)
+        val = utility_matrix.iloc[indices[:val_split]]
+        test = utility_matrix.iloc[indices[val_split: test_split]]
+        train = utility_matrix.iloc[indices[test_split:]]
+    else:
+        global_val_split = utility_matrix['timestamp'].groupby('userId').quantile(0.95).mean()
+        global_test_split = utility_matrix['timestamp'].groupby('userId').quantile(0.98).mean()
+        train = utility_matrix[utility_matrix['timestamp'] < global_val_split]
+        val = utility_matrix[(utility_matrix['timestamp'] >= global_val_split) & (utility_matrix['timestamp'] < global_test_split)]
+        test = utility_matrix[utility_matrix['timestamp'] >= global_test_split]
 
-    train = utility_matrix[utility_matrix['timestamp'] < global_val_split]
-    val = utility_matrix[(utility_matrix['timestamp'] >= global_val_split) & (utility_matrix['timestamp'] < global_test_split)]
-    test = utility_matrix[utility_matrix['timestamp'] >= global_test_split]
     print(f'Training shape: {train.shape}, Validation shape: {val.shape}, Test shape: {test.shape}')
+
     print('Saving sets...')
     save_set(train, train_set_file)
     save_set(val, val_set_file)
     save_set(test, test_set_file)
     print('OK!')
+
+    train.hist(column='timestamp')
+    val.hist(column='timestamp')
+    test.hist(column='timestamp')

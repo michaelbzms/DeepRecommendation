@@ -7,3 +7,5 @@ user_ratings_file = '../data/user_ratings'
 train_set_file = '../data/train'
 val_set_file = '../data/val'
 test_set_file = '../data/test'
+
+seed = 102
