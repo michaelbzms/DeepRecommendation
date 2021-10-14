@@ -5,7 +5,8 @@ from rdflib import Graph, Namespace
 from tqdm import tqdm
 import warnings
 
-from globals import movielens_path, rdf_path, item_metadata_file, train_set_file, val_set_file, test_set_file, seed
+from globals import movielens_path, rdf_path, item_metadata_file, train_set_file, val_set_file, test_set_file, seed, \
+    user_ratings_file
 
 
 def load_user_ratings(movielens_data_folder, limit=None) -> pd.DataFrame:
@@ -130,6 +131,7 @@ def save_set(matrix: pd.DataFrame, name: str):
 
 if __name__ == '__main__':
     recalculate_metadata = False
+    save_user_ratings = True
     random_splitting_vs_global_temporal = True
 
     # load user ratings (sparse representation of a utility matrix)
@@ -174,6 +176,14 @@ if __name__ == '__main__':
         test = utility_matrix[utility_matrix['timestamp'] >= global_test_split]
 
     print(f'Training shape: {train.shape}, Validation shape: {val.shape}, Test shape: {test.shape}')
+
+    if save_user_ratings:
+        # user_ratings: pd.DataFrame = utility_matrix.drop('timestamp', axis=1).groupby('userId').apply(list)
+        print('Saving user ratings from train set only...')
+        user_ratings: pd.DataFrame = train.drop('timestamp', axis=1).groupby('userId').agg({'rating': list, 'movieId': list})
+        print(user_ratings)
+        user_ratings.to_hdf(user_ratings_file + '.h5', key='user_ratings', mode='w')
+        print('OK!')
 
     print('Saving sets...')
     save_set(train, train_set_file)
