@@ -17,10 +17,10 @@ class MovieLensDataset(Dataset):
         """ returns (item input, user input, target) """
         data = self.samples.iloc[item]
         rating = float(data['rating'])
-        item_tensor = torch.FloatTensor(data['movieId'])
+        item_tensor = torch.FloatTensor(self.metadata.loc[data['movieId']]['features'])
         user_ratings: pd.DataFrame = self.user_ratings.loc[data['userId']]
         user_tensor = self.create_user_embedding(user_ratings)
-        return torch.tensor(item_tensor, user_tensor, rating)
+        return item_tensor, user_tensor, rating
 
     def create_user_embedding(self, user_ratings: pd.DataFrame):
         avg_rating = user_ratings['rating'].mean()
@@ -28,3 +28,7 @@ class MovieLensDataset(Dataset):
 
     def __len__(self):
         return self.samples.shape[0]
+
+    @staticmethod
+    def get_metadata_dim():
+        return len(MovieLensDataset.metadata['features'].iloc[0])
