@@ -181,6 +181,8 @@ if __name__ == '__main__':
         # user_ratings: pd.DataFrame = utility_matrix.drop('timestamp', axis=1).groupby('userId').apply(list)
         print('Saving user ratings from train set only...')
         user_ratings: pd.DataFrame = train.drop('timestamp', axis=1).groupby('userId').agg({'rating': list, 'movieId': list})
+        user_ratings['rating'] = user_ratings['rating'].apply(lambda x: np.array(x))
+        user_ratings['movieId'] = user_ratings['movieId'].apply(lambda x: np.array(x))
         print(user_ratings)
         user_ratings.to_hdf(user_ratings_file + '.h5', key='user_ratings', mode='w')
         print('OK!')
