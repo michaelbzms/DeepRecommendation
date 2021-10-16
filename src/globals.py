@@ -21,5 +21,5 @@ lr = 3e-4
 weight_decay = 1e-5
 dropout_rate = 0.2
 early_stop = True
-stop_with_train_loss_instead = False   # TODO
+stop_with_train_loss_instead = False  # Note: useful if we are trying to overfit
 patience = 5

@@ -81,8 +81,8 @@ def train_model(model: nn.Module):
                 early_stop_times = 0  # reset
             else:
                 if early_stop_times >= patience:
-                    print(f'Early stopping at epoch {epoch}.')
-                    print(f'Loading best model from checkpoint from epoch {checkpoint_epoch}.')
+                    print(f'Early stopping at epoch {epoch + 1}.')
+                    print(f'Loading best model from checkpoint from epoch {checkpoint_epoch + 1}.')
                     model.load_state_dict(torch.load(checkpoint_model_path))
                     model.eval()
                     break
