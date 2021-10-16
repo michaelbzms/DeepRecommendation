@@ -6,7 +6,7 @@ from tqdm import tqdm
 import warnings
 
 from globals import movielens_path, rdf_path, item_metadata_file, train_set_file, val_set_file, test_set_file, seed, \
-    user_ratings_file
+    user_ratings_file, user_embeddings_file
 
 
 def load_user_ratings(movielens_data_folder, limit=None) -> pd.DataFrame:
@@ -130,21 +130,27 @@ def save_set(matrix: pd.DataFrame, name: str):
 
 
 if __name__ == '__main__':
-    recalculate_metadata = False
+    recalculate_metadata = True
     save_user_ratings = True
     random_splitting_vs_global_temporal = True
+    create_user_embeddings_too = True
+    LIMIT_USERS = 30000
 
     # load user ratings (sparse representation of a utility matrix)
     print('Loading movieLens data...')
     utility_matrix = load_user_ratings(movielens_path)
-    print(utility_matrix)
+    if LIMIT_USERS is not None:
+        print('Limiting number of users to', LIMIT_USERS)
+        # utility_matrix = utility_matrix.loc[1: LIMIT_USERS:]
+        utility_matrix = utility_matrix.loc[utility_matrix.index.max() - LIMIT_USERS: utility_matrix.index.max()]
+    print(utility_matrix.shape)
 
     # load movie features from RDF only for movies in movieLens (for which we have ratings)
     if recalculate_metadata:
         print('Loading IMDb data...')
         unique_movies = pd.Series(index=utility_matrix['movieId'].unique().copy())
         metadata = load_movie_metadata_features(unique_movies)
-        print('Saving metadata...')
+        print(f'Found {metadata.shape[0]} movies.\nSaving metadata...')
         metadata.to_hdf(item_metadata_file + '.h5', key='metadata', mode='w')
         print('OK!')
     else:
@@ -183,9 +189,27 @@ if __name__ == '__main__':
         user_ratings: pd.DataFrame = train.drop('timestamp', axis=1).groupby('userId').agg({'rating': list, 'movieId': list})
         user_ratings['rating'] = user_ratings['rating'].apply(lambda x: np.array(x))
         user_ratings['movieId'] = user_ratings['movieId'].apply(lambda x: np.array(x))
-        print(user_ratings)
+        print(user_ratings.shape)
         user_ratings.to_hdf(user_ratings_file + '.h5', key='user_ratings', mode='w')
         print('OK!')
+        print(f'Average number of ratings per user: {user_ratings["rating"].apply(lambda x: len(x)).mean()}')
+
+        if create_user_embeddings_too:
+            # create user_embeddings from user ratings once beforehand
+            # Note: This takes a very long time
+            print('Creating user embeddings')
+
+            def create_user_embedding(user_ratings: pd.DataFrame, metadata: pd.DataFrame):
+                avg_rating = user_ratings['rating'].mean()
+                return ((user_ratings['rating'] - avg_rating) * metadata.loc[user_ratings['movieId']]['features'].values).mean()  # TODO: sum or mean?
+
+            user_embeddings = pd.DataFrame(index=user_ratings.index.unique().copy(), data={'embedding': object})
+            for userId, user_ratings in tqdm(user_ratings.groupby('userId'), desc='Creating user embeddings...'):
+                # Note: iloc[0] is needed because of some weird encapsulation idk
+                user_embeddings.at[userId, 'embedding'] = create_user_embedding(user_ratings.iloc[0], metadata)
+            print('Saving...')
+            user_embeddings.to_hdf(user_embeddings_file + '.h5', key='user_embeddings', mode='w')
+            print('Done')
 
     print('Saving sets...')
     save_set(train, train_set_file)

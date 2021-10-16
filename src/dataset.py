@@ -1,14 +1,27 @@
 import torch
 from torch.utils.data import Dataset
 import pandas as pd
+from tqdm import tqdm
 
-from globals import item_metadata_file, user_ratings_file
+from globals import item_metadata_file, user_ratings_file, user_embeddings_file
+
+
+def create_user_embedding(user_ratings: pd.DataFrame, metadata: pd.DataFrame):
+    avg_rating = user_ratings['rating'].mean()
+    return ((user_ratings['rating'] - avg_rating) * metadata.loc[user_ratings['movieId']]['features'].values).mean()    # TODO: sum or mean?
 
 
 class MovieLensDataset(Dataset):
     # Static: same for all instances -> shared across train-val-test sets
+    print('Initializing common dataset prerequisites...')
     metadata: pd.DataFrame = pd.read_hdf(item_metadata_file + '.h5')
-    user_ratings: pd.DataFrame = pd.read_hdf(user_ratings_file + '.h5')
+    user_embeddings: pd.DataFrame = pd.read_hdf(user_embeddings_file + '.h5')
+    # # create user_embeddings from user ratings once beforehand (TOO SLOW TO DO IT HERE) TODO: remove
+    # user_embeddings = pd.DataFrame(index=user_ratings.index.unique().copy(), data={'embedding': object})
+    # for userId, user_ratings in tqdm(user_ratings.groupby('userId'), desc='Creating user embeddings...'):
+    #     # Note: iloc[0] is needed because of some weird encapsulation idk
+    #     user_embeddings.at[userId, 'embedding'] = create_user_embedding(user_ratings.iloc[0], metadata)
+    print('Done')
 
     def __init__(self, file):
         self.samples: pd.DataFrame = pd.read_csv(file + '.csv')
@@ -18,11 +31,11 @@ class MovieLensDataset(Dataset):
         data = self.samples.iloc[item]
         rating = float(data['rating'])
         item_tensor = torch.FloatTensor(self.metadata.loc[data['movieId']]['features'])
-        user_ratings: pd.DataFrame = self.user_ratings.loc[data['userId']]
-        user_tensor = self.create_user_embedding(user_ratings)
+        user_tensor = torch.FloatTensor(self.user_embeddings.loc[data['userId']][0])
         return item_tensor, user_tensor, rating
 
     def create_user_embedding(self, user_ratings: pd.DataFrame):
+        # Note: Old way. This is for just-in-time user embedding creation. Better to do pre-do this for the whole class.
         avg_rating = user_ratings['rating'].mean()
         return torch.FloatTensor(((user_ratings['rating'] - avg_rating) * self.metadata.loc[user_ratings['movieId']]['features'].values).mean())   # TODO: sum or mean?
 
