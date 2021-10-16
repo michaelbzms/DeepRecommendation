@@ -14,11 +14,12 @@ seed = 102
 
 """ NN hyperparameters """
 checkpoint_model_path = '../models/checkpoint.pt'
-max_epochs = 3
-batch_size = 128
+final_model_path = '../models/final_model.pt'
+max_epochs = 100
+batch_size = 256
 lr = 3e-4
 weight_decay = 1e-5
 dropout_rate = 0.2
 early_stop = True
-stop_with_train_loss_instead = True   # TODO
+stop_with_train_loss_instead = False   # TODO
 patience = 5

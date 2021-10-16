@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from dataset import MovieLensDataset
 from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, max_epochs, early_stop, \
-    stop_with_train_loss_instead, checkpoint_model_path, patience, dropout_rate
+    stop_with_train_loss_instead, checkpoint_model_path, patience, dropout_rate, final_model_path
 from model import BasicNCF
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -92,6 +92,10 @@ def train_model(model: nn.Module):
                         print(f'Loss worsened in last epoch(s), loading best model from checkpoint from epoch {checkpoint_epoch}')
                         model.load_state_dict(torch.load(checkpoint_model_path))
                         model.eval()
+
+    print('Saving model...')
+    torch.save(model.state_dict(), final_model_path)
+    print('Done!')
 
     return model
 

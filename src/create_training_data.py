@@ -134,7 +134,7 @@ if __name__ == '__main__':
     save_user_ratings = True
     random_splitting_vs_global_temporal = True
     create_user_embeddings_too = True
-    LIMIT_USERS = 30000
+    LIMIT_USERS = 10000
 
     # load user ratings (sparse representation of a utility matrix)
     print('Loading movieLens data...')
