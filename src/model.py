@@ -4,8 +4,8 @@ from torch import nn
 
 class BasicNCF(nn.Module):
     def __init__(self, item_dim, user_dim, dropout_rate=0.2,
-                 item_embeddings_size=256, user_embeddings_size=256,
-                 dense1=512, dense2=64):
+                 item_embeddings_size=150, user_embeddings_size=150,
+                 dense1=300, dense2=200):
         super(BasicNCF, self).__init__()
         self.item_embeddings = nn.Sequential(
             nn.Linear(item_dim, item_embeddings_size),

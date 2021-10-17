@@ -8,6 +8,7 @@ from dataset import MovieLensDataset
 from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, max_epochs, early_stop, \
     stop_with_train_loss_instead, checkpoint_model_path, patience, dropout_rate, final_model_path
 from model import BasicNCF
+from plots import plot_train_val_losses
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -29,6 +30,8 @@ def train_model(model: nn.Module):
     early_stop_times = 0
     least_running_loss = None
     checkpoint_epoch = -1
+    train_losses = []
+    val_losses = []
     for epoch in range(max_epochs):                   # epoch
         """ training """
         train_sum_loss = 0.0
@@ -51,7 +54,9 @@ def train_model(model: nn.Module):
             train_sum_loss += loss.detach().item()
             train_size += len(y_batch)     # Note: a little redundant doing this every epoch but it should be negligible
 
-        print(f'Epoch {epoch + 1}: Training loss: {(train_sum_loss / train_size):.6f}')
+        train_loss = train_sum_loss / train_size
+        train_losses.append(train_loss)
+        print(f'Epoch {epoch + 1}: Training loss: {train_loss:.6f}')
 
         """ validation """
         # Calculate val_loss and see if we need to stop
@@ -70,7 +75,9 @@ def train_model(model: nn.Module):
                 val_sum_loss += loss.detach().item()
                 val_size += len(y_batch)
 
-        print(f'Validation loss: {(val_sum_loss / val_size):.6f}')
+        val_loss = val_sum_loss / val_size
+        val_losses.append(val_loss)
+        print(f'Validation loss: {val_loss:.6f}')
 
         if early_stop:
             if least_running_loss is None or (not stop_with_train_loss_instead and val_sum_loss < least_running_loss) \
@@ -93,9 +100,13 @@ def train_model(model: nn.Module):
                         model.load_state_dict(torch.load(checkpoint_model_path))
                         model.eval()
 
+    # save model (its weights)
     print('Saving model...')
     torch.save(model.state_dict(), final_model_path)
     print('Done!')
+
+    # plot and save losses
+    plot_train_val_losses(train_losses, val_losses)
 
     return model
 
@@ -109,4 +120,5 @@ if __name__ == '__main__':
     model.to(device)
     print(model)
 
+    # train and save result
     train_model(model)

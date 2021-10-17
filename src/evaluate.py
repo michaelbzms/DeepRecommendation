@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from dataset import MovieLensDataset
-from globals import test_set_file, batch_size, dropout_rate
+from globals import test_set_file, batch_size
 from model import BasicNCF
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -42,7 +42,7 @@ def evaluate_model(model: nn.Module):
 
 
 if __name__ == '__main__':
-    model_file = '../models/first_model_067val.pt'
+    model_file = '../models/final_model.pt'
 
     # get metadata dim
     item_dim = MovieLensDataset.get_metadata_dim()
