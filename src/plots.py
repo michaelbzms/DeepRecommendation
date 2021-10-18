@@ -10,6 +10,7 @@ def plot_train_val_losses(train_losses: [float], val_losses: [float]):
     plt.xlabel('epoch')
     plt.legend(loc='upper right')
     plt.title('Training and Validation loss during training')
+    plt.ylim(ymin=0)
 
     # save image
     plt.savefig('train_val_loss.png')
