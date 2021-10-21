@@ -9,21 +9,33 @@ from globals import movielens_path, rdf_path, item_metadata_file, train_set_file
     user_ratings_file, user_embeddings_file
 
 
-def load_user_ratings(movielens_data_folder, limit=None) -> pd.DataFrame:
+def load_user_ratings(movielens_data_folder, LIMIT_USERS=None) -> pd.DataFrame:
     # load movielens user reviews data
     user_ratings = pd.read_csv(movielens_data_folder + 'ratings.csv',
                                index_col='userId',
                                usecols=['userId', 'movieId', 'rating', 'timestamp'],
                                dtype={'userId': np.int32, 'movieId': np.int32, 'rating': np.float32})
-    if limit is not None:
-        user_ratings = user_ratings[:limit]
-    # link movieIds with imdbIds
+    if LIMIT_USERS is not None:
+        print('Limiting number of users to', LIMIT_USERS)
+        # user_ratings = user_ratings.loc[1: LIMIT_USERS]
+        user_ratings = user_ratings.loc[user_ratings.index.max() - LIMIT_USERS: user_ratings.index.max()]
+
+    # load genome tags
+    genometags = pd.read_csv(movielens_data_folder + 'genome-scores.csv',
+                             index_col='movieId',
+                             usecols=['movieId', 'tagId', 'relevance'],
+                             dtype={'movieId': np.int32, 'tagId': np.int32, 'relevance': np.float64})
+    genometags = genometags.pivot_table('relevance', index='movieId', columns='tagId')
+
+    # change movieId to IMDb ID, link movieIds with imdbIds
     links = pd.read_csv(movielens_data_folder + 'links.csv',
                         index_col='movieId',
                         usecols=['movieId', 'imdbId'],
                         dtype={'movieId': np.int32, 'imdbId': 'string'})
     user_ratings['movieId'] = 'tt' + user_ratings['movieId'].map(links['imdbId'])
-    return user_ratings
+    genometags.index = 'tt' + genometags.index.map(links['imdbId'])
+
+    return user_ratings, genometags
 
 
 def extract_binary_features(actual_values: set, ordered_possible_values: list) -> np.array:
@@ -33,7 +45,7 @@ def extract_binary_features(actual_values: set, ordered_possible_values: list) -
     return binary_format
 
 
-def load_movie_metadata_features(unique_movies: pd.Series):
+def load_imdb_metadata_features(unique_movies: pd.Series):
     # NAMESPACES
     ns_movies = Namespace('https://www.imdb.com/title/')
     ns_genres = Namespace('https://www.imdb.com/search/title/?genres=')
@@ -69,7 +81,7 @@ def load_movie_metadata_features(unique_movies: pd.Series):
     print('Found', len(all_actors), 'actors with at least', LEAST_MOVIES, 'movies made.')
 
     print('Looking up directors...')
-    LEAST_MOVIES2 = 7
+    LEAST_MOVIES2 = 5
     all_directors = rdf.query(
         """ SELECT DISTINCT ?director
             WHERE {
@@ -131,6 +143,7 @@ def save_set(matrix: pd.DataFrame, name: str):
 
 if __name__ == '__main__':
     recalculate_metadata = True
+    use_genom_tags = True
     save_user_ratings = True
     random_splitting_vs_global_temporal = True
     create_user_embeddings_too = True
@@ -138,24 +151,29 @@ if __name__ == '__main__':
 
     # load user ratings (sparse representation of a utility matrix)
     print('Loading movieLens data...')
-    utility_matrix = load_user_ratings(movielens_path)
-    if LIMIT_USERS is not None:
-        print('Limiting number of users to', LIMIT_USERS)
-        # utility_matrix = utility_matrix.loc[1: LIMIT_USERS:]
-        utility_matrix = utility_matrix.loc[utility_matrix.index.max() - LIMIT_USERS: utility_matrix.index.max()]
+    utility_matrix, genome_metadata = load_user_ratings(movielens_path, LIMIT_USERS=LIMIT_USERS)
     print(utility_matrix.shape)
 
     # load movie features from RDF only for movies in movieLens (for which we have ratings)
     if recalculate_metadata:
         print('Loading IMDb data...')
         unique_movies = pd.Series(index=utility_matrix['movieId'].unique().copy())
-        metadata = load_movie_metadata_features(unique_movies)
+        imdb_metadata = load_imdb_metadata_features(unique_movies)
+        if use_genom_tags:
+            metadata = genome_metadata.join(imdb_metadata, on='movieId', how='inner')
+            metadata = pd.DataFrame(index=metadata.index,
+                                    data={'features': metadata.apply(lambda x: np.concatenate([np.array(x.iloc[:-1], dtype=np.float64),
+                                                                                           np.array(x['features'], dtype=np.float64)], dtype=np.float64),
+                                                                     axis=1)})
+        else:
+            metadata = imdb_metadata
         print(f'Found {metadata.shape[0]} movies.\nSaving metadata...')
         metadata.to_hdf(item_metadata_file + '.h5', key='metadata', mode='w')
         print('OK!')
     else:
         metadata = pd.read_hdf(item_metadata_file + '.h5', key='metadata')
     # Note to check statistics: metadata['features'].sum(axis=0)
+    print(metadata.shape)
 
     # Note: there can still be movies in ratings for which we have no features
     # so remove them like this:
