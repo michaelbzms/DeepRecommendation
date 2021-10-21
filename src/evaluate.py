@@ -42,7 +42,7 @@ def evaluate_model(model: nn.Module):
 
 
 if __name__ == '__main__':
-    model_file = '../models/3layers_model_066val.pt'
+    model_file = '../models/genome_model_065val.pt'
 
     # get metadata dim
     item_dim = MovieLensDataset.get_metadata_dim()
