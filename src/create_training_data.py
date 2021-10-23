@@ -81,7 +81,7 @@ def load_imdb_metadata_features(unique_movies: pd.Series):
     print('Found', len(all_actors), 'actors with at least', LEAST_MOVIES, 'movies made.')
 
     print('Looking up directors...')
-    LEAST_MOVIES2 = 5
+    LEAST_MOVIES2 = 7
     all_directors = rdf.query(
         """ SELECT DISTINCT ?director
             WHERE {
@@ -143,7 +143,7 @@ def save_set(matrix: pd.DataFrame, name: str):
 
 if __name__ == '__main__':
     recalculate_metadata = True
-    use_genom_tags = True
+    use_genom_tags = False
     save_user_ratings = True
     random_splitting_vs_global_temporal = True
     create_user_embeddings_too = True
