@@ -40,7 +40,7 @@ def plot_fitted_vs_targets(fitted_values: np.array, ground_truth: np.array):
 def plot_residuals(fitted_values: np.array, ground_truth: np.array):
     plt.style.use('seaborn')
     df = pd.DataFrame(data={'fitted_values': fitted_values, 'ground_truth': ground_truth})
-    axes = df['fitted_values'].hist(by=df['ground_truth'], bins=100)
+    axes = df['fitted_values'].hist(by=df['ground_truth'], bins=100, stacked=True)
     k = 0.5
     for i in range(axes.shape[0]):
         for j in range(axes.shape[1]):
@@ -54,6 +54,23 @@ def plot_residuals(fitted_values: np.array, ground_truth: np.array):
 
     # save image
     plt.savefig('fitted_vs_target_hists.png', dpi=200)
+
+    # show
+    plt.show()
+
+
+def plot_stacked_residuals(fitted_values, ground_truth):
+    # plt.style.use('seaborn')
+    df = pd.DataFrame(index=ground_truth, data={'fitted_values': fitted_values})
+    plt.hist([df.loc[k]['fitted_values'] for k in [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]],
+             bins=150, stacked=True, density=True)
+    plt.legend(title='Ground truth', labels=[str(num) for num in [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]])
+    plt.title('Histogram of predicted ratings per ground truth')
+    plt.xlabel('Predicted ratings')
+    plt.ylabel('Frequency')
+
+    # save image
+    plt.savefig('fitted_hist.png', dpi=150)
 
     # show
     plt.show()

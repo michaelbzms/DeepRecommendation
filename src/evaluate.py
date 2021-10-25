@@ -9,7 +9,7 @@ from tqdm import tqdm
 from dataset import MovieLensDataset
 from globals import test_set_file, batch_size
 from model import BasicNCF
-from plots import plot_fitted_vs_targets, plot_residuals
+from plots import plot_fitted_vs_targets, plot_residuals, plot_stacked_residuals
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -49,9 +49,11 @@ def evaluate_model(model: nn.Module):
 
     fitted_values = np.concatenate(fitted_values, dtype=np.float64).reshape(-1)
     ground_truth = np.concatenate(ground_truth, dtype=np.float64).reshape(-1)
-    plot_fitted_vs_targets(fitted_values, ground_truth)
+    # plot_fitted_vs_targets(fitted_values, ground_truth)
 
-    plot_residuals(fitted_values, ground_truth)
+    # plot_residuals(fitted_values, ground_truth)
+
+    plot_stacked_residuals(fitted_values, ground_truth)
 
 
 if __name__ == '__main__':
