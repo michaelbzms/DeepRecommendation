@@ -29,6 +29,9 @@ def evaluate_model(model: nn.Module):
     test_size = 0
     fitted_values = []
     ground_truth = []
+
+    test = False
+    i = 0
     with torch.no_grad():
         for data in tqdm(test_loader, desc='Testing'):
             # get the item & user input and the target
@@ -43,6 +46,10 @@ def evaluate_model(model: nn.Module):
             # keep track of fitted values and their actual targets
             fitted_values.append(out.cpu().detach().numpy())
             ground_truth.append(y_batch.view(-1, 1).float().cpu().detach().numpy())
+            # TODO: temp
+            i += 1
+            if test and i > 10:
+                break
 
     test_mse = test_sum_loss / test_size
     print(f'Test loss (MSE): {test_mse:.6f} - RMSE: {sqrt(test_mse):.6f}')

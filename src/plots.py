@@ -59,13 +59,24 @@ def plot_residuals(fitted_values: np.array, ground_truth: np.array):
     plt.show()
 
 
-def plot_stacked_residuals(fitted_values, ground_truth):
+def plot_stacked_residuals(fitted_values, ground_truth, normalize=True):
     # plt.style.use('seaborn')
     df = pd.DataFrame(index=ground_truth, data={'fitted_values': fitted_values})
-    plt.hist([df.loc[k]['fitted_values'] for k in [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]],
-             bins=150, stacked=True, density=True)
-    plt.legend(title='Ground truth', labels=[str(num) for num in [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]])
-    plt.title('Histogram of predicted ratings per ground truth')
+    if normalize:
+        num_bins = 128
+        _, bins = np.histogram(df['fitted_values'].values, bins=num_bins)
+        pre_height = np.zeros(num_bins)
+        for k in [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]:
+            hist, _ = np.histogram(df.loc[k]['fitted_values'].values, bins=bins)  # pass actual bin points
+            height = np.array(hist.astype(np.float32) / hist.sum())
+            plt.bar(bins[:-1], height, width=(bins[1] - bins[0]), bottom=pre_height, label=str(k))
+            pre_height += height
+        plt.legend(title='Ground truth')
+    else:
+        plt.hist([df.loc[k]['fitted_values'] for k in [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]],
+                 bins=128, stacked=True)
+        plt.legend(title='Ground truth', labels=[str(num) for num in [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]])
+    plt.title(('Normalized (per target) histogram' if normalize else 'Histogram') + ' of predicted ratings per ground truth')
     plt.xlabel('Predicted ratings')
     plt.ylabel('Frequency')
 
