@@ -47,12 +47,11 @@ def evaluate_model(model: nn.Module):
     test_mse = test_sum_loss / test_size
     print(f'Test loss (MSE): {test_mse:.6f} - RMSE: {sqrt(test_mse):.6f}')
 
-    fitted_values = np.concatenate(fitted_values, dtype=np.float64)
-    ground_truth = np.concatenate(ground_truth, dtype=np.float64)
+    fitted_values = np.concatenate(fitted_values, dtype=np.float64).reshape(-1)
+    ground_truth = np.concatenate(ground_truth, dtype=np.float64).reshape(-1)
     plot_fitted_vs_targets(fitted_values, ground_truth)
 
-    residuals = np.abs(fitted_values - ground_truth)
-    plot_residuals(residuals)
+    plot_residuals(fitted_values, ground_truth)
 
 
 if __name__ == '__main__':
