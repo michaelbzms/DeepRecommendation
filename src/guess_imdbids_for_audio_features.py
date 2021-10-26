@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from thefuzz import process
 import glob
+import re
 
 from globals import imdb_path, audio_features_path
 
@@ -57,7 +58,23 @@ for file_path in glob.glob(audio_features_path + '/*.npy'):
     elif 'files_list' in file:
         f_list = np.load(file_path)
         for i in range(len(f_list)):
+            # extract movie name from file name
             f_list[i] = f_list[i].split('/')[-1]
+            f_list[i] = f_list[i].replace('.', ' ')
+            if '720' in f_list[i]:
+                f_list[i] = f_list[i].split('720')[0]
+            if '1080' in f_list[i]:
+                f_list[i] = f_list[i].split('1080')[0]
+            if 'BluRay' in f_list[i]:
+                f_list[i] = f_list[i].split('BluRay')[0]
+            if 'wav' in f_list[i]:
+                f_list[i] = f_list[i].split('wav')[0]
+            f_list[i] = f_list[i].rstrip()
+            if re.match('\(\d\d\d\d\)', f_list[i][-6:]):
+                f_list[i] = f_list[i][:-6]
+            elif re.match('\d\d\d\d', f_list[i][-4:]):
+                f_list[i] = f_list[i][:-4]
+            print(f_list[i])
     else:
         f_names = np.load(file_path)
     if features is not None and f_list is not None and f_names is not None:
