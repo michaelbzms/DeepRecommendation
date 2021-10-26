@@ -69,7 +69,7 @@ def plot_stacked_residuals(fitted_values, ground_truth, normalize=True):
         for k in [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]:
             hist, _ = np.histogram(df.loc[k]['fitted_values'].values, bins=bins)  # pass actual bin points
             height = np.array(hist.astype(np.float32) / hist.sum())
-            plt.bar(bins[:-1], height, width=(bins[1] - bins[0]), bottom=pre_height, label=str(k))
+            plt.bar((bins[:-1] + bins[1:]) / 2, height, width=(bins[1] - bins[0]), bottom=pre_height, label=str(k))
             pre_height += height
         plt.legend(title='Ground truth')
     else:
