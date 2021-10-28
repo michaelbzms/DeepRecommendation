@@ -143,10 +143,11 @@ def save_set(matrix: pd.DataFrame, name: str):
 
 if __name__ == '__main__':
     recalculate_metadata = True
-    use_genom_tags = False
+    use_genom_tags = True
     save_user_ratings = True
     random_splitting_vs_global_temporal = True
     create_user_embeddings_too = True
+    split_embeddings_from_train = False
     LIMIT_USERS = 10000
 
     # load user ratings (sparse representation of a utility matrix)
@@ -191,20 +192,31 @@ if __name__ == '__main__':
         np.random.shuffle(indices)
         val = utility_matrix.iloc[indices[:val_split]]
         test = utility_matrix.iloc[indices[val_split: test_split]]
-        train = utility_matrix.iloc[indices[test_split:]]
+        if split_embeddings_from_train:
+            embedding_split = test_split + int(np.floor(0.35 * size))   # (1 - (0.15 + 0.15)) / 2 = 0.7 / 2 = 0.4
+            embeddings = utility_matrix.iloc[indices[test_split: embedding_split]]
+            train = utility_matrix.iloc[indices[embedding_split:]]
+        else:
+            train = utility_matrix.iloc[indices[test_split:]]
+            embeddings = None
     else:
         global_val_split = utility_matrix['timestamp'].groupby('userId').quantile(0.95).mean()
         global_test_split = utility_matrix['timestamp'].groupby('userId').quantile(0.98).mean()
         train = utility_matrix[utility_matrix['timestamp'] < global_val_split]
         val = utility_matrix[(utility_matrix['timestamp'] >= global_val_split) & (utility_matrix['timestamp'] < global_test_split)]
         test = utility_matrix[utility_matrix['timestamp'] >= global_test_split]
+        embeddings = None
 
-    print(f'Training shape: {train.shape}, Validation shape: {val.shape}, Test shape: {test.shape}')
+    print(f'Training shape: {train.shape}, Validation shape: {val.shape}, Test shape: {test.shape}' + (f', Embedding shape: {embeddings.shape}' if split_embeddings_from_train else ''))
 
     if save_user_ratings:
         # user_ratings: pd.DataFrame = utility_matrix.drop('timestamp', axis=1).groupby('userId').apply(list)
         print('Saving user ratings from train set only...')
-        user_ratings: pd.DataFrame = train.drop('timestamp', axis=1).groupby('userId').agg({'rating': list, 'movieId': list})
+        if split_embeddings_from_train:
+            ratings_for_embeddings = embeddings
+        else:
+            ratings_for_embeddings = train
+        user_ratings: pd.DataFrame = ratings_for_embeddings.drop('timestamp', axis=1).groupby('userId').agg({'rating': list, 'movieId': list})
         user_ratings['rating'] = user_ratings['rating'].apply(lambda x: np.array(x))
         user_ratings['movieId'] = user_ratings['movieId'].apply(lambda x: np.array(x))
         print(user_ratings.shape)
@@ -215,7 +227,7 @@ if __name__ == '__main__':
         if create_user_embeddings_too:
             # create user_embeddings from user ratings once beforehand
             # Note: This takes a very long time
-            print('Creating user embeddings')
+            print('Creating user embeddings...')
 
             def create_user_embedding(user_ratings: pd.DataFrame, metadata: pd.DataFrame):
                 avg_rating = user_ratings['rating'].mean()

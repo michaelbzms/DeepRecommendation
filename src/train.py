@@ -13,7 +13,7 @@ from plots import plot_train_val_losses
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-def train_model(model: nn.Module):
+def train_model(model: nn.Module, save=True):
     model.to(device)
 
     # load dataset
@@ -101,9 +101,10 @@ def train_model(model: nn.Module):
                         model.eval()
 
     # save model (its weights)
-    print('Saving model...')
-    torch.save(model.state_dict(), final_model_path)
-    print('Done!')
+    if save:
+        print('Saving model...')
+        torch.save(model.state_dict(), final_model_path)
+        print('Done!')
 
     # plot and save losses
     plot_train_val_losses(train_losses, val_losses)
