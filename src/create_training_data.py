@@ -45,7 +45,7 @@ def extract_binary_features(actual_values: set, ordered_possible_values: list) -
     return binary_format
 
 
-def load_imdb_metadata_features(unique_movies: pd.Series):
+def load_imdb_metadata_features(unique_movies: pd.Series, use_extended=False):
     # NAMESPACES
     ns_movies = Namespace('https://www.imdb.com/title/')
     ns_genres = Namespace('https://www.imdb.com/search/title/?genres=')
@@ -53,7 +53,7 @@ def load_imdb_metadata_features(unique_movies: pd.Series):
     ns_predicates = Namespace('http://example.org/props/')
 
     print('Loading rdf...')
-    rdf = Graph().parse(rdf_path + 'movies_pruned_actors.nt', format='nt')
+    rdf = Graph().parse(rdf_path + ('movies_extended.nt' if use_extended else 'movies_pruned_actors.nt'), format='nt')
     print('done')
 
     # get all possible categorical features
@@ -145,9 +145,9 @@ if __name__ == '__main__':
     recalculate_metadata = True
     use_genom_tags = True
     save_user_ratings = True
-    random_splitting_vs_global_temporal = True
+    random_vs_temporal_splitting = False
     create_user_embeddings_too = True
-    split_embeddings_from_train = False
+    split_embeddings_from_train = False   # don't do this
     use_audio = True
     LIMIT_USERS = None
 
@@ -165,16 +165,18 @@ if __name__ == '__main__':
         print(utility_matrix.shape)
         # filter utility matrix as per users:
         user_votes = utility_matrix.groupby('userId')['rating'].count()
-        print(len(user_votes))
-        user_votes = user_votes[user_votes >= 16]   # at least these many votes on movies
-        print(len(user_votes))
+        print('Original users:', len(user_votes))
+        user_votes = user_votes[user_votes >= 70]   # at least these many votes on movies
+        print('Keeping this many users based on number of votes:', len(user_votes))
+        utility_matrix = utility_matrix[utility_matrix.index.isin(user_votes.index)]
+        print('Utility matrix:', utility_matrix.shape)
         # utility_matrix['rating'].hist()
 
     # load movie features from RDF only for movies in movieLens (for which we have ratings)
     if recalculate_metadata:
         print('Loading IMDb data...')
         unique_movies = pd.Series(index=utility_matrix['movieId'].unique().copy())
-        imdb_metadata = load_imdb_metadata_features(unique_movies)
+        imdb_metadata = load_imdb_metadata_features(unique_movies, use_extended=use_audio)
         if use_genom_tags:
             metadata = genome_metadata.join(imdb_metadata, on='movieId', how='inner')
             metadata = pd.DataFrame(index=metadata.index,
@@ -199,7 +201,7 @@ if __name__ == '__main__':
 
     # train-val-test split (global temporal splitting)
     print('Calculating train-val-test split...')
-    if random_splitting_vs_global_temporal:
+    if random_vs_temporal_splitting:
         size: int = len(utility_matrix)
         val_split = int(np.floor(0.15 * size))
         test_split = val_split + int(np.floor(0.15 * size))
@@ -208,7 +210,7 @@ if __name__ == '__main__':
         np.random.shuffle(indices)
         val = utility_matrix.iloc[indices[:val_split]]
         test = utility_matrix.iloc[indices[val_split: test_split]]
-        if split_embeddings_from_train:
+        if split_embeddings_from_train:    # bad idea, isn't helping
             embedding_split = test_split + int(np.floor(0.35 * size))   # (1 - (0.15 + 0.15)) / 2 = 0.7 / 2 = 0.4
             embeddings = utility_matrix.iloc[indices[test_split: embedding_split]]
             train = utility_matrix.iloc[indices[embedding_split:]]
@@ -216,11 +218,18 @@ if __name__ == '__main__':
             train = utility_matrix.iloc[indices[test_split:]]
             embeddings = None
     else:
-        global_val_split = utility_matrix['timestamp'].groupby('userId').quantile(0.95).mean()
-        global_test_split = utility_matrix['timestamp'].groupby('userId').quantile(0.98).mean()
-        train = utility_matrix[utility_matrix['timestamp'] < global_val_split]
-        val = utility_matrix[(utility_matrix['timestamp'] >= global_val_split) & (utility_matrix['timestamp'] < global_test_split)]
-        test = utility_matrix[utility_matrix['timestamp'] >= global_test_split]
+        val_size = 0.15
+        test_size = 0.15
+        # calculate proper timestamp splits for each user based on his ratings
+        val_splits = utility_matrix['timestamp'].groupby('userId').quantile(1.0 - val_size - test_size).astype(int)
+        test_splits = utility_matrix['timestamp'].groupby('userId').quantile(1.0 - test_size).astype(int)
+        # broadcast the result properly in the utility matrix
+        utility_matrix['val_split'] = val_splits
+        utility_matrix['test_split'] = test_splits
+        # do train-val-test split according to the new broadcasted columns
+        train = utility_matrix[utility_matrix['timestamp'] < utility_matrix['val_split']]
+        val = utility_matrix[(utility_matrix['timestamp'] >= utility_matrix['val_split']) & (utility_matrix['timestamp'] < utility_matrix['test_split'])]
+        test = utility_matrix[utility_matrix['timestamp'] >= utility_matrix['test_split']]
         embeddings = None
 
     print(f'Training shape: {train.shape}, Validation shape: {val.shape}, Test shape: {test.shape}' + (f', Embedding shape: {embeddings.shape}' if split_embeddings_from_train else ''))

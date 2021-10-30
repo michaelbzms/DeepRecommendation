@@ -21,6 +21,8 @@ def evaluate_model(model: nn.Module):
     test_dataset = MovieLensDataset(test_set_file)
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
+    print('Test size:', len(test_dataset))
+
     criterion = nn.MSELoss(reduction='sum')   # don't average the loss as we shall do that ourselves for the whole epoch
 
     # Calculate val_loss and see if we need to stop
@@ -56,15 +58,14 @@ def evaluate_model(model: nn.Module):
 
     fitted_values = np.concatenate(fitted_values, dtype=np.float64).reshape(-1)
     ground_truth = np.concatenate(ground_truth, dtype=np.float64).reshape(-1)
+
     # plot_fitted_vs_targets(fitted_values, ground_truth)
-
-    # plot_residuals(fitted_values, ground_truth)
-
     plot_stacked_residuals(fitted_values, ground_truth)
+    plot_residuals(fitted_values, ground_truth)
 
 
 if __name__ == '__main__':
-    model_file = '../models/3layers_model_066val.pt'
+    model_file = '../models/final_model.pt'
 
     # get metadata dim
     item_dim = MovieLensDataset.get_metadata_dim()

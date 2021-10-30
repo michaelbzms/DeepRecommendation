@@ -19,6 +19,7 @@ def train_model(model: nn.Module, save=True):
     # load dataset
     train_dataset = MovieLensDataset(train_set_file)
     val_dataset = MovieLensDataset(val_set_file)
+    print('Training size:', len(train_dataset), ' - Validation size:', len(val_dataset))
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size)

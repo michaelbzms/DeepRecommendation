@@ -16,11 +16,6 @@ class MovieLensDataset(Dataset):
     print('Initializing common dataset prerequisites...')
     metadata: pd.DataFrame = pd.read_hdf(item_metadata_file + '.h5')
     user_embeddings: pd.DataFrame = pd.read_hdf(user_embeddings_file + '.h5')
-    # # create user_embeddings from user ratings once beforehand (TOO SLOW TO DO IT HERE) TODO: remove
-    # user_embeddings = pd.DataFrame(index=user_ratings.index.unique().copy(), data={'embedding': object})
-    # for userId, user_ratings in tqdm(user_ratings.groupby('userId'), desc='Creating user embeddings...'):
-    #     # Note: iloc[0] is needed because of some weird encapsulation idk
-    #     user_embeddings.at[userId, 'embedding'] = create_user_embedding(user_ratings.iloc[0], metadata)
     print('Done')
 
     def __init__(self, file):
