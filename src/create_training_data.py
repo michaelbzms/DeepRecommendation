@@ -148,12 +148,27 @@ if __name__ == '__main__':
     random_splitting_vs_global_temporal = True
     create_user_embeddings_too = True
     split_embeddings_from_train = False
-    LIMIT_USERS = 10000
+    use_audio = True
+    LIMIT_USERS = None
 
     # load user ratings (sparse representation of a utility matrix)
     print('Loading movieLens data...')
     utility_matrix, genome_metadata = load_user_ratings(movielens_path, LIMIT_USERS=LIMIT_USERS)
     print(utility_matrix.shape)
+
+    # load audio features
+    if use_audio:
+        audio_features = pd.read_csv('../data/audio_features.csv', index_col='movieId', sep=';')
+        utility_matrix = utility_matrix[utility_matrix['movieId'].isin(audio_features.index)]
+        # utility_matrix = audio_features.join(utility_matrix, on='movieId', how='inner')
+        print(utility_matrix)
+        print(utility_matrix.shape)
+        # filter utility matrix as per users:
+        user_votes = utility_matrix.groupby('userId')['rating'].count()
+        print(len(user_votes))
+        user_votes = user_votes[user_votes >= 16]   # at least these many votes on movies
+        print(len(user_votes))
+        # utility_matrix['rating'].hist()
 
     # load movie features from RDF only for movies in movieLens (for which we have ratings)
     if recalculate_metadata:
@@ -164,7 +179,7 @@ if __name__ == '__main__':
             metadata = genome_metadata.join(imdb_metadata, on='movieId', how='inner')
             metadata = pd.DataFrame(index=metadata.index,
                                     data={'features': metadata.apply(lambda x: np.concatenate([np.array(x.iloc[:-1], dtype=np.float64),
-                                                                                           np.array(x['features'], dtype=np.float64)], dtype=np.float64),
+                                                                                               np.array(x['features'], dtype=np.float64)], dtype=np.float64),
                                                                      axis=1)})
         else:
             metadata = imdb_metadata
@@ -180,6 +195,7 @@ if __name__ == '__main__':
     # so remove them like this:
     print('Removing movies for which we have no features...')
     utility_matrix = utility_matrix[utility_matrix['movieId'].isin(metadata.index)]
+    print('Final # of movies:', len(utility_matrix['movieId'].unique()))
 
     # train-val-test split (global temporal splitting)
     print('Calculating train-val-test split...')
