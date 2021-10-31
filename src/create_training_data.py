@@ -9,7 +9,7 @@ from globals import movielens_path, rdf_path, item_metadata_file, train_set_file
     user_ratings_file, user_embeddings_file
 
 
-def load_user_ratings(movielens_data_folder, LIMIT_USERS=None) -> pd.DataFrame:
+def load_user_ratings(movielens_data_folder, LIMIT_USERS=None):
     # load movielens user reviews data
     user_ratings = pd.read_csv(movielens_data_folder + 'ratings.csv',
                                index_col='userId',
@@ -142,7 +142,7 @@ def save_set(matrix: pd.DataFrame, name: str):
 
 
 if __name__ == '__main__':
-    recalculate_metadata = True
+    recalculate_metadata = False
     use_genom_tags = True
     save_user_ratings = True
     random_vs_temporal_splitting = False
@@ -244,6 +244,8 @@ if __name__ == '__main__':
         user_ratings: pd.DataFrame = ratings_for_embeddings.drop('timestamp', axis=1).groupby('userId').agg({'rating': list, 'movieId': list})
         user_ratings['rating'] = user_ratings['rating'].apply(lambda x: np.array(x))
         user_ratings['movieId'] = user_ratings['movieId'].apply(lambda x: np.array(x))
+        user_ratings['meanRating'] = user_ratings['rating'].apply(lambda x: np.mean(x))
+        print('User ratings:\n', user_ratings)
         print(user_ratings.shape)
         user_ratings.to_hdf(user_ratings_file + '.h5', key='user_ratings', mode='w')
         print('OK!')
