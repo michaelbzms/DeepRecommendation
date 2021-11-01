@@ -98,6 +98,9 @@ final_movies = audio_features.shape[0]
 print('Stared with', starting_movies, 'and ended up with', final_movies, 'movies.')
 
 print('Saving findings to csv...')
+pd.set_option('display.html.table_schema', True)     # to can see the dataframe/table as a html
+pd.set_option('display.precision', 8)                # setting up the precision point so can see the data how looks, here is 5
 audio_features.to_csv(audio_features_path + 'imdb_mapped_features.csv', sep=';',
-                      index=False, columns=list(f_names) + ['movieId', 'primaryTitle', 'fileName'])
+                      index=False, columns=list(f_names) + ['movieId', 'primaryTitle', 'fileName'],
+                      float_format='%.8f')   # This fixes an issue where it would store wrong numbers in scientific notation
 print('Done')

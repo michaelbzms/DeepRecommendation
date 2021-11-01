@@ -249,7 +249,7 @@ if __name__ == '__main__':
         print(user_ratings.shape)
         user_ratings.to_hdf(user_ratings_file + '.h5', key='user_ratings', mode='w')
         print('OK!')
-        print(f'Average number of ratings per user: {user_ratings["rating"].apply(lambda x: len(x)).mean()}')
+        print(f'Average number of ratings per user (in train set): {user_ratings["rating"].apply(lambda x: len(x)).mean()}')
 
         if create_user_embeddings_too:
             # create user_embeddings from user ratings once beforehand
