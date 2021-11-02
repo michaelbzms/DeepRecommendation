@@ -241,7 +241,8 @@ if __name__ == '__main__':
             ratings_for_embeddings = embeddings
         else:
             ratings_for_embeddings = train
-        user_ratings: pd.DataFrame = ratings_for_embeddings.drop('timestamp', axis=1).groupby('userId').agg({'rating': list, 'movieId': list})
+        # IMPORTANT to sort by movieId
+        user_ratings: pd.DataFrame = ratings_for_embeddings.drop('timestamp', axis=1).sort_values(by='movieId').groupby('userId').agg({'rating': list, 'movieId': list})
         user_ratings['rating'] = user_ratings['rating'].apply(lambda x: np.array(x))
         user_ratings['movieId'] = user_ratings['movieId'].apply(lambda x: np.array(x))
         user_ratings['meanRating'] = user_ratings['rating'].apply(lambda x: np.mean(x))

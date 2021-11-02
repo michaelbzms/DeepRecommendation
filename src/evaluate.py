@@ -6,7 +6,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from dataset import MovieLensDataset
+from dataset import MovieLensDatasetPreloaded
 from globals import test_set_file, batch_size
 from model import BasicNCF
 from plots import plot_fitted_vs_targets, plot_residuals, plot_stacked_residuals
@@ -18,7 +18,7 @@ def evaluate_model(model: nn.Module):
     model.to(device)
 
     # load dataset
-    test_dataset = MovieLensDataset(test_set_file)
+    test_dataset = MovieLensDatasetPreloaded(test_set_file)
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
     print('Test size:', len(test_dataset))
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     model_file = '../models/final_model.pt'
 
     # get metadata dim
-    item_dim = MovieLensDataset.get_metadata_dim()
+    item_dim = MovieLensDatasetPreloaded.get_metadata_dim()
 
     # create model and load trained weights
     model = BasicNCF(item_dim, item_dim)

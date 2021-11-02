@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 
-from dataset import MovieLensDataset
+from dataset import MovieLensDataset, my_collate_fn
 from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, max_epochs, early_stop, \
     stop_with_train_loss_instead, checkpoint_model_path, patience, dropout_rate, final_model_path
 from model import BasicNCF
@@ -21,8 +21,8 @@ def train_model(model: nn.Module, save=True):
     val_dataset = MovieLensDataset(val_set_file)
     print('Training size:', len(train_dataset), ' - Validation size:', len(val_dataset))
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=my_collate_fn)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, collate_fn=my_collate_fn)
 
     # define optimizer and loss
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -114,11 +114,19 @@ def train_model(model: nn.Module, save=True):
 
 
 if __name__ == '__main__':
+    # # get metadata dim
+    # item_dim = MovieLensDatasetPreloaded.get_metadata_dim()
+    #
+    # # create model
+    # model = BasicNCF(item_dim, item_dim, dropout_rate=dropout_rate)
+    # model.to(device)
+    # print(model)
+
     # get metadata dim
-    item_dim = MovieLensDataset.get_metadata_dim()
+    i1, i2 = MovieLensDataset.get_metadata_dim()
 
     # create model
-    model = BasicNCF(item_dim, item_dim, dropout_rate=dropout_rate)
+    model = BasicNCF(i1, i1, dropout_rate=dropout_rate)     # todo
     model.to(device)
     print(model)
 

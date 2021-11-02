@@ -15,11 +15,15 @@ test_set_file = '../data/test'
 # random seed to use for data creation
 seed = 102
 
+# which features to use for items
+""" 'metadata', 'audio' or 'all' """
+features_to_use = 'audio'
+
 """ NN hyperparameters """
 checkpoint_model_path = '../models/checkpoint.pt'
 final_model_path = '../models/final_model.pt'
 max_epochs = 100
-batch_size = 128
+batch_size = 32
 lr = 3e-4
 weight_decay = 1e-5
 dropout_rate = 0.2
