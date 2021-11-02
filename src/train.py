@@ -4,16 +4,16 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 
-from dataset import MovieLensDataset, my_collate_fn
+from datasets.dynamic_dataset import MovieLensDataset, my_collate_fn
 from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, max_epochs, early_stop, \
-    stop_with_train_loss_instead, checkpoint_model_path, patience, dropout_rate, final_model_path
-from model import BasicNCF
+    stop_with_train_loss_instead, checkpoint_model_path, patience, dropout_rate, final_model_path, embeddings_lr
+from models.AdvancedNCF import AdvancedNCF
 from plots import plot_train_val_losses
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-def train_model(model: nn.Module, save=True):
+def train_model(model: AdvancedNCF, save=True):
     model.to(device)
 
     # load dataset
@@ -25,7 +25,10 @@ def train_model(model: nn.Module, save=True):
     val_loader = DataLoader(val_dataset, batch_size=batch_size, collate_fn=my_collate_fn)
 
     # define optimizer and loss
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    optimizer = optim.Adam([
+        {'params': model.item_embeddings.parameters(), 'lr': embeddings_lr},
+        {'params': model.MLP.parameters(), 'lr': lr, 'weight_decay': weight_decay}
+    ])
     criterion = nn.MSELoss(reduction='sum')   # don't average the loss as we shall do that ourselves for the whole epoch
 
     early_stop_times = 0
@@ -39,12 +42,12 @@ def train_model(model: nn.Module, save=True):
         train_size = 0
         model.train()  # gradients "on"
         for data in tqdm(train_loader, desc='Training'):                     # batch
-            # get the item & user input and the target
-            X_item_batch, X_user_batch, y_batch = data
+            # get the input matrices and the target
+            candidate_items, rated_items, user_matrix, y_batch = data
             # reset the gradients
             optimizer.zero_grad()
             # forward model
-            out = model(X_item_batch.float().to(device), X_user_batch.float().to(device))
+            out = model(candidate_items.float().to(device), rated_items.float().to(device), user_matrix.float().to(device))
             # calculate loss
             loss = criterion(out, y_batch.view(-1, 1).float().to(device))
             # backpropagation (compute gradients)
@@ -66,10 +69,10 @@ def train_model(model: nn.Module, save=True):
         val_size = 0
         with torch.no_grad():
             for data in tqdm(val_loader, desc='Validating'):
-                # get the item & user input and the target
-                X_item_batch, X_user_batch, y_batch = data
+                # get the input matrices and the target
+                candidate_items, rated_items, user_matrix, y_batch = data
                 # forward model
-                out = model(X_item_batch.float().to(device), X_user_batch.float().to(device))
+                out = model(candidate_items.float().to(device), rated_items.float().to(device), user_matrix.float().to(device))
                 # calculate loss
                 loss = criterion(out, y_batch.view(-1, 1).float().to(device))
                 # accumulate validation loss
@@ -114,19 +117,11 @@ def train_model(model: nn.Module, save=True):
 
 
 if __name__ == '__main__':
-    # # get metadata dim
-    # item_dim = MovieLensDatasetPreloaded.get_metadata_dim()
-    #
-    # # create model
-    # model = BasicNCF(item_dim, item_dim, dropout_rate=dropout_rate)
-    # model.to(device)
-    # print(model)
-
     # get metadata dim
-    i1, i2 = MovieLensDataset.get_metadata_dim()
+    item_dim = MovieLensDataset.get_metadata_dim()
 
     # create model
-    model = BasicNCF(i1, i1, dropout_rate=dropout_rate)     # todo
+    model = AdvancedNCF(item_dim, dropout_rate=dropout_rate)
     model.to(device)
     print(model)
 
