@@ -246,6 +246,7 @@ if __name__ == '__main__':
         user_ratings['rating'] = user_ratings['rating'].apply(lambda x: np.array(x))
         user_ratings['movieId'] = user_ratings['movieId'].apply(lambda x: np.array(x))
         user_ratings['meanRating'] = user_ratings['rating'].apply(lambda x: np.mean(x))
+        user_ratings['numRatings'] = user_ratings['rating'].apply(lambda x: len(x))
         print('User ratings:\n', user_ratings)
         print(user_ratings.shape)
         user_ratings.to_hdf(user_ratings_file + '.h5', key='user_ratings', mode='w')

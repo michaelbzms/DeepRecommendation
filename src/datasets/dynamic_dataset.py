@@ -32,7 +32,7 @@ class MovieLensDataset(Dataset):
             candidate_items = torch.FloatTensor(self.audio.loc[data['movieId']].astype(np.float64))
         elif features_to_use == 'all' or features_to_use == 'both':
             candidate_items = torch.cat((torch.FloatTensor(self.metadata.loc[data['movieId']]['features']),
-                                         torch.FloatTensor(self.audio.loc[data['movieId']].astype(np.float64))), dim=1)
+                                         torch.FloatTensor(self.audio.loc[data['movieId']].astype(np.float64))))
         else:
             raise Exception('Invalid features_to_use parameter in dataset')
         # for the user part only forward the user's ID. We will mass collect info in batch-level
@@ -90,3 +90,37 @@ def my_collate_fn(batch):
         raise Exception('Invalid features_to_use parameter in dataset')
 
     return candidate_items, rated_items, user_matrix, targets
+
+
+def my_collate_fn2(batch):
+    # turn per-row to per-column
+    batch_data = list(zip(*batch))
+    # stack torch tensors from dataset
+    candidate_items = torch.stack(batch_data[0])
+    targets = torch.FloatTensor(batch_data[2])
+
+    # get ALL item features
+    if features_to_use == 'metadata':
+        item_matrix = torch.FloatTensor(np.stack(MovieLensDataset.metadata['features'].values))
+    elif features_to_use == 'audio':
+        item_matrix = torch.FloatTensor(MovieLensDataset.audio.astype(np.float64).values)
+    elif features_to_use == 'all' or features_to_use == 'both':
+        v1 = torch.FloatTensor(np.stack(MovieLensDataset.metadata['features'].values))
+        v2 = torch.FloatTensor(MovieLensDataset.audio.astype(np.float64).values)
+        item_matrix = torch.cat((v1, v2), dim=1)
+    else:
+        raise Exception('Invalid features_to_use parameter in dataset')
+
+    # for the user part we do all the work here.
+    # get user ids in batch and their ratings
+    user_ids = list(batch_data[1])
+    user_ratings = MovieLensDataset.user_ratings.loc[user_ids]
+    # multi-hot encode sparse ratings into a matrix form
+    user_matrix = multihot_encode(user_ratings['movieId'], MovieLensDataset.metadata.index.to_list()).astype(np.float64)
+    # TODO: This will work but ONLY IF ratings are ORDERED by movieId when we create the dataset. Else the ratings will be misplaced! Be careful!
+    user_matrix[user_matrix == 1] = np.concatenate((user_ratings['rating'] - user_ratings['meanRating']).values)
+    # check: e.g. user_matrix[0, rated_movies == 'tt0114709']
+    user_matrix = torch.FloatTensor(user_matrix)       # convert to tensor
+    # get features for all rated items in batch
+
+    return candidate_items, item_matrix, user_matrix, targets

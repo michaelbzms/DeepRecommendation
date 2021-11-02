@@ -6,8 +6,8 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from datasets.dynamic_dataset import MovieLensDataset, my_collate_fn
-from globals import test_set_file, batch_size
+from datasets.dynamic_dataset import MovieLensDataset, my_collate_fn, my_collate_fn2
+from globals import test_set_file, val_batch_size
 from models.AdvancedNCF import AdvancedNCF
 from plots import plot_residuals, plot_stacked_residuals
 
@@ -19,7 +19,7 @@ def evaluate_model(model: nn.Module):
 
     # load dataset
     test_dataset = MovieLensDataset(test_set_file)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, collate_fn=my_collate_fn)
+    test_loader = DataLoader(test_dataset, batch_size=val_batch_size, collate_fn=my_collate_fn2)
 
     print('Test size:', len(test_dataset))
 

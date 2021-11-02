@@ -4,9 +4,10 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 
-from datasets.dynamic_dataset import MovieLensDataset, my_collate_fn
+from datasets.dynamic_dataset import MovieLensDataset, my_collate_fn, my_collate_fn2
 from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, max_epochs, early_stop, \
-    stop_with_train_loss_instead, checkpoint_model_path, patience, dropout_rate, final_model_path, embeddings_lr
+    stop_with_train_loss_instead, checkpoint_model_path, patience, dropout_rate, final_model_path, embeddings_lr, \
+    val_batch_size
 from models.AdvancedNCF import AdvancedNCF
 from plots import plot_train_val_losses
 
@@ -21,14 +22,14 @@ def train_model(model: AdvancedNCF, save=True):
     val_dataset = MovieLensDataset(val_set_file)
     print('Training size:', len(train_dataset), ' - Validation size:', len(val_dataset))
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=my_collate_fn)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, collate_fn=my_collate_fn)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=my_collate_fn2)
+    val_loader = DataLoader(val_dataset, batch_size=val_batch_size, collate_fn=my_collate_fn2)
 
     # define optimizer and loss
     optimizer = optim.Adam([
         {'params': model.item_embeddings.parameters(), 'lr': embeddings_lr},
-        {'params': model.MLP.parameters(), 'lr': lr, 'weight_decay': weight_decay}
-    ])
+        {'params': model.MLP.parameters(), 'lr': lr}
+    ], weight_decay=weight_decay)
     criterion = nn.MSELoss(reduction='sum')   # don't average the loss as we shall do that ourselves for the whole epoch
 
     early_stop_times = 0
