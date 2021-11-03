@@ -15,6 +15,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 def train_model(model: AdvancedNCF, save=True):
+    # torch.autograd.set_detect_anomaly(True)   # this slows down training
     model.to(device)
 
     # load dataset
@@ -30,6 +31,7 @@ def train_model(model: AdvancedNCF, save=True):
         {'params': model.item_embeddings.parameters(), 'lr': embeddings_lr},
         {'params': model.MLP.parameters(), 'lr': lr}
     ], weight_decay=weight_decay)
+    # optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     criterion = nn.MSELoss(reduction='sum')   # don't average the loss as we shall do that ourselves for the whole epoch
 
     early_stop_times = 0
