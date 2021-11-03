@@ -145,11 +145,12 @@ if __name__ == '__main__':
     recalculate_metadata = False
     use_genom_tags = True
     save_user_ratings = True
-    random_vs_temporal_splitting = False
+    random_vs_temporal_splitting = True
     create_user_embeddings_too = True
     split_embeddings_from_train = False   # don't do this
     use_audio = True
     LIMIT_USERS = None
+    MIN_VOTES = 100  # 70
 
     # load user ratings (sparse representation of a utility matrix)
     print('Loading movieLens data...')
@@ -166,7 +167,7 @@ if __name__ == '__main__':
         # filter utility matrix as per users:
         user_votes = utility_matrix.groupby('userId')['rating'].count()
         print('Original users:', len(user_votes))
-        user_votes = user_votes[user_votes >= 70]   # at least these many votes on movies
+        user_votes = user_votes[user_votes >= MIN_VOTES]   # at least these many votes on movies
         print('Keeping this many users based on number of votes:', len(user_votes))
         utility_matrix = utility_matrix[utility_matrix.index.isin(user_votes.index)]
         print('Utility matrix:', utility_matrix.shape)

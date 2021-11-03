@@ -9,12 +9,13 @@ from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, 
     stop_with_train_loss_instead, checkpoint_model_path, patience, dropout_rate, final_model_path, embeddings_lr, \
     val_batch_size
 from models.AdvancedNCF import AdvancedNCF
+from models.AttentionNCF import AttentionNCF
 from plots import plot_train_val_losses
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-def train_model(model: AdvancedNCF, save=True):
+def train_model(model: nn.Module, save=True, optimizer=None):
     # torch.autograd.set_detect_anomaly(True)   # this slows down training
     model.to(device)
 
@@ -23,15 +24,16 @@ def train_model(model: AdvancedNCF, save=True):
     val_dataset = MovieLensDataset(val_set_file)
     print('Training size:', len(train_dataset), ' - Validation size:', len(val_dataset))
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=my_collate_fn2)
-    val_loader = DataLoader(val_dataset, batch_size=val_batch_size, collate_fn=my_collate_fn2)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=my_collate_fn)
+    val_loader = DataLoader(val_dataset, batch_size=val_batch_size, collate_fn=my_collate_fn)
 
     # define optimizer and loss
-    optimizer = optim.Adam([
-        {'params': model.item_embeddings.parameters(), 'lr': embeddings_lr},
-        {'params': model.MLP.parameters(), 'lr': lr}
-    ], weight_decay=weight_decay)
-    # optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    # optimizer = optim.Adam([  # TODO add for attention
+    #     {'params': model.item_embeddings.parameters(), 'lr': embeddings_lr},
+    #     {'params': model.MLP.parameters(), 'lr': lr}
+    # ], weight_decay=weight_decay)
+    if optimizer is None:
+        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     criterion = nn.MSELoss(reduction='sum')   # don't average the loss as we shall do that ourselves for the whole epoch
 
     early_stop_times = 0
@@ -124,7 +126,7 @@ if __name__ == '__main__':
     item_dim = MovieLensDataset.get_metadata_dim()
 
     # create model
-    model = AdvancedNCF(item_dim, dropout_rate=dropout_rate)
+    model = AttentionNCF(item_dim, dropout_rate=dropout_rate)
     model.to(device)
     print(model)
 

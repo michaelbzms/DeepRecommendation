@@ -19,7 +19,7 @@ def evaluate_model(model: nn.Module):
 
     # load dataset
     test_dataset = MovieLensDataset(test_set_file)
-    test_loader = DataLoader(test_dataset, batch_size=val_batch_size, collate_fn=my_collate_fn2)
+    test_loader = DataLoader(test_dataset, batch_size=val_batch_size, collate_fn=my_collate_fn)
 
     print('Test size:', len(test_dataset))
 
