@@ -6,19 +6,13 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 class AttentionNCF(nn.Module):
-    def __init__(self, item_dim, item_embeddings_size=16, dropout_rate=0.2,
-                 dense1=32, dense2=16, att_dense1=32, att_dense2=16):
+    def __init__(self, item_dim, dropout_rate=0.2,
+                 dense1=32, dense2=20, dense3=12, att_dense1=8):
         super(AttentionNCF, self).__init__()
-        # self.item_embeddings = nn.Sequential(
-        #     nn.Linear(item_dim, item_embeddings_size),
-        #     # nn.ReLU()
-        # )
         self.AttentionNet = nn.Sequential(
-            nn.Linear(2*item_dim, att_dense1),
-            nn.ReLU(),
-            nn.Linear(att_dense1, att_dense2),
-            nn.ReLU(),
-            nn.Linear(att_dense2, 1)
+            nn.Linear(2*item_dim, 1),
+            # nn.ReLU(),
+            # nn.Linear(att_dense1, 1)
         )
         self.MLP = nn.Sequential(
             nn.Linear(2*item_dim, dense1),
@@ -27,7 +21,10 @@ class AttentionNCF(nn.Module):
             nn.Linear(dense1, dense2),
             nn.ReLU(),
             nn.Dropout(dropout_rate),
-            nn.Linear(dense2, 1)
+            nn.Linear(dense2, dense3),
+            nn.ReLU(),
+            nn.Dropout(dropout_rate),
+            nn.Linear(dense3, 1)
         )
 
     def forward(self, candidate_items, rated_items, user_matrix):

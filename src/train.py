@@ -65,7 +65,7 @@ def train_model(model: nn.Module, save=True, optimizer=None):
 
         train_loss = train_sum_loss / train_size
         train_losses.append(train_loss)
-        print(f'Epoch {epoch + 1}: Training loss: {train_loss:.6f}')
+        print(f'\nEpoch {epoch + 1}: Training loss: {train_loss:.6f}')
 
         """ validation """
         # Calculate val_loss and see if we need to stop
@@ -86,7 +86,7 @@ def train_model(model: nn.Module, save=True, optimizer=None):
 
         val_loss = val_sum_loss / val_size
         val_losses.append(val_loss)
-        print(f'Validation loss: {val_loss:.6f}')
+        print(f'\nValidation loss: {val_loss:.6f}')
 
         if early_stop:
             if least_running_loss is None or (not stop_with_train_loss_instead and val_sum_loss < least_running_loss) \

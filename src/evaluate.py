@@ -9,6 +9,7 @@ from tqdm import tqdm
 from datasets.dynamic_dataset import MovieLensDataset, my_collate_fn, my_collate_fn2
 from globals import test_set_file, val_batch_size
 from models.AdvancedNCF import AdvancedNCF
+from models.AttentionNCF import AttentionNCF
 from plots import plot_residuals, plot_stacked_residuals
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -71,7 +72,7 @@ if __name__ == '__main__':
     item_dim = MovieLensDataset.get_metadata_dim()
 
     # create model and load trained weights
-    model = AdvancedNCF(item_dim)
+    model = AttentionNCF(item_dim)
     model.load_state_dict(torch.load(model_file))
     model.to(device)
 
