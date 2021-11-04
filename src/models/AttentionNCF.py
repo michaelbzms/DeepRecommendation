@@ -6,20 +6,22 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 class AttentionNCF(nn.Module):
-    def __init__(self, item_dim, item_embeddings_size=64, dropout_rate=0.2,
-                 dense1=64, dense2=32, att_dense=16):
+    def __init__(self, item_dim, item_embeddings_size=16, dropout_rate=0.2,
+                 dense1=32, dense2=16, att_dense1=32, att_dense2=16):
         super(AttentionNCF, self).__init__()
-        self.item_embeddings = nn.Sequential(
-            nn.Linear(item_dim, item_embeddings_size),
-            # nn.ReLU()
-        )
+        # self.item_embeddings = nn.Sequential(
+        #     nn.Linear(item_dim, item_embeddings_size),
+        #     # nn.ReLU()
+        # )
         self.AttentionNet = nn.Sequential(
-            nn.Linear(2*item_embeddings_size, att_dense),
+            nn.Linear(2*item_dim, att_dense1),
             nn.ReLU(),
-            nn.Linear(att_dense, 1)
+            nn.Linear(att_dense1, att_dense2),
+            nn.ReLU(),
+            nn.Linear(att_dense2, 1)
         )
         self.MLP = nn.Sequential(
-            nn.Linear(2*item_embeddings_size, dense1),
+            nn.Linear(2*item_dim, dense1),
             nn.ReLU(),
             nn.Dropout(dropout_rate),
             nn.Linear(dense1, dense2),
@@ -32,24 +34,32 @@ class AttentionNCF(nn.Module):
         I = rated_items.shape[0]      # == user_matrix.shape[1]
         B = candidate_items.shape[0]  # == user_matrix.shape[0]
         # item part
-        candidate_embeddings = self.item_embeddings(candidate_items)   # (B, E)
-
+        # candidate_embeddings = self.item_embeddings(candidate_items)   # (B, E)
         # attention between candidate items and rated items
-        rated_embeddings = self.item_embeddings(rated_items).detach()  # (I, E)
+        # rated_embeddings = self.item_embeddings(rated_items).detach()  # (I, E)
         attention_scores = torch.zeros((B, I)).to(device)              # (B, I)
-        for i in range(I):
-            repeated_rated_embedding = rated_embeddings[i].view(1, -1).repeat(B, 1)   # repeat batch-size times for i-th rated item -> (B, E)
-            item_emb_pairs = torch.cat((candidate_embeddings.detach(), repeated_rated_embedding), dim=1)
-            attention_scores[:, [i]] = self.AttentionNet(item_emb_pairs)
+        # for i in range(I):
+        #     repeated_rated_items = rated_items[i].view(1, -1).repeat(B, 1)   # repeat batch-size times for i-th rated item -> (B, E)
+        #     item_pairs = torch.cat((candidate_items, repeated_rated_items), dim=1)
+        #     attention_scores[:, [i]] = self.AttentionNet(item_pairs)
+        # # TODO: is this equivalent but with a smaller for-loop?
+        # for i in range(B):
+        #     repeated_candidate_item = candidate_items[i].view(1, -1).repeat(I, 1)   # (I, F)
+        #     item_pairs = torch.cat((repeated_candidate_item, rated_items), dim=1)   # (I, 2*F)
+        #     attention_scores[[i], :] = self.AttentionNet(item_pairs).view(1, -1)    # (I, 1)  -> (1, I)
+
+        # TODO: the one that interleaves matters! I think this works correctly into (B, I) shape because the first I elements contain all different rated items and they become the first row of length I
+        attNetInput = torch.cat((candidate_items.repeat_interleave(I, dim=0), rated_items.repeat(B, 1)), dim=1)
+        attention_scores = self.AttentionNet(attNetInput).view(B, I)
         # pass through softmax
         attention_scores = F.softmax(attention_scores, dim=1)   # (B, I)
 
         # user part
         attended_user_matrix = torch.mul(attention_scores, user_matrix)
-        user_embeddings = torch.matmul(attended_user_matrix, rated_embeddings)
+        user_embeddings = torch.matmul(attended_user_matrix, rated_items)
 
         # combine
-        combined = torch.cat((candidate_embeddings, user_embeddings), dim=1)
+        combined = torch.cat((candidate_items, user_embeddings), dim=1)
         # MLP part
         out = self.MLP(combined)
         return out
