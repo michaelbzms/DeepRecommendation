@@ -47,7 +47,7 @@ def plot_residuals(fitted_values: np.array, ground_truth: np.array):
     for i in range(axes.shape[0]):
         for j in range(axes.shape[1]):
             axes[i][j].set_xticks([0, 1, 2, 3, 4, 5])
-            axes[i][j].set_yticks([0, 500, 1000])
+            axes[i][j].set_yticks([0, 250, 500])
             # axes[i][j].set_title('Hist of fitted values per ground truth')
             axes[i][j].set_xlabel('Fitted values')
             axes[i][j].axvline(x=k, color='red')

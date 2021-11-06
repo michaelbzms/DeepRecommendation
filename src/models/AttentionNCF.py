@@ -7,15 +7,21 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class AttentionNCF(nn.Module):
     def __init__(self, item_dim, dropout_rate=0.2,
-                 item_emb=512, user_emb=512,
+                 item_emb=512, user_emb=1024,
                  dense1=1024, dense2=512, dense3=256):
         super(AttentionNCF, self).__init__()
         self.ItemEmbeddings = nn.Sequential(
-            nn.Linear(item_dim, item_emb),
+            nn.Linear(item_dim, 2*item_emb),
+            nn.ReLU(),
+            nn.Linear(2*item_emb, item_emb),
+            nn.Dropout(dropout_rate),
             nn.ReLU()
         )
         self.UserEmbeddings = nn.Sequential(
-            nn.Linear(item_dim, user_emb),
+            nn.Linear(item_dim, 2*user_emb),
+            nn.ReLU(),
+            nn.Linear(2*user_emb, user_emb),
+            nn.Dropout(dropout_rate),
             nn.ReLU()
         )
         self.AttentionNet = nn.Sequential(
