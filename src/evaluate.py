@@ -2,11 +2,12 @@ from math import sqrt
 
 import numpy as np
 import torch
+from matplotlib import pyplot as plt
 from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from datasets.dynamic_dataset import MovieLensDataset, my_collate_fn, my_collate_fn2
+from datasets.dynamic_dataset import MovieLensDataset, my_collate_fn, my_collate_fn2, MyCollator, NamedMovieLensDataset
 from globals import test_set_file, val_batch_size
 from models.AdvancedNCF import AdvancedNCF
 from models.AttentionNCF import AttentionNCF
@@ -19,8 +20,8 @@ def evaluate_model(model: nn.Module):
     model.to(device)
 
     # load dataset
-    test_dataset = MovieLensDataset(test_set_file)
-    test_loader = DataLoader(test_dataset, batch_size=val_batch_size, collate_fn=my_collate_fn)
+    test_dataset = NamedMovieLensDataset(test_set_file)
+    test_loader = DataLoader(test_dataset, batch_size=1, collate_fn=MyCollator(with_names=True))
 
     print('Test size:', len(test_dataset))
 
@@ -38,9 +39,10 @@ def evaluate_model(model: nn.Module):
     with torch.no_grad():
         for data in tqdm(test_loader, desc='Testing'):
             # get the input matrices and the target
-            candidate_items, rated_items, user_matrix, y_batch = data
+            candidate_items, rated_items, user_matrix, y_batch, candidate_names, rated_names = data
             # forward model
-            out = model(candidate_items.float().to(device), rated_items.float().to(device), user_matrix.float().to(device))
+            out = model(candidate_items.float().to(device), rated_items.float().to(device), user_matrix.float().to(device),
+                        candidate_names=candidate_names, rated_names=rated_names)
             # calculate loss
             loss = criterion(out, y_batch.view(-1, 1).float().to(device))
             # accumulate validation loss

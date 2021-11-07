@@ -11,6 +11,7 @@ class MovieLensDataset(Dataset):
     print('Initializing common dataset prerequisites...')
     metadata: pd.DataFrame = pd.read_hdf(item_metadata_file + '.h5')
     audio: pd.DataFrame = pd.read_csv(audio_features_file + '.csv', sep=';', index_col='movieId')
+    item_names = pd.DataFrame(index=audio.index, data=audio['primaryTitle'].copy())
     audio.drop(['primaryTitle', 'fileName'], axis=1, inplace=True)   # drop non-features if they exist
     audio = audio.astype(np.float64)
     user_ratings: pd.DataFrame = pd.read_hdf(user_ratings_file + '.h5')
@@ -20,7 +21,6 @@ class MovieLensDataset(Dataset):
         self.samples: pd.DataFrame = pd.read_csv(file + '.csv')
 
     def __getitem__(self, item):
-        """ returns ((item metadata, item audio), [(ratings, items metadata, items audio)], target rating) """
         # get sample
         data = self.samples.iloc[item]
         # get target rating
@@ -53,6 +53,18 @@ class MovieLensDataset(Dataset):
             raise Exception('Invalid features_to_use parameter in dataset')
 
 
+class NamedMovieLensDataset(MovieLensDataset):
+    def __init__(self, file):
+        super(NamedMovieLensDataset, self).__init__(file)
+
+    def __getitem__(self, item):
+        x = super(NamedMovieLensDataset, self).__getitem__(item)
+        # get sample
+        data = self.samples.iloc[item]
+        name = MovieLensDataset.item_names.loc[data['movieId']]
+        return x + (name, )      # tuple concat
+
+
 def multihot_encode(actual_values, ordered_possible_values) -> np.array:
     """ Converts a categorical feature with multiple values to a multi-label binary encoding """
     mlb = MultiLabelBinarizer(classes=ordered_possible_values)
@@ -60,7 +72,20 @@ def multihot_encode(actual_values, ordered_possible_values) -> np.array:
     return binary_format
 
 
-def my_collate_fn(batch):
+class MyCollator:
+    # In order to use args
+    def __init__(self, only_rated=True, with_names=False):
+        self.only_rated = only_rated
+        self.with_names = with_names
+
+    def __call__(self, batch):
+        if self.only_rated:
+            return my_collate_fn(batch, with_names=self.with_names)
+        else:
+            return my_collate_fn2(batch, with_names=self.with_names)
+
+
+def my_collate_fn(batch, with_names=False):
     # turn per-row to per-column
     batch_data = list(zip(*batch))
     # stack torch tensors from dataset
@@ -89,10 +114,15 @@ def my_collate_fn(batch):
     else:
         raise Exception('Invalid features_to_use parameter in dataset')
 
-    return candidate_items, rated_items, user_matrix, targets
+    if not with_names:
+        return candidate_items, rated_items, user_matrix, targets
+    else:
+        candidate_names = np.vstack(batch_data[-1])
+        rated_item_names = MovieLensDataset.item_names.loc[rated_items_ids]
+        return candidate_items, rated_items, user_matrix, targets, candidate_names, rated_item_names
 
 
-def my_collate_fn2(batch):
+def my_collate_fn2(batch, with_names=False):
     # turn per-row to per-column
     batch_data = list(zip(*batch))
     # stack torch tensors from dataset

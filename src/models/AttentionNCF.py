@@ -2,13 +2,15 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+from plots import visualize_attention
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 class AttentionNCF(nn.Module):
     def __init__(self, item_dim, dropout_rate=0.2,
-                 item_emb=512, user_emb=1024,
-                 dense1=1024, dense2=512, dense3=256):
+                 item_emb=256, user_emb=512,
+                 dense1=1024, dense2=512, dense3=256, dense4=128):
         super(AttentionNCF, self).__init__()
         self.ItemEmbeddings = nn.Sequential(
             nn.Linear(item_dim, 2*item_emb),
@@ -37,10 +39,13 @@ class AttentionNCF(nn.Module):
             nn.Linear(dense2, dense3),
             nn.ReLU(),
             nn.Dropout(dropout_rate),
-            nn.Linear(dense3, 1)
+            nn.Linear(dense3, dense4),
+            nn.ReLU(),
+            nn.Dropout(dropout_rate),
+            nn.Linear(dense4, 1)
         )
 
-    def forward(self, candidate_items, rated_items, user_matrix):
+    def forward(self, candidate_items, rated_items, user_matrix, candidate_names=None, rated_names=None):
         I = rated_items.shape[0]      # == user_matrix.shape[1]
         B = candidate_items.shape[0]  # == user_matrix.shape[0]
 
@@ -54,6 +59,10 @@ class AttentionNCF(nn.Module):
         # pass through softmax
         attention_scores = F.softmax(attention_scores, dim=1)   # (B, I)
         attention_scores = attention_scores.nan_to_num(nan=0.0, posinf=0.0, neginf=0.0)  # will get NaNs if a user has 0 ratings. Replace those with 0
+
+        # visualize attention
+        if candidate_names is not None and rated_names is not None:
+            visualize_attention(attention_scores.to('cpu'), user_matrix.to('cpu'), candidate_names, rated_names)
 
         # aggregate item features based on ratings and attention weights
         attended_user_matrix = torch.mul(attention_scores, user_matrix)
