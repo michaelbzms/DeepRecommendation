@@ -16,14 +16,22 @@ from plots import plot_residuals, plot_stacked_residuals
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
+# perform attention visualization on top of evaluation
+visualize = True
+
+
 def evaluate_model(model: nn.Module):
     model.to(device)
 
     # load dataset
     test_dataset = NamedMovieLensDataset(test_set_file)
-    test_loader = DataLoader(test_dataset, batch_size=1, collate_fn=MyCollator(with_names=True), shuffle=True)
-
     print('Test size:', len(test_dataset))
+
+    if visualize:
+        B = 1
+        test_loader = DataLoader(test_dataset, batch_size=B, collate_fn=MyCollator(with_names=True), shuffle=True)
+    else:
+        test_loader = DataLoader(test_dataset, batch_size=val_batch_size, collate_fn=my_collate_fn)
 
     criterion = nn.MSELoss(reduction='sum')   # don't average the loss as we shall do that ourselves for the whole epoch
 
@@ -34,15 +42,19 @@ def evaluate_model(model: nn.Module):
     fitted_values = []
     ground_truth = []
 
-    test = False
-    i = 0
     with torch.no_grad():
         for data in tqdm(test_loader, desc='Testing'):
-            # get the input matrices and the target
-            candidate_items, rated_items, user_matrix, y_batch, candidate_names, rated_names = data
-            # forward model
-            out = model(candidate_items.float().to(device), rated_items.float().to(device), user_matrix.float().to(device),
-                        candidate_names=candidate_names, rated_names=rated_names)
+            if visualize:
+                # get the input matrices and the target
+                candidate_items, rated_items, user_matrix, y_batch, candidate_names, rated_names = data
+                # forward model
+                out = model(candidate_items.float().to(device), rated_items.float().to(device), user_matrix.float().to(device),
+                            candidate_names=candidate_names, rated_names=rated_names)
+            else:
+                # get the input matrices and the target
+                candidate_items, rated_items, user_matrix, y_batch = data
+                # forward model
+                out = model(candidate_items.float().to(device), rated_items.float().to(device), user_matrix.float().to(device))
             # calculate loss
             loss = criterion(out, y_batch.view(-1, 1).float().to(device))
             # accumulate validation loss
@@ -51,10 +63,6 @@ def evaluate_model(model: nn.Module):
             # keep track of fitted values and their actual targets
             fitted_values.append(out.cpu().detach().numpy())
             ground_truth.append(y_batch.view(-1, 1).float().cpu().detach().numpy())
-            # TODO: temp
-            i += 1
-            if test and i > 10:
-                break
 
     test_mse = test_sum_loss / test_size
     print(f'Test loss (MSE): {test_mse:.6f} - RMSE: {sqrt(test_mse):.6f}')

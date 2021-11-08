@@ -109,9 +109,9 @@ def visualize_attention(weights: np.array, user_matrix: np.array, candidate_name
         LIMIT_VISIBLE = None
 
     fig, ax = plt.subplots(figsize=(19, 9))
-    ax = sns.heatmap(weights, robust=True, linewidths=0.5, square=True,
+    ax = sns.heatmap(weights, robust=True, vmin=0, linewidths=0.5, square=True, annot=B == 1, annot_kws={"size": 6}, fmt='.3f',
                      cmap="Blues_r", cbar=True, cbar_kws={"location": "top", "shrink": .25})
-    # With annotations:
+    # With rating annotations:
     # ax = sns.heatmap(np.array(weights), robust=True, annot=np.around(user_matrix, 1), linewidths=1.0, square=True,
     #                  cmap="Blues_r", cbar=True, cbar_kws={"location": "top", "shrink": .25}, annot_kws={"size": 6})
 
