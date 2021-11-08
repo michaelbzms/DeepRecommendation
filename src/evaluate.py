@@ -21,7 +21,7 @@ def evaluate_model(model: nn.Module):
 
     # load dataset
     test_dataset = NamedMovieLensDataset(test_set_file)
-    test_loader = DataLoader(test_dataset, batch_size=1, collate_fn=MyCollator(with_names=True))
+    test_loader = DataLoader(test_dataset, batch_size=1, collate_fn=MyCollator(with_names=True), shuffle=True)
 
     print('Test size:', len(test_dataset))
 

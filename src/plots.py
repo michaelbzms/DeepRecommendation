@@ -94,26 +94,28 @@ def visualize_attention(weights: np.array, user_matrix: np.array, candidate_name
     B, I = len(candidate_names), len(rated_names)
 
     fig, ax = plt.subplots(figsize=(19, 9))
-    # fig.set_size_inches(18.0, 9.0)
-    # ax.imshow(np.array(weights), cmap='hot', interpolation='nearest')
-    ax = sns.heatmap(np.array(weights), robust=True, annot=False, linewidths=0.5, square=True, cbar=True)
-    print(weights)
+    ax = sns.heatmap(np.array(weights), robust=True, linewidths=1.0, square=True,
+                     cmap="Blues_r", cbar=True, cbar_kws={"location": "top", "shrink": .25})
+    # With annotations:
+    # ax = sns.heatmap(np.array(weights), robust=True, annot=np.around(user_matrix, 1), linewidths=1.0, square=True,
+    #                  cmap="Blues_r", cbar=True, cbar_kws={"location": "top", "shrink": .25}, annot_kws={"size": 6})
 
     # We want to show all ticks...
     ax.set_yticks(np.arange(B))
     ax.set_xticks(np.arange(I))
+
     # ... and label them with the respective list entries
     ax.set_yticklabels([name[0] for name in candidate_names], fontsize=8)
     ax.set_xticklabels([name[0] for name in rated_names.values], fontsize=8)
 
     # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
-    plt.setp(ax.get_yticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+    plt.setp(ax.get_xticklabels(), rotation=80, ha="right", rotation_mode="anchor")
+    plt.setp(ax.get_yticklabels(), rotation=80, ha="right", rotation_mode="anchor")
 
     # Loop over data dimensions and create text annotations.
     # for i in range(B):
     #     for j in range(I):
-    #         text = ax.text(j, i, float(weights[i, j]), ha="center", va="center")
+    #         ax.text(j, i, f"{weights[i, j]:.2f}", ha="center", va="center")
 
     ax.set_title("Attention weights visualization")
     fig.tight_layout()
