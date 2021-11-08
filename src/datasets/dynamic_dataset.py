@@ -61,7 +61,7 @@ class NamedMovieLensDataset(MovieLensDataset):
         x = super(NamedMovieLensDataset, self).__getitem__(item)
         # get sample
         data = self.samples.iloc[item]
-        name = MovieLensDataset.item_names.loc[data['movieId']]
+        name = MovieLensDataset.item_names.loc[data['movieId']].values
         return x + (name, )      # tuple concat
 
 
@@ -117,7 +117,7 @@ def my_collate_fn(batch, with_names=False):
     if not with_names:
         return candidate_items, rated_items, user_matrix, targets
     else:
-        candidate_names = np.vstack(batch_data[-1])
+        candidate_names = np.vstack(batch_data[-1]) if len(batch_data[-1]) > 1 else batch_data[-1]
         rated_item_names = MovieLensDataset.item_names.loc[rated_items_ids]
         return candidate_items, rated_items, user_matrix, targets, candidate_names, rated_item_names
 

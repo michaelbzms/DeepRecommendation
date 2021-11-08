@@ -93,8 +93,23 @@ def plot_stacked_residuals(fitted_values, ground_truth, normalize=True):
 def visualize_attention(weights: np.array, user_matrix: np.array, candidate_names, rated_names):
     B, I = len(candidate_names), len(rated_names)
 
+    weights = np.array(weights)
+
+    if B == 1:   # if only showing one item order by att weight
+        weights = weights.reshape(-1)
+        rated_names = rated_names.reshape(-1)
+        LIMIT_VISIBLE = None
+        reordered_indx = (-weights).argsort()
+        if LIMIT_VISIBLE:
+            reordered_indx = reordered_indx[:LIMIT_VISIBLE]
+        weights = weights[reordered_indx]
+        rated_names = rated_names[reordered_indx]
+        weights = weights.reshape(1, -1)
+    else:
+        LIMIT_VISIBLE = None
+
     fig, ax = plt.subplots(figsize=(19, 9))
-    ax = sns.heatmap(np.array(weights), robust=True, linewidths=1.0, square=True,
+    ax = sns.heatmap(weights, robust=True, linewidths=0.5, square=True,
                      cmap="Blues_r", cbar=True, cbar_kws={"location": "top", "shrink": .25})
     # With annotations:
     # ax = sns.heatmap(np.array(weights), robust=True, annot=np.around(user_matrix, 1), linewidths=1.0, square=True,
@@ -102,15 +117,15 @@ def visualize_attention(weights: np.array, user_matrix: np.array, candidate_name
 
     # We want to show all ticks...
     ax.set_yticks(np.arange(B))
-    ax.set_xticks(np.arange(I))
+    ax.set_xticks(np.arange(I if B > 1 or LIMIT_VISIBLE is None else LIMIT_VISIBLE))
 
     # ... and label them with the respective list entries
     ax.set_yticklabels([name[0] for name in candidate_names], fontsize=8)
-    ax.set_xticklabels([name[0] for name in rated_names.values], fontsize=8)
+    ax.set_xticklabels(rated_names if B == 1 else [name[0] for name in rated_names], fontsize=8)
 
     # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(), rotation=80, ha="right", rotation_mode="anchor")
-    plt.setp(ax.get_yticklabels(), rotation=80, ha="right", rotation_mode="anchor")
+    plt.setp(ax.get_xticklabels(), rotation=75, ha="right", rotation_mode="anchor")
+    plt.setp(ax.get_yticklabels(), rotation=75 if B == 1 else 25, ha="right", rotation_mode="anchor")
 
     # Loop over data dimensions and create text annotations.
     # for i in range(B):

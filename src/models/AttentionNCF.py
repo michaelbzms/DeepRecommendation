@@ -62,7 +62,7 @@ class AttentionNCF(nn.Module):
 
         # visualize attention
         if candidate_names is not None and rated_names is not None:
-            visualize_attention(attention_scores.to('cpu'), user_matrix.to('cpu'), candidate_names, rated_names)
+            visualize_attention(attention_scores.to('cpu'), user_matrix.to('cpu'), candidate_names, rated_names.values)
 
         # aggregate item features based on ratings and attention weights
         attended_user_matrix = torch.mul(attention_scores, user_matrix)
