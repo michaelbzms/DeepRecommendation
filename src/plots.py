@@ -116,8 +116,9 @@ def visualize_attention(weights: np.array, user_matrix: np.array, candidate_name
     #                  cmap="Blues_r", cbar=True, cbar_kws={"location": "top", "shrink": .25}, annot_kws={"size": 6})
 
     # We want to show all ticks...
-    ax.set_yticks(np.arange(B))
-    ax.set_xticks(np.arange(I if B > 1 or LIMIT_VISIBLE is None else LIMIT_VISIBLE))
+    ax.set_yticks(np.arange(B) + 0.5)
+    ax.set_xticks(np.arange(I if B > 1 or LIMIT_VISIBLE is None else LIMIT_VISIBLE) + 0.5)
+    ax.tick_params(axis='both', which='both', length=0)
 
     # ... and label them with the respective list entries
     ax.set_yticklabels([name[0] for name in candidate_names], fontsize=8)
