@@ -17,7 +17,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 # perform attention visualization on top of evaluation
-visualize = False
+visualize = True
 
 
 def evaluate_model(model: nn.Module):
@@ -28,7 +28,7 @@ def evaluate_model(model: nn.Module):
     print('Test size:', len(test_dataset))
 
     if visualize:
-        B = 1
+        B = 8
         test_loader = DataLoader(test_dataset, batch_size=B, collate_fn=MyCollator(with_names=True), shuffle=True)
     else:
         test_loader = DataLoader(test_dataset, batch_size=val_batch_size, collate_fn=my_collate_fn)

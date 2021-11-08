@@ -9,7 +9,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class AttentionNCF(nn.Module):
     def __init__(self, item_dim, dropout_rate=0.2,
-                 item_emb=256, user_emb=512,
+                 item_emb=512, user_emb=512, att_dense=None,
                  dense1=1024, dense2=512, dense3=256, dense4=128):
         super(AttentionNCF, self).__init__()
         self.ItemEmbeddings = nn.Sequential(
@@ -20,9 +20,17 @@ class AttentionNCF(nn.Module):
             nn.Linear(item_dim, user_emb),
             nn.ReLU()
         )
-        self.AttentionNet = nn.Sequential(
-            nn.Linear(2*item_emb, 1)
-        )
+        if att_dense is not None:
+            self.AttentionNet = nn.Sequential(
+                nn.Linear(2*item_emb, att_dense),
+                nn.ReLU(),
+                nn.Dropout(dropout_rate),
+                nn.Linear(att_dense, 1)
+            )
+        else:
+            self.AttentionNet = nn.Sequential(
+                nn.Linear(2 * item_emb, 1)
+            )
         self.MLP = nn.Sequential(
             nn.Linear(item_emb + user_emb, dense1),
             nn.ReLU(),
@@ -43,14 +51,16 @@ class AttentionNCF(nn.Module):
         I = rated_items.shape[0]      # == user_matrix.shape[1]
         B = candidate_items.shape[0]  # == user_matrix.shape[0]
 
-        # TODO: use emb instead of features for attention? Use detach or not?
-        candidate_emb = self.ItemEmbeddings(candidate_items).detach()
-        rated_emb = self.ItemEmbeddings(rated_items).detach()
+        # pass through item embeddings layer
+        candidate_item_embeddings = self.ItemEmbeddings(candidate_items)
+
+        # TODO:  Use detach or not?
+        rated_emb = self.ItemEmbeddings(rated_items)  # .detach()
 
         # attention on rated items
         """ Note: the one that interleaves matters! I think this works correctly into (B, I) shape 
         because the first I elements contain all different rated items and they become the first row of length I """
-        attNetInput = torch.cat((candidate_emb.repeat_interleave(I, dim=0), rated_emb.repeat(B, 1)), dim=1)
+        attNetInput = torch.cat((candidate_item_embeddings.repeat_interleave(I, dim=0), rated_emb.repeat(B, 1)), dim=1)
         attention_scores = self.AttentionNet(attNetInput).view(B, I)
         # mask unrated items per user (!) - otherwise there may be high weights on 0 entries
         attention_scores[user_matrix == 0.0] = -float('inf')    # so that softmax gives this a 0 attention weight
@@ -66,13 +76,11 @@ class AttentionNCF(nn.Module):
         attended_user_matrix = torch.mul(attention_scores, user_matrix)
         user_estimated_features = torch.matmul(attended_user_matrix, rated_items)
 
-        # pass through item embeddings layer
-        item_embeddings = self.ItemEmbeddings(candidate_items)
         # pass through user embeddings layer
         user_embeddings = self.UserEmbeddings(user_estimated_features)   # TODO: or use embeddings here as well?
 
         # combine
-        combined = torch.cat((item_embeddings, user_embeddings), dim=1)
+        combined = torch.cat((candidate_item_embeddings, user_embeddings), dim=1)
 
         # MLP part
         out = self.MLP(combined)
