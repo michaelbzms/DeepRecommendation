@@ -6,7 +6,7 @@ from tqdm import tqdm
 import warnings
 
 from globals import movielens_path, rdf_path, item_metadata_file, train_set_file, val_set_file, test_set_file, seed, \
-    user_ratings_file, user_embeddings_file
+    user_ratings_file, user_embeddings_file, full_matrix_file
 
 
 def load_user_ratings(movielens_data_folder, LIMIT_USERS=None):
@@ -239,11 +239,11 @@ if __name__ == '__main__':
         # user_ratings: pd.DataFrame = utility_matrix.drop('timestamp', axis=1).groupby('userId').apply(list)
         print('Saving user ratings from train set only...')
         if split_embeddings_from_train:
-            ratings_for_embeddings = embeddings
+            ratings_to_use = embeddings
         else:
-            ratings_for_embeddings = train
+            ratings_to_use = train
         # IMPORTANT to sort by movieId
-        user_ratings: pd.DataFrame = ratings_for_embeddings.drop('timestamp', axis=1).sort_values(by='movieId').groupby('userId').agg({'rating': list, 'movieId': list})
+        user_ratings: pd.DataFrame = ratings_to_use.drop('timestamp', axis=1).sort_values(by='movieId').groupby('userId').agg({'rating': list, 'movieId': list})
         user_ratings['rating'] = user_ratings['rating'].apply(lambda x: np.array(x))
         user_ratings['movieId'] = user_ratings['movieId'].apply(lambda x: np.array(x))
         user_ratings['meanRating'] = user_ratings['rating'].apply(lambda x: np.mean(x))
@@ -275,6 +275,7 @@ if __name__ == '__main__':
     save_set(train, train_set_file)
     save_set(val, val_set_file)
     save_set(test, test_set_file)
+    save_set(utility_matrix, full_matrix_file)
     print('OK!')
 
     train.hist(column='timestamp')

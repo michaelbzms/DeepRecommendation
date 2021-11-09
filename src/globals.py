@@ -11,6 +11,7 @@ audio_features_file = '../data/audio_features'
 train_set_file = '../data/train'
 val_set_file = '../data/val'
 test_set_file = '../data/test'
+full_matrix_file = '../data/full_utility_matrix'
 
 # random seed to use for data creation
 seed = 102

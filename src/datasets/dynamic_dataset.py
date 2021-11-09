@@ -17,7 +17,7 @@ class MovieLensDataset(Dataset):
     user_ratings: pd.DataFrame = pd.read_hdf(user_ratings_file + '.h5')
     print('Done')
 
-    def __init__(self, file):      # 'metadata', 'audio' or 'all'
+    def __init__(self, file):
         self.samples: pd.DataFrame = pd.read_csv(file + '.csv')
 
     def __getitem__(self, item):
