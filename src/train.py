@@ -133,7 +133,8 @@ if __name__ == '__main__':
     item_dim = MovieLensDataset.get_metadata_dim()
 
     # create model
-    model = AttentionNCF(item_dim, dropout_rate=dropout_rate)
+    model = AttentionNCF(item_dim, dropout_rate=dropout_rate,
+                         item_emb=256, user_emb=256, att_dense=16, mlp_dense_layers=[256, 128])
     model.to(device)
     print(model)
 

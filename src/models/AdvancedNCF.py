@@ -30,7 +30,7 @@ class AdvancedNCF(NCF):
         # item part
         candidate_embeddings = self.item_embeddings(candidate_items)
         # user part
-        rated_embeddings = self.item_embeddings(item_matrix).detach()   # (!) detach
+        rated_embeddings = self.item_embeddings(item_matrix)
         ratings_per_user = user_matrix.count_nonzero(dim=1)
         ratings_per_user[ratings_per_user == 0] = 1.0       # avoid div by zero
         user_embeddings = torch.div(torch.matmul(user_matrix, rated_embeddings), ratings_per_user.view(-1, 1))
