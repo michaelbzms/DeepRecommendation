@@ -1,6 +1,10 @@
 import torch
 from torch import nn
 
+"""
+Depricated. TODO: update to current way
+"""
+
 
 class BasicNCF(nn.Module):
     def __init__(self, item_dim, user_dim, dropout_rate=0.2,

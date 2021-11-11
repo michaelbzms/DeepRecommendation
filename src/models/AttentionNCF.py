@@ -2,16 +2,20 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+from models.NCF import NCF
 from plots import visualize_attention
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-class AttentionNCF(nn.Module):
-    def __init__(self, item_dim, dropout_rate=0.2,
-                 item_emb=512, user_emb=512, att_dense=None,
-                 dense1=1024, dense2=512, dense3=256, dense4=128):
+class AttentionNCF(NCF):
+    def __init__(self, item_dim, item_emb=256, user_emb=256, att_dense=None,
+                 dense1=1024, dense2=512, dense3=256, dense4=128, dropout_rate=0.2):
         super(AttentionNCF, self).__init__()
+        # save the (hyper) parameters needed to construct this object when saving model
+        self.kwargs = {'item_dim': item_dim, 'item_emb': item_emb, 'user_emb': user_emb, 'att_dense': att_dense,
+                       'dense1': dense1, 'dense2': dense2, 'dense3': dense3, 'dense4': dense4}
+        # layers
         self.ItemEmbeddings = nn.Sequential(
             nn.Linear(item_dim, item_emb),
             nn.ReLU()
@@ -46,6 +50,9 @@ class AttentionNCF(nn.Module):
             nn.Dropout(dropout_rate),
             nn.Linear(dense4, 1)
         )
+
+    def get_model_parameters(self) -> dict[str]:
+        return self.kwargs
 
     def forward(self, candidate_items, rated_items, user_matrix, candidate_names=None, rated_names=None):
         I = rated_items.shape[0]      # == user_matrix.shape[1]

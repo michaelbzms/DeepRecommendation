@@ -8,6 +8,7 @@ from datasets.dynamic_dataset import MovieLensDataset, my_collate_fn, my_collate
 from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, max_epochs, early_stop, \
     stop_with_train_loss_instead, checkpoint_model_path, patience, dropout_rate, final_model_path, embeddings_lr, \
     val_batch_size
+from models import NCF
 from models.AdvancedNCF import AdvancedNCF
 from models.AttentionNCF import AttentionNCF
 from plots import plot_train_val_losses
@@ -15,7 +16,7 @@ from plots import plot_train_val_losses
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-def train_model(model: nn.Module, save=True, optimizer=None):
+def train_model(model: NCF, save=True, optimizer=None):
     # torch.autograd.set_detect_anomaly(True)   # this slows down training
     model.to(device)
 
@@ -28,10 +29,13 @@ def train_model(model: nn.Module, save=True, optimizer=None):
     val_loader = DataLoader(val_dataset, batch_size=val_batch_size, collate_fn=my_collate_fn)
 
     # define optimizer and loss
-    # optimizer = optim.Adam([  # TODO add for attention
+    # Fore separate lrs:
+
+    # optimizer = optim.Adam([
     #     {'params': model.item_embeddings.parameters(), 'lr': embeddings_lr},
     #     {'params': model.MLP.parameters(), 'lr': lr}
     # ], weight_decay=weight_decay)
+
     if optimizer is None:
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     criterion = nn.MSELoss(reduction='sum')   # don't average the loss as we shall do that ourselves for the whole epoch
@@ -91,7 +95,7 @@ def train_model(model: nn.Module, save=True, optimizer=None):
         if early_stop:
             if least_running_loss is None or (not stop_with_train_loss_instead and val_sum_loss < least_running_loss) \
                     or (stop_with_train_loss_instead and train_sum_loss < least_running_loss):
-                torch.save(model.state_dict(), checkpoint_model_path)
+                model.save_model(checkpoint_model_path)   # saves kwargs as well
                 checkpoint_epoch = epoch
                 least_running_loss = val_sum_loss if not stop_with_train_loss_instead else train_sum_loss
                 early_stop_times = 0  # reset
@@ -99,20 +103,23 @@ def train_model(model: nn.Module, save=True, optimizer=None):
                 if early_stop_times >= patience:
                     print(f'Early stopping at epoch {epoch + 1}.')
                     print(f'Loading best model from checkpoint from epoch {checkpoint_epoch + 1}.')
-                    model.load_state_dict(torch.load(checkpoint_model_path))
+                    state, _ = NCF.load_model_state_and_params(checkpoint_model_path)  # ignore kwargs -> we know them
+                    model.load_state_dict(state)
+                    # Old way: model.load_state_dict(torch.load(checkpoint_model_path))
                     model.eval()
                     break
                 else:
                     early_stop_times += 1
                     if epoch == max_epochs - 1:
                         print(f'Loss worsened in last epoch(s), loading best model from checkpoint from epoch {checkpoint_epoch}')
-                        model.load_state_dict(torch.load(checkpoint_model_path))
+                        state, _ = NCF.load_model_state_and_params(checkpoint_model_path)  # ignore kwargs -> we know them
+                        model.load_state_dict(state)
                         model.eval()
 
     # save model (its weights)
     if save:
         print('Saving model...')
-        torch.save(model.state_dict(), final_model_path)
+        model.save_model(final_model_path)
         print('Done!')
 
     # plot and save losses

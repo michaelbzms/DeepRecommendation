@@ -2,13 +2,13 @@ from math import sqrt
 
 import numpy as np
 import torch
-from matplotlib import pyplot as plt
 from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from datasets.dynamic_dataset import MovieLensDataset, my_collate_fn, my_collate_fn2, MyCollator, NamedMovieLensDataset
 from globals import test_set_file, val_batch_size
+from models import NCF
 from models.AdvancedNCF import AdvancedNCF
 from models.AttentionNCF import AttentionNCF
 from plots import plot_residuals, plot_stacked_residuals
@@ -17,7 +17,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 # perform attention visualization on top of evaluation
-visualize = True
+visualize = False
 
 
 def evaluate_model(model: nn.Module):
@@ -82,9 +82,12 @@ if __name__ == '__main__':
     item_dim = MovieLensDataset.get_metadata_dim()
 
     # create model and load trained weights
-    model = AttentionNCF(item_dim)
-    model.load_state_dict(torch.load(model_file))
-    model.to(device)
+    model = NCF.load_model(model_file, AttentionNCF)
+    print(model)
+
+    # old way:
+    # model = AttentionNCF(item_dim)
+    # model.load_state_dict(torch.load(model_file))
 
     # evaluate model on test set
     evaluate_model(model)

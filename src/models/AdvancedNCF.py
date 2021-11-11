@@ -1,11 +1,14 @@
 import torch
 from torch import nn
 
+from models.NCF import NCF
 
-class AdvancedNCF(nn.Module):
-    def __init__(self, item_dim, item_embeddings_size=128, dropout_rate=0.2,
-                 dense1=128, dense2=64):
+
+class AdvancedNCF(NCF):
+    def __init__(self, item_dim, item_embeddings_size=128, dense1=128, dense2=64, dropout_rate=0.2):
         super(AdvancedNCF, self).__init__()
+        self.kwargs = {'item_dim': item_dim, 'item_embeddings_size': item_embeddings_size,
+                       'dense1': dense1, 'dense2': dense2}
         self.item_embeddings = nn.Sequential(
             nn.Linear(item_dim, item_embeddings_size),
             nn.ReLU()
@@ -19,6 +22,9 @@ class AdvancedNCF(nn.Module):
             nn.Dropout(dropout_rate),
             nn.Linear(dense2, 1)
         )
+
+    def get_model_parameters(self) -> dict[str]:
+        return self.kwargs
 
     def forward(self, candidate_items, item_matrix, user_matrix):
         # item part
