@@ -11,7 +11,7 @@ class MovieLensDataset(Dataset):
     print('Initializing common dataset prerequisites...')
     metadata: pd.DataFrame = pd.read_hdf(item_metadata_file + '.h5')
     audio: pd.DataFrame = pd.read_csv(audio_features_file + '.csv', sep=';', index_col='movieId')
-    item_names = pd.DataFrame(index=audio.index, data=audio['primaryTitle'].copy())
+    item_names = pd.DataFrame(index=audio.index, data=audio['primaryTitle'].copy()).loc[metadata.index]
     audio.drop(['primaryTitle', 'fileName'], axis=1, inplace=True)   # drop non-features if they exist
     audio = audio.astype(np.float64)
     user_ratings: pd.DataFrame = pd.read_hdf(user_ratings_file + '.h5')
@@ -40,6 +40,9 @@ class MovieLensDataset(Dataset):
 
     def __len__(self):
         return self.samples.shape[0]
+
+    def get_I(self):
+        return self.metadata.shape[0]
 
     @staticmethod
     def get_metadata_dim():
@@ -119,28 +122,17 @@ def my_collate_fn(batch, with_names=False):
     else:
         candidate_names = np.vstack(batch_data[-1]) if len(batch_data[-1]) > 1 else batch_data[-1]
         rated_item_names = MovieLensDataset.item_names.loc[rated_items_ids]
-        return candidate_items, rated_items, user_matrix, targets, candidate_names, rated_item_names
+        return candidate_items, rated_items, user_matrix, targets, candidate_names.flatten(), rated_item_names
 
 
 def my_collate_fn2(batch, with_names=False):
+    # TODO: test if it works ok, only use this for eval?
+
     # turn per-row to per-column
     batch_data = list(zip(*batch))
     # stack torch tensors from dataset
     candidate_items = torch.stack(batch_data[0])
     targets = torch.FloatTensor(batch_data[2])
-
-    # get ALL item features
-    if features_to_use == 'metadata':
-        item_matrix = torch.FloatTensor(np.stack(MovieLensDataset.metadata['features'].values))
-    elif features_to_use == 'audio':
-        item_matrix = torch.FloatTensor(MovieLensDataset.audio.astype(np.float64).values)
-    elif features_to_use == 'all' or features_to_use == 'both':
-        v1 = torch.FloatTensor(np.stack(MovieLensDataset.metadata['features'].values))
-        v2 = torch.FloatTensor(MovieLensDataset.audio.astype(np.float64).values)
-        item_matrix = torch.cat((v1, v2), dim=1)
-    else:
-        raise Exception('Invalid features_to_use parameter in dataset')
-
     # for the user part we do all the work here.
     # get user ids in batch and their ratings
     user_ids = list(batch_data[1])
@@ -150,7 +142,22 @@ def my_collate_fn2(batch, with_names=False):
     # TODO: This will work but ONLY IF ratings are ORDERED by movieId when we create the dataset. Else the ratings will be misplaced! Be careful!
     user_matrix[user_matrix == 1] = np.concatenate((user_ratings['rating'] - user_ratings['meanRating']).values)
     # check: e.g. user_matrix[0, rated_movies == 'tt0114709']
-    user_matrix = torch.FloatTensor(user_matrix)       # convert to tensor
-    # get features for all rated items in batch
+    user_matrix = torch.FloatTensor(user_matrix)  # convert to tensor
+    # get features for ALL items
+    if features_to_use == 'metadata':
+        all_item_features = torch.FloatTensor(np.stack(MovieLensDataset.metadata['features'].values))
+    elif features_to_use == 'audio':
+        all_item_features = torch.FloatTensor(MovieLensDataset.audio.loc[MovieLensDataset.metadata.index].astype(np.float64).values)
+    elif features_to_use == 'all' or features_to_use == 'both':
+        all_item_features = torch.cat((torch.FloatTensor(np.stack(MovieLensDataset.metadata['features'].values)),
+                                       torch.FloatTensor(MovieLensDataset.audio.loc[MovieLensDataset.metadata.index].astype(np.float64).values)), dim=1)
+        # TODO: audio features have more imbdIds?
+    else:
+        raise Exception('Invalid features_to_use parameter in dataset')
 
-    return candidate_items, item_matrix, user_matrix, targets
+    if not with_names:
+        return candidate_items, all_item_features, user_matrix, targets
+    else:
+        candidate_names = np.vstack(batch_data[-1]) if len(batch_data[-1]) > 1 else batch_data[-1]
+        all_item_names = MovieLensDataset.item_names
+        return candidate_items, all_item_features, user_matrix, targets, candidate_names.flatten(), all_item_names

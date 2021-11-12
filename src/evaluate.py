@@ -1,6 +1,7 @@
 from math import sqrt
 
 import numpy as np
+import pandas as pd
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
@@ -18,18 +19,25 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # perform attention visualization on top of evaluation
 visualize = False
+keep_att_stats = True
 
 
-def evaluate_model(model: nn.Module):
+def evaluate_model(model: NCF):
     model.to(device)
 
     # load dataset
     test_dataset = NamedMovieLensDataset(test_set_file)
     print('Test size:', len(test_dataset))
 
+    att_stats = None
+    I = test_dataset.get_I()
     if visualize:
-        B = 8
-        test_loader = DataLoader(test_dataset, batch_size=B, collate_fn=MyCollator(with_names=True), shuffle=True)
+        B = 4
+        test_loader = DataLoader(test_dataset, batch_size=B, collate_fn=MyCollator(only_rated=True, with_names=True), shuffle=True)
+    elif keep_att_stats:
+        att_stats = {'sum': pd.DataFrame(index=MovieLensDataset.item_names.values.flatten(), columns=MovieLensDataset.item_names.values.flatten(), data=np.zeros((I, I))),
+                     'count': pd.DataFrame(index=MovieLensDataset.item_names.values.flatten(), columns=MovieLensDataset.item_names.values.flatten(), data=np.zeros((I, I), dtype=np.int32))}
+        test_loader = DataLoader(test_dataset, batch_size=val_batch_size, collate_fn=MyCollator(only_rated=False, with_names=True))
     else:
         test_loader = DataLoader(test_dataset, batch_size=val_batch_size, collate_fn=my_collate_fn)
 
@@ -49,7 +57,13 @@ def evaluate_model(model: nn.Module):
                 candidate_items, rated_items, user_matrix, y_batch, candidate_names, rated_names = data
                 # forward model
                 out = model(candidate_items.float().to(device), rated_items.float().to(device), user_matrix.float().to(device),
-                            candidate_names=candidate_names, rated_names=rated_names)
+                            candidate_names=candidate_names, rated_names=rated_names, visualize=True)
+            elif keep_att_stats:
+                # get the input matrices and the target
+                candidate_items, rated_items, user_matrix, y_batch, candidate_names, rated_names = data
+                # forward model
+                out = model(candidate_items.float().to(device), rated_items.float().to(device), user_matrix.float().to(device),
+                            att_stats=att_stats, candidate_names=candidate_names, rated_names=rated_names)
             else:
                 # get the input matrices and the target
                 candidate_items, rated_items, user_matrix, y_batch = data
@@ -66,6 +80,9 @@ def evaluate_model(model: nn.Module):
 
     test_mse = test_sum_loss / test_size
     print(f'Test loss (MSE): {test_mse:.6f} - RMSE: {sqrt(test_mse):.6f}')
+
+    print(att_stats['count'])
+    print(att_stats['sum'])
 
     fitted_values = np.concatenate(fitted_values, dtype=np.float64).reshape(-1)
     ground_truth = np.concatenate(ground_truth, dtype=np.float64).reshape(-1)

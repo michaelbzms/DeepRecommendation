@@ -1,6 +1,8 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+import pandas as pd
+import numpy as np
 
 from models.NCF import NCF
 from plots import visualize_attention
@@ -52,7 +54,7 @@ class AttentionNCF(NCF):
     def get_model_parameters(self) -> dict[str]:
         return self.kwargs
 
-    def forward(self, candidate_items, rated_items, user_matrix, candidate_names=None, rated_names=None):
+    def forward(self, candidate_items, rated_items, user_matrix, candidate_names=None, rated_names=None, att_stats=None, visualize=False):
         I = rated_items.shape[0]      # == user_matrix.shape[1]
         B = candidate_items.shape[0]  # == user_matrix.shape[0]
 
@@ -74,8 +76,18 @@ class AttentionNCF(NCF):
         attention_scores = attention_scores.nan_to_num(nan=0.0, posinf=0.0, neginf=0.0)  # will get NaNs if a user has 0 ratings. Replace those with 0
 
         # visualize attention
-        if candidate_names is not None and rated_names is not None:
-            visualize_attention(attention_scores.to('cpu'), user_matrix.to('cpu'), candidate_names, rated_names.values)
+        if visualize and candidate_names is not None and rated_names is not None:
+            visualize_attention(attention_scores.to('cpu').detach(), user_matrix.to('cpu').detach(), candidate_names, rated_names.values)
+
+        # keep stats for attention weights and items
+        if att_stats is not None and candidate_names is not None and rated_names is not None:
+            att_scores_np = attention_scores.to('cpu').detach().numpy()
+            counts = np.zeros((B, I), dtype=np.int)
+            counts[user_matrix.to('cpu').detach() != 0.0] = 1
+            # Old attempt: att_scores_df = pd.DataFrame(index=candidate_names, columns=rated_names['primaryTitle'], data=att_scores_np)
+            for i in range(len(candidate_names)):
+                att_stats['sum'].loc[candidate_names[i]] += att_scores_np[i, :]
+                att_stats['count'].loc[candidate_names[i]] += counts[i, :]
 
         # aggregate item features based on ratings and attention weights
         attended_user_matrix = torch.mul(attention_scores, user_matrix)

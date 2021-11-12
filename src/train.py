@@ -102,7 +102,7 @@ def train_model(model: NCF, save=True, optimizer=None):
             else:
                 if early_stop_times >= patience:
                     print(f'Early stopping at epoch {epoch + 1}.')
-                    print(f'Loading best model from checkpoint from epoch {checkpoint_epoch + 1}.')
+                    print(f'Loading best model from checkpoint from epoch {checkpoint_epoch + 1} with loss: {least_running_loss / val_size:.6f}')
                     state, _ = NCF.load_model_state_and_params(checkpoint_model_path)  # ignore kwargs -> we know them
                     model.load_state_dict(state)
                     # Old way: model.load_state_dict(torch.load(checkpoint_model_path))
@@ -134,7 +134,7 @@ if __name__ == '__main__':
 
     # create model
     model = AttentionNCF(item_dim, dropout_rate=dropout_rate,
-                         item_emb=256, user_emb=256, att_dense=16, mlp_dense_layers=[256, 128])
+                         item_emb=128, user_emb=128, att_dense=16, mlp_dense_layers=[256, 128])
     model.to(device)
     print(model)
 
