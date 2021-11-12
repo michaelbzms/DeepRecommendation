@@ -126,7 +126,7 @@ def my_collate_fn(batch, with_names=False):
 
 
 def my_collate_fn2(batch, with_names=False):
-    # TODO: test if it works ok, only use this for eval?
+    # TODO: This is bugged, causes higher test MSE, probably messes up the ratings
 
     # turn per-row to per-column
     batch_data = list(zip(*batch))

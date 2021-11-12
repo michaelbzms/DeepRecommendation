@@ -136,3 +136,36 @@ def visualize_attention(weights: np.array, user_matrix: np.array, candidate_name
     ax.set_title("Attention weights visualization")
     fig.tight_layout()
     plt.show()
+
+
+def plot_att_stats(att_stats, item_names):
+    item_names = [(i[:17] + '...' if len(i) > 20 else i) for i in item_names]
+
+    I = len(item_names)
+
+    ratios = att_stats['sum'] / np.max(att_stats['count'].values, 1)
+    print(ratios)
+
+    fig, ax = plt.subplots(figsize=(16, 12))
+    ax = sns.heatmap(ratios, robust=True, vmin=0, linewidths=0.5, square=True, annot=False, annot_kws={"size": 6},
+                     fmt='.2f', cmap="Blues_r", cbar=False, cbar_kws={"location": "top", "shrink": .25})
+    # With rating annotations:
+    # ax = sns.heatmap(np.array(weights), robust=True, annot=np.around(user_matrix, 1), linewidths=1.0, square=True,
+    #                  cmap="Blues_r", cbar=True, cbar_kws={"location": "top", "shrink": .25}, annot_kws={"size": 6})
+
+    # We want to show all ticks...
+    ax.set_yticks(np.arange(I) + 0.5)
+    ax.set_xticks(np.arange(I) + 0.5)
+    ax.tick_params(axis='both', which='both', length=0)
+
+    # ... and label them with the respective list entries
+    ax.set_yticklabels(item_names, fontsize=5)
+    ax.set_xticklabels(item_names, fontsize=5)
+
+    # Rotate the tick labels and set their alignment.
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+    plt.setp(ax.get_yticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+
+    ax.set_title("Cumulative attention weights visualization")
+    fig.tight_layout()
+    plt.show()

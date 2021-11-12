@@ -12,14 +12,14 @@ from globals import test_set_file, val_batch_size
 from models import NCF
 from models.AdvancedNCF import AdvancedNCF
 from models.AttentionNCF import AttentionNCF
-from plots import plot_residuals, plot_stacked_residuals
+from plots import plot_residuals, plot_stacked_residuals, plot_att_stats
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 # perform attention visualization on top of evaluation
 visualize = False
-keep_att_stats = True
+keep_att_stats = False
 
 
 def evaluate_model(model: NCF):
@@ -81,8 +81,8 @@ def evaluate_model(model: NCF):
     test_mse = test_sum_loss / test_size
     print(f'Test loss (MSE): {test_mse:.6f} - RMSE: {sqrt(test_mse):.6f}')
 
-    print(att_stats['count'])
-    print(att_stats['sum'])
+    if keep_att_stats:
+        plot_att_stats(att_stats, item_names=MovieLensDataset.item_names.values.flatten())
 
     fitted_values = np.concatenate(fitted_values, dtype=np.float64).reshape(-1)
     ground_truth = np.concatenate(ground_truth, dtype=np.float64).reshape(-1)
@@ -93,7 +93,7 @@ def evaluate_model(model: NCF):
 
 
 if __name__ == '__main__':
-    model_file = '../models/final_model.pt'
+    model_file = '../models/first_att_model_trained.pt'
 
     # get metadata dim
     item_dim = MovieLensDataset.get_metadata_dim()
