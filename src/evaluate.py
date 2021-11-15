@@ -12,14 +12,14 @@ from globals import test_set_file, val_batch_size
 from models import NCF
 from models.AdvancedNCF import AdvancedNCF
 from models.AttentionNCF import AttentionNCF
-from plots import plot_residuals, plot_stacked_residuals, plot_att_stats
+from plots import plot_residuals, plot_stacked_residuals, plot_att_stats, plot_rated_items_counts
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 # perform attention visualization on top of evaluation
 visualize = False
-keep_att_stats = False
+keep_att_stats = True
 
 
 def evaluate_model(model: NCF):
@@ -39,7 +39,7 @@ def evaluate_model(model: NCF):
                      'count': pd.DataFrame(index=MovieLensDataset.item_names.values.flatten(), columns=MovieLensDataset.item_names.values.flatten(), data=np.zeros((I, I), dtype=np.int32))}
         test_loader = DataLoader(test_dataset, batch_size=val_batch_size, collate_fn=MyCollator(only_rated=False, with_names=True))
     else:
-        test_loader = DataLoader(test_dataset, batch_size=val_batch_size, collate_fn=my_collate_fn2)
+        test_loader = DataLoader(test_dataset, batch_size=val_batch_size, collate_fn=my_collate_fn)
 
     criterion = nn.MSELoss(reduction='sum')   # don't average the loss as we shall do that ourselves for the whole epoch
 
@@ -82,14 +82,15 @@ def evaluate_model(model: NCF):
     print(f'Test loss (MSE): {test_mse:.6f} - RMSE: {sqrt(test_mse):.6f}')
 
     if keep_att_stats:
+        plot_rated_items_counts(att_stats['count'], item_names=MovieLensDataset.item_names.values.flatten())
         plot_att_stats(att_stats, item_names=MovieLensDataset.item_names.values.flatten())
+    else:
+        fitted_values = np.concatenate(fitted_values, dtype=np.float64).reshape(-1)
+        ground_truth = np.concatenate(ground_truth, dtype=np.float64).reshape(-1)
 
-    fitted_values = np.concatenate(fitted_values, dtype=np.float64).reshape(-1)
-    ground_truth = np.concatenate(ground_truth, dtype=np.float64).reshape(-1)
-
-    # plot_fitted_vs_targets(fitted_values, ground_truth)
-    plot_stacked_residuals(fitted_values, ground_truth)
-    plot_residuals(fitted_values, ground_truth)
+        # plot_fitted_vs_targets(fitted_values, ground_truth)
+        plot_stacked_residuals(fitted_values, ground_truth)
+        plot_residuals(fitted_values, ground_truth)
 
 
 if __name__ == '__main__':
