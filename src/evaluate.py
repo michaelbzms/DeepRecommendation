@@ -39,7 +39,7 @@ def evaluate_model(model: NCF):
                      'count': pd.DataFrame(index=MovieLensDataset.item_names.values.flatten(), columns=MovieLensDataset.item_names.values.flatten(), data=np.zeros((I, I), dtype=np.int32))}
         test_loader = DataLoader(test_dataset, batch_size=val_batch_size, collate_fn=MyCollator(only_rated=False, with_names=True))
     else:
-        test_loader = DataLoader(test_dataset, batch_size=val_batch_size, collate_fn=my_collate_fn)
+        test_loader = DataLoader(test_dataset, batch_size=val_batch_size, collate_fn=my_collate_fn2)
 
     criterion = nn.MSELoss(reduction='sum')   # don't average the loss as we shall do that ourselves for the whole epoch
 

@@ -15,6 +15,7 @@ class MovieLensDataset(Dataset):
     audio.drop(['primaryTitle', 'fileName'], axis=1, inplace=True)   # drop non-features if they exist
     audio = audio.astype(np.float64)
     user_ratings: pd.DataFrame = pd.read_hdf(user_ratings_file + '.h5')
+    item_ids = np.array(sorted(metadata.index.to_list()))
     print('Done')
 
     def __init__(self, file):
@@ -43,6 +44,10 @@ class MovieLensDataset(Dataset):
 
     def get_I(self):
         return self.metadata.shape[0]
+
+    @staticmethod
+    def get_all_itemIds_sorted():
+        return MovieLensDataset.item_ids
 
     @staticmethod
     def get_metadata_dim():
@@ -138,19 +143,20 @@ def my_collate_fn2(batch, with_names=False):
     user_ids = list(batch_data[1])
     user_ratings = MovieLensDataset.user_ratings.loc[user_ids]
     # multi-hot encode sparse ratings into a matrix form
-    user_matrix = multihot_encode(user_ratings['movieId'], MovieLensDataset.metadata.index.to_list()).astype(np.float64)
+    all_item_ids = MovieLensDataset.get_all_itemIds_sorted()
+    user_matrix = multihot_encode(user_ratings['movieId'], all_item_ids).astype(np.float64)
     # TODO: This will work but ONLY IF ratings are ORDERED by movieId when we create the dataset. Else the ratings will be misplaced! Be careful!
     user_matrix[user_matrix == 1] = np.concatenate((user_ratings['rating'] - user_ratings['meanRating']).values)
     # check: e.g. user_matrix[0, rated_movies == 'tt0114709']
     user_matrix = torch.FloatTensor(user_matrix)  # convert to tensor
     # get features for ALL items
     if features_to_use == 'metadata':
-        all_item_features = torch.FloatTensor(np.stack(MovieLensDataset.metadata['features'].values))
+        all_item_features = torch.FloatTensor(np.stack(MovieLensDataset.metadata.loc[all_item_ids]['features'].values))    # (!) Note: .loc important to reorder all item features
     elif features_to_use == 'audio':
-        all_item_features = torch.FloatTensor(MovieLensDataset.audio.loc[MovieLensDataset.metadata.index].astype(np.float64).values)
+        all_item_features = torch.FloatTensor(MovieLensDataset.audio.loc[all_item_ids].astype(np.float64).values)
     elif features_to_use == 'all' or features_to_use == 'both':
-        all_item_features = torch.cat((torch.FloatTensor(np.stack(MovieLensDataset.metadata['features'].values)),
-                                       torch.FloatTensor(MovieLensDataset.audio.loc[MovieLensDataset.metadata.index].astype(np.float64).values)), dim=1)
+        all_item_features = torch.cat((torch.FloatTensor(np.stack(MovieLensDataset.metadata.loc[all_item_ids]['features'].values)),
+                                       torch.FloatTensor(MovieLensDataset.audio.loc[all_item_ids].astype(np.float64).values)), dim=1)
         # TODO: audio features have more imbdIds?
     else:
         raise Exception('Invalid features_to_use parameter in dataset')
