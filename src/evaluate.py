@@ -19,7 +19,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 # perform attention visualization on top of evaluation
-visualize = False
+visualize = True
 keep_att_stats = False
 
 
@@ -33,7 +33,7 @@ def evaluate_model(model: NCF):
     att_stats = None
     I = test_dataset.get_I()
     if visualize and isinstance(model, AttentionNCF):
-        B = 4
+        B = 1
         test_loader = DataLoader(test_dataset, batch_size=B, collate_fn=MyCollator(only_rated=True, with_names=True), shuffle=True)
     elif keep_att_stats and isinstance(model, AttentionNCF):
         att_stats = {'sum': pd.DataFrame(index=MovieLensDataset.get_sorted_item_names(), columns=MovieLensDataset.get_sorted_item_names(), data=np.zeros((I, I))),
@@ -95,13 +95,13 @@ def evaluate_model(model: NCF):
 
 
 if __name__ == '__main__':
-    model_file = '../models/AdvancedNCF_audio_meta.pt'
+    model_file = '../models/final_model.pt'
 
     # get metadata dim
     item_dim = MovieLensDataset.get_metadata_dim()
 
     # load model with correct layer sizes
-    model = load_model(model_file, AdvancedNCF)
+    model = load_model(model_file, AttentionNCF)
     print(model)
 
     # evaluate model on test set

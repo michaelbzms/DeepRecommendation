@@ -6,12 +6,16 @@ from globals import train_set_file, test_set_file
 class UtilityMatrix:
     def __init__(self, file):
         """ Read utility matrix in sparse (userId, movieId, rating) format """
+        self.file = file
         self.sparse_matrix: pd.DataFrame = pd.read_csv(file + '.csv')
         # go from sparse to dense format:
         self.matrix = self.sparse_matrix.pivot(index='userId', columns='movieId', values='rating')
 
         self.item_avg_ratings = self.matrix.mean(axis=0)    # NaNs ignored
         self.user_avg_ratings = self.matrix.mean(axis=1)    # NaNs ignored
+
+    def get_file(self):
+        return self.file
 
     def get_items_mean_ratings(self):
         return self.item_avg_ratings.copy()
