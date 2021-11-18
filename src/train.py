@@ -2,7 +2,7 @@ import torch
 from torch import optim, nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-
+from torch.utils.tensorboard import SummaryWriter
 
 from datasets.dynamic_dataset import MovieLensDataset, my_collate_fn, my_collate_fn2
 from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, max_epochs, early_stop, \
@@ -25,7 +25,7 @@ def train_model(model: NCF, save=True, optimizer=None):
     val_dataset = MovieLensDataset(val_set_file)
     print('Training size:', len(train_dataset), ' - Validation size:', len(val_dataset))
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=my_collate_fn)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=my_collate_fn2)
     val_loader = DataLoader(val_dataset, batch_size=val_batch_size, collate_fn=my_collate_fn)
 
     # define optimizer and loss
@@ -133,9 +133,11 @@ if __name__ == '__main__':
     item_dim = MovieLensDataset.get_metadata_dim()
 
     # create model
-    model = AttentionNCF(item_dim, dropout_rate=dropout_rate,
-                         item_emb=128, user_emb=128, att_dense=16, mlp_dense_layers=[256, 128])
-    model.to(device)
+    # model = AttentionNCF(item_dim, dropout_rate=dropout_rate,
+    #                      item_emb=128, user_emb=128, att_dense=16, mlp_dense_layers=[256, 128])
+    #
+    model = AdvancedNCF(item_dim, item_emb=256, user_emb=256, mlp_dense_layers=[512, 256, 128], dropout_rate=dropout_rate)
+
     print(model)
 
     # train and save result

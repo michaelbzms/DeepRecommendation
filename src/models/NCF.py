@@ -14,7 +14,8 @@ class NCF(nn.Module):
         Executes a forward pass of the network for a batch of B samples which are known cells in the utility matrix.
         :param candidate_items_batch: (B, F)  B items with their features
         :param rated_items_features: (I, F) I rated items with their features
-        :param user_matrix: (B, I) a subarray of the utility matrix with the (normalized?) ratings of B users on I items
+        :param user_matrix: (B, I) a subarray of the utility matrix with the (normalized?) ratings of B users on I items.
+            The order must match rated_items_feature's order on I axis.
         :return:
         """
         raise Exception('Not Implemented')

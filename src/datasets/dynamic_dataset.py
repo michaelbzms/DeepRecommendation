@@ -50,6 +50,10 @@ class MovieLensDataset(Dataset):
         return MovieLensDataset.item_ids
 
     @staticmethod
+    def get_sorted_item_names():
+        return MovieLensDataset.item_names.loc[MovieLensDataset.item_ids].values.flatten()
+
+    @staticmethod
     def get_metadata_dim():
         if features_to_use == 'metadata':
             return len(MovieLensDataset.metadata['features'].iloc[0])
@@ -131,8 +135,6 @@ def my_collate_fn(batch, with_names=False):
 
 
 def my_collate_fn2(batch, with_names=False):
-    # TODO: This is bugged, causes higher test MSE, probably messes up the ratings
-
     # turn per-row to per-column
     batch_data = list(zip(*batch))
     # stack torch tensors from dataset
@@ -165,5 +167,5 @@ def my_collate_fn2(batch, with_names=False):
         return candidate_items, all_item_features, user_matrix, targets
     else:
         candidate_names = np.vstack(batch_data[-1]) if len(batch_data[-1]) > 1 else batch_data[-1]
-        all_item_names = MovieLensDataset.item_names
+        all_item_names = MovieLensDataset.item_names.loc[all_item_ids]
         return candidate_items, all_item_features, user_matrix, targets, candidate_names.flatten(), all_item_names

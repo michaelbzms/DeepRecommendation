@@ -6,6 +6,7 @@ import numpy as np
 
 from models.NCF import NCF
 from plots import visualize_attention
+from util import build_MLP_layers
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -15,7 +16,7 @@ class AttentionNCF(NCF):
                  mlp_dense_layers=None, dropout_rate=0.2):
         super(AttentionNCF, self).__init__()
         if mlp_dense_layers is None:
-            mlp_dense_layers = [512, 256, 128]           # default
+            mlp_dense_layers = [256, 128]           # default
         # save the (hyper) parameters needed to construct this object when saving model
         self.kwargs = {'item_dim': item_dim, 'item_emb': item_emb, 'user_emb': user_emb, 'att_dense': att_dense,
                        'mlp_dense_layers': mlp_dense_layers}
@@ -41,15 +42,7 @@ class AttentionNCF(NCF):
                 nn.Linear(2 * item_emb, 1)
             )
         # Build MLP according to
-        mlp_dense_layers = list(mlp_dense_layers)    # make mutable if it's not
-        mlp_dense_layers.append(1)                   # the output layer
-        num_layers = len(mlp_dense_layers)
-        mlp_layers = [nn.Linear(item_emb + user_emb, mlp_dense_layers[0])]   # input layer
-        for i in range(1, num_layers):
-            mlp_layers.append(nn.ReLU())
-            mlp_layers.append(nn.Dropout(dropout_rate))
-            mlp_layers.append(nn.Linear(mlp_dense_layers[i - 1], mlp_dense_layers[i]))
-        self.MLP = nn.Sequential(*mlp_layers)
+        self.MLP = build_MLP_layers(item_emb + user_emb, mlp_dense_layers, dropout_rate=dropout_rate)
 
     def get_model_parameters(self) -> dict[str]:
         return self.kwargs

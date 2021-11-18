@@ -12,6 +12,7 @@ from globals import test_set_file, val_batch_size
 from models import NCF
 from models.AdvancedNCF import AdvancedNCF
 from models.AttentionNCF import AttentionNCF
+from models.NCF import load_model_state_and_params, load_model
 from plots import plot_residuals, plot_stacked_residuals, plot_att_stats, plot_rated_items_counts
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -19,7 +20,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # perform attention visualization on top of evaluation
 visualize = False
-keep_att_stats = True
+keep_att_stats = False
 
 
 def evaluate_model(model: NCF):
@@ -31,12 +32,12 @@ def evaluate_model(model: NCF):
 
     att_stats = None
     I = test_dataset.get_I()
-    if visualize:
+    if visualize and isinstance(model, AttentionNCF):
         B = 4
         test_loader = DataLoader(test_dataset, batch_size=B, collate_fn=MyCollator(only_rated=True, with_names=True), shuffle=True)
-    elif keep_att_stats:
-        att_stats = {'sum': pd.DataFrame(index=MovieLensDataset.item_names.values.flatten(), columns=MovieLensDataset.item_names.values.flatten(), data=np.zeros((I, I))),
-                     'count': pd.DataFrame(index=MovieLensDataset.item_names.values.flatten(), columns=MovieLensDataset.item_names.values.flatten(), data=np.zeros((I, I), dtype=np.int32))}
+    elif keep_att_stats and isinstance(model, AttentionNCF):
+        att_stats = {'sum': pd.DataFrame(index=MovieLensDataset.get_sorted_item_names(), columns=MovieLensDataset.get_sorted_item_names(), data=np.zeros((I, I))),
+                     'count': pd.DataFrame(index=MovieLensDataset.get_sorted_item_names(), columns=MovieLensDataset.get_sorted_item_names(), data=np.zeros((I, I), dtype=np.int32))}
         test_loader = DataLoader(test_dataset, batch_size=val_batch_size, collate_fn=MyCollator(only_rated=False, with_names=True))
     else:
         test_loader = DataLoader(test_dataset, batch_size=val_batch_size, collate_fn=my_collate_fn)
@@ -52,13 +53,13 @@ def evaluate_model(model: NCF):
 
     with torch.no_grad():
         for data in tqdm(test_loader, desc='Testing'):
-            if visualize:
+            if visualize and isinstance(model, AttentionNCF):
                 # get the input matrices and the target
                 candidate_items, rated_items, user_matrix, y_batch, candidate_names, rated_names = data
                 # forward model
                 out = model(candidate_items.float().to(device), rated_items.float().to(device), user_matrix.float().to(device),
                             candidate_names=candidate_names, rated_names=rated_names, visualize=True)
-            elif keep_att_stats:
+            elif keep_att_stats and isinstance(model, AttentionNCF):
                 # get the input matrices and the target
                 candidate_items, rated_items, user_matrix, y_batch, candidate_names, rated_names = data
                 # forward model
@@ -81,9 +82,9 @@ def evaluate_model(model: NCF):
     test_mse = test_sum_loss / test_size
     print(f'Test loss (MSE): {test_mse:.6f} - RMSE: {sqrt(test_mse):.6f}')
 
-    if keep_att_stats:
-        plot_rated_items_counts(att_stats['count'], item_names=MovieLensDataset.item_names.values.flatten())
-        plot_att_stats(att_stats, item_names=MovieLensDataset.item_names.values.flatten())
+    if keep_att_stats and isinstance(model, AttentionNCF):
+        plot_rated_items_counts(att_stats['count'], item_names=MovieLensDataset.get_sorted_item_names())
+        plot_att_stats(att_stats, item_names=MovieLensDataset.get_sorted_item_names())
     else:
         fitted_values = np.concatenate(fitted_values, dtype=np.float64).reshape(-1)
         ground_truth = np.concatenate(ground_truth, dtype=np.float64).reshape(-1)
@@ -94,18 +95,14 @@ def evaluate_model(model: NCF):
 
 
 if __name__ == '__main__':
-    model_file = '../models/first_att_model_trained.pt'
+    model_file = '../models/AdvancedNCF_audio_meta.pt'
 
     # get metadata dim
     item_dim = MovieLensDataset.get_metadata_dim()
 
-    # create model and load trained weights
-    model = NCF.load_model(model_file, AttentionNCF)
+    # load model with correct layer sizes
+    model = load_model(model_file, AdvancedNCF)
     print(model)
-
-    # old way:
-    # model = AttentionNCF(item_dim)
-    # model.load_state_dict(torch.load(model_file))
 
     # evaluate model on test set
     evaluate_model(model)
