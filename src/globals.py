@@ -18,7 +18,7 @@ seed = 102
 
 # which features to use for items
 """ 'metadata', 'audio' or 'all' """
-features_to_use = 'all'
+features_to_use = 'metadata'
 
 """ NN hyperparameters """
 checkpoint_model_path = '../models/checkpoint.pt'

@@ -1,7 +1,6 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-import pandas as pd
 import numpy as np
 
 from models.NCF import NCF
@@ -12,7 +11,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 class AttentionNCF(NCF):
-    def __init__(self, item_dim, item_emb=256, user_emb=256, att_dense=None,
+    def __init__(self, item_dim, item_emb=128, user_emb=128, att_dense=None,
                  mlp_dense_layers=None, dropout_rate=0.2):
         super(AttentionNCF, self).__init__()
         if mlp_dense_layers is None:
@@ -54,8 +53,8 @@ class AttentionNCF(NCF):
         # pass through item embeddings layer
         candidate_item_embeddings = self.ItemEmbeddings(candidate_items)
 
-        # TODO:  Use detach or not?
-        rated_emb = self.ItemEmbeddings(rated_items)  # .detach()
+        # Note:  Use detach or not?  -> using it gives slightly worse results
+        rated_emb = self.ItemEmbeddings(rated_items)
 
         # attention on rated items
         """ Note: the one that interleaves matters! I think this works correctly into (B, I) shape 
@@ -87,7 +86,7 @@ class AttentionNCF(NCF):
         user_estimated_features = torch.matmul(attended_user_matrix, rated_items)
 
         # pass through user embeddings layer
-        user_embeddings = self.UserEmbeddings(user_estimated_features)   # TODO: or use embeddings here as well?
+        user_embeddings = self.UserEmbeddings(user_estimated_features)
 
         # combine
         combined = torch.cat((candidate_item_embeddings, user_embeddings), dim=1)
