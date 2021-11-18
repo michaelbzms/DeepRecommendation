@@ -121,7 +121,7 @@ def visualize_attention(weights: np.array, user_matrix: np.array, candidate_name
     ax.tick_params(axis='both', which='both', length=0)
 
     # ... and label them with the respective list entries
-    ax.set_yticklabels(candidate_names, fontsize=8)
+    ax.set_yticklabels(candidate_names[0] if B == 1 else candidate_names, fontsize=8)
     ax.set_xticklabels(rated_names if B == 1 else [name[0] for name in rated_names], fontsize=8)
 
     # Rotate the tick labels and set their alignment.

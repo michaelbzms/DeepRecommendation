@@ -129,9 +129,9 @@ def my_collate_fn(batch, with_names=False):
     if not with_names:
         return candidate_items, rated_items, user_matrix, targets
     else:
-        candidate_names = np.vstack(batch_data[-1]) if len(batch_data[-1]) > 1 else batch_data[-1]
+        candidate_names = np.vstack(batch_data[-1]).flatten() if len(batch_data[-1]) > 1 else batch_data[-1]
         rated_item_names = MovieLensDataset.item_names.loc[rated_items_ids]
-        return candidate_items, rated_items, user_matrix, targets, candidate_names.flatten(), rated_item_names
+        return candidate_items, rated_items, user_matrix, targets, candidate_names, rated_item_names
 
 
 def my_collate_fn2(batch, with_names=False):
@@ -166,6 +166,6 @@ def my_collate_fn2(batch, with_names=False):
     if not with_names:
         return candidate_items, all_item_features, user_matrix, targets
     else:
-        candidate_names = np.vstack(batch_data[-1]) if len(batch_data[-1]) > 1 else batch_data[-1]
+        candidate_names = np.vstack(batch_data[-1]).flatten() if len(batch_data[-1]) > 1 else batch_data[-1]
         all_item_names = MovieLensDataset.item_names.loc[all_item_ids]
-        return candidate_items, all_item_features, user_matrix, targets, candidate_names.flatten(), all_item_names
+        return candidate_items, all_item_features, user_matrix, targets, candidate_names, all_item_names

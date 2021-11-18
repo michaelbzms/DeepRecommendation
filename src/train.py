@@ -16,7 +16,7 @@ from plots import plot_train_val_losses
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-def train_model(model: NCF, save=True, optimizer=None):
+def train_model(model: NCF, save=True, optimizer=None, writer: SummaryWriter=None):
     # torch.autograd.set_detect_anomaly(True)   # this slows down training
     model.to(device)
 
@@ -71,6 +71,9 @@ def train_model(model: NCF, save=True, optimizer=None):
         train_losses.append(train_loss)
         print(f'\nEpoch {epoch + 1}: Training loss: {train_loss:.6f}')
 
+        if writer is not None:
+            writer.add_scalar('Loss/train', train_loss, epoch)
+
         """ validation """
         # Calculate val_loss and see if we need to stop
         model.eval()   # gradients "off"
@@ -91,6 +94,9 @@ def train_model(model: NCF, save=True, optimizer=None):
         val_loss = val_sum_loss / val_size
         val_losses.append(val_loss)
         print(f'Validation loss: {val_loss:.6f}')
+
+        if writer is not None:
+            writer.add_scalar('Loss/val', val_loss, epoch)
 
         if early_stop:
             if least_running_loss is None or (not stop_with_train_loss_instead and val_sum_loss < least_running_loss) \
@@ -122,6 +128,10 @@ def train_model(model: NCF, save=True, optimizer=None):
         model.save_model(final_model_path)
         print('Done!')
 
+    if writer is not None:
+        writer.flush()
+        writer.close()
+
     # plot and save losses
     plot_train_val_losses(train_losses, val_losses)
 
@@ -133,12 +143,15 @@ if __name__ == '__main__':
     item_dim = MovieLensDataset.get_metadata_dim()
 
     # create model
-    # model = AttentionNCF(item_dim, dropout_rate=dropout_rate,
-    #                      item_emb=128, user_emb=128, att_dense=16, mlp_dense_layers=[256, 128])
-    #
-    model = AdvancedNCF(item_dim, item_emb=256, user_emb=256, mlp_dense_layers=[512, 256, 128], dropout_rate=dropout_rate)
+    model = AttentionNCF(item_dim, dropout_rate=dropout_rate,
+                         item_emb=256, user_emb=256, att_dense=5, mlp_dense_layers=[512, 256, 128])
+
+    # model = AdvancedNCF(item_dim, item_emb=256, user_emb=256, mlp_dense_layers=[512, 256, 128], dropout_rate=dropout_rate)
 
     print(model)
 
+    # log training for later?
+    writer = SummaryWriter('./runs/' + type(model).__name__ + '/')
+
     # train and save result
-    train_model(model)
+    train_model(model, writer)
