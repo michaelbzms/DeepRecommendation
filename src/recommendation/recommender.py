@@ -63,8 +63,6 @@ class NCF_Recommender(Recommender):
                                               ('_metadata' if use_metadata else '') +
                                               ('_audio' if use_audio else ''))
         self.model = model
-        self.use_metadata = use_metadata
-        self.use_audio = use_audio
         self.MSE = None
 
     def calculate_MSE(self, test_utility_matrix):

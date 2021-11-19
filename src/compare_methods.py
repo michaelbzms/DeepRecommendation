@@ -13,9 +13,9 @@ if __name__ == '__main__':
     recommender_list = [
         NaiveBaselineRecommender(),
         PerItemBaselineRecommender(),
-        NCF_Recommender(load_model('../models/AdvancedNCF_meta.pt', AdvancedNCF),
+        NCF_Recommender(load_model('../models/AdvancedNCF_audio.pt', AdvancedNCF),
                         use_metadata=True, use_audio=True),
-        NCF_Recommender(load_model('../models/AttentionNCF_meta.pt', AttentionNCF),
+        NCF_Recommender(load_model('../models/AttentionNCF_audio2.pt', AttentionNCF),
                         use_metadata=True, use_audio=True)
     ]
 

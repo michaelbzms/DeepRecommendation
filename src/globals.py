@@ -18,7 +18,7 @@ seed = 102
 
 # which features to use for items
 """ 'metadata', 'audio' or 'all' """
-features_to_use = 'metadata'
+features_to_use = 'all'
 
 """ NN hyperparameters """
 checkpoint_model_path = '../models/checkpoint.pt'
@@ -27,7 +27,7 @@ max_epochs = 100
 batch_size = 128
 val_batch_size = 128
 embeddings_lr = 3e-4
-lr = 3e-4
+lr = 3e-4   # or 1e-3 if taking too long
 weight_decay = 1e-5
 dropout_rate = 0.2
 early_stop = True
