@@ -12,7 +12,9 @@ class BasicNCF(NCF):
         if mlp_dense_layers is None:
             mlp_dense_layers = [256, 128]
         # save the (hyper) parameters needed to construct this object when saving model
-        self.kwargs = {'item_dim': item_dim, 'item_emb': item_emb, 'user_emb': user_emb, 'mlp_dense_layers': mlp_dense_layers}
+        self.kwargs = {'item_dim': item_dim, 'user_dim': user_dim,
+                       'item_emb': item_emb, 'user_emb': user_emb,
+                       'mlp_dense_layers': mlp_dense_layers}
         self.item_embeddings = nn.Sequential(
             nn.Linear(item_dim, item_emb),
             nn.ReLU()

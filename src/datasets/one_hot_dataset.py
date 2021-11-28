@@ -42,6 +42,10 @@ class OneHotMovieLensDataset(Dataset):
         return self.set.shape[0]
 
     @staticmethod
+    def get_I():
+        return len(OneHotMovieLensDataset.all_items)
+
+    @staticmethod
     def get_user_dim():
         return len(OneHotMovieLensDataset.all_users)
 

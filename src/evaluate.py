@@ -8,12 +8,15 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from datasets.dynamic_dataset import MovieLensDataset, my_collate_fn, my_collate_fn2, MyCollator, NamedMovieLensDataset
-from globals import test_set_file, val_batch_size
+from datasets.one_hot_dataset import OneHotMovieLensDataset
+from globals import test_set_file, val_batch_size, USE_FEATURES
 from models import NCF
 from models.AdvancedNCF import AdvancedNCF
 from models.AttentionNCF import AttentionNCF
+from models.BasicNCF import BasicNCF
 from models.NCF import load_model_state_and_params, load_model
 from plots import plot_residuals, plot_stacked_residuals, plot_att_stats, plot_rated_items_counts
+from train import NCF_withfeatures_forward, NCF_onehot_forward
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -23,11 +26,11 @@ visualize = False
 keep_att_stats = False
 
 
-def evaluate_model(model: NCF):
+def evaluate_model(model: NCF, forward_function, dataset_class):
     model.to(device)
 
     # load dataset
-    test_dataset = NamedMovieLensDataset(test_set_file)
+    test_dataset = dataset_class(test_set_file)
     print('Test size:', len(test_dataset))
 
     att_stats = None
@@ -40,7 +43,7 @@ def evaluate_model(model: NCF):
                      'count': pd.DataFrame(index=MovieLensDataset.get_sorted_item_names(), columns=MovieLensDataset.get_sorted_item_names(), data=np.zeros((I, I), dtype=np.int32))}
         test_loader = DataLoader(test_dataset, batch_size=val_batch_size, collate_fn=MyCollator(only_rated=False, with_names=True))
     else:
-        test_loader = DataLoader(test_dataset, batch_size=val_batch_size, collate_fn=my_collate_fn)
+        test_loader = DataLoader(test_dataset, batch_size=val_batch_size, collate_fn=dataset_class.use_collate())
 
     criterion = nn.MSELoss(reduction='sum')   # don't average the loss as we shall do that ourselves for the whole epoch
 
@@ -66,10 +69,8 @@ def evaluate_model(model: NCF):
                 out = model(candidate_items.float().to(device), rated_items.float().to(device), user_matrix.float().to(device),
                             att_stats=att_stats, candidate_names=candidate_names, rated_names=rated_names)
             else:
-                # get the input matrices and the target
-                candidate_items, rated_items, user_matrix, y_batch = data
                 # forward model
-                out = model(candidate_items.float().to(device), rated_items.float().to(device), user_matrix.float().to(device))
+                out, y_batch = forward_function(model, data)
             # calculate loss
             loss = criterion(out, y_batch.view(-1, 1).float().to(device))
             # accumulate validation loss
@@ -97,12 +98,31 @@ def evaluate_model(model: NCF):
 if __name__ == '__main__':
     model_file = '../models/final_model.pt'
 
-    # get metadata dim
-    item_dim = MovieLensDataset.get_item_feature_dim()
+    if USE_FEATURES:
+        # get metadata dim
+        item_dim = MovieLensDataset.get_item_feature_dim()
 
-    # load model with correct layer sizes
-    model = load_model(model_file, AttentionNCF)
+        # load model with correct layer sizes
+        model = load_model(model_file, AttentionNCF)
+
+        forward_function = NCF_withfeatures_forward
+        dataset_class = MovieLensDataset
+    else:
+        # model = load_model(model_file, BasicNCF)
+
+        state, _ = torch.load(model_file)
+        model = BasicNCF(item_dim=OneHotMovieLensDataset.get_item_dim(),
+                         user_dim=OneHotMovieLensDataset.get_user_dim())
+        model.load_state_dict(state)
+
+        forward_function = NCF_onehot_forward
+        dataset_class = OneHotMovieLensDataset
+
+        # make sure these are false
+        visualize = False
+        keep_att_stats = False
+
     print(model)
 
     # evaluate model on test set
-    evaluate_model(model)
+    evaluate_model(model, forward_function, dataset_class)

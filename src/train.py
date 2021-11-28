@@ -178,7 +178,7 @@ if __name__ == '__main__':
         dataset_class = MovieLensDataset
     else:
         model = BasicNCF(item_dim=OneHotMovieLensDataset.get_item_dim(),
-                         user_dim=OneHotMovieLensDataset.get_user_dim())  # TODO
+                         user_dim=OneHotMovieLensDataset.get_user_dim())
         forward_function = NCF_onehot_forward
         dataset_class = OneHotMovieLensDataset
 
