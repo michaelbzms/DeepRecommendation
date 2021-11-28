@@ -97,7 +97,7 @@ class MyCollator:
             return my_collate_fn2(batch, with_names=self.with_names)
 
 
-def my_collate_fn(batch, with_names=False):
+def my_collate_fn(batch, with_names=False, ignore_ratings=False):
     # turn per-row to per-column
     batch_data = list(zip(*batch))
     # stack torch tensors from dataset
@@ -111,9 +111,10 @@ def my_collate_fn(batch, with_names=False):
     rated_items_ids = np.unique(np.concatenate(user_ratings['movieId'].values))   # TODO: must return ordered list (seems to)
     # multi-hot encode sparse ratings into a matrix form
     user_matrix = multihot_encode(user_ratings['movieId'], rated_items_ids).astype(np.float64)
-    # TODO: This will work but ONLY IF ratings are ORDERED by movieId when we create the dataset. Else the ratings will be misplaced! Be careful!
-    user_matrix[user_matrix == 1] = np.concatenate((user_ratings['rating'] - user_ratings['meanRating']).values)
-    # check: e.g. user_matrix[0, rated_movies == 'tt0114709']
+    if not ignore_ratings:
+        # TODO: This will work but ONLY IF ratings are ORDERED by movieId when we create the dataset. Else the ratings will be misplaced! Be careful!
+        user_matrix[user_matrix == 1] = np.concatenate((user_ratings['rating'] - user_ratings['meanRating']).values)
+        # check: e.g. user_matrix[0, rated_movies == 'tt0114709']
     user_matrix = torch.FloatTensor(user_matrix)       # convert to tensor
     # get features for all rated items in batch
     if features_to_use == 'metadata':
@@ -134,7 +135,7 @@ def my_collate_fn(batch, with_names=False):
         return candidate_items, rated_items, user_matrix, targets, candidate_names, rated_item_names
 
 
-def my_collate_fn2(batch, with_names=False):
+def my_collate_fn2(batch, with_names=False, ignore_ratings=False):
     # turn per-row to per-column
     batch_data = list(zip(*batch))
     # stack torch tensors from dataset
@@ -147,9 +148,10 @@ def my_collate_fn2(batch, with_names=False):
     # multi-hot encode sparse ratings into a matrix form
     all_item_ids = MovieLensDataset.get_all_itemIds_sorted()
     user_matrix = multihot_encode(user_ratings['movieId'], all_item_ids).astype(np.float64)
-    # TODO: This will work but ONLY IF ratings are ORDERED by movieId when we create the dataset. Else the ratings will be misplaced! Be careful!
-    user_matrix[user_matrix == 1] = np.concatenate((user_ratings['rating'] - user_ratings['meanRating']).values)
-    # check: e.g. user_matrix[0, rated_movies == 'tt0114709']
+    if not ignore_ratings:
+        # TODO: This will work but ONLY IF ratings are ORDERED by movieId when we create the dataset. Else the ratings will be misplaced! Be careful!
+        user_matrix[user_matrix == 1] = np.concatenate((user_ratings['rating'] - user_ratings['meanRating']).values)
+        # check: e.g. user_matrix[0, rated_movies == 'tt0114709']
     user_matrix = torch.FloatTensor(user_matrix)  # convert to tensor
     # get features for ALL items
     if features_to_use == 'metadata':

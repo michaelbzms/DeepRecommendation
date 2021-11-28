@@ -52,6 +52,9 @@ def load_imdb_metadata_features(unique_movies: pd.Series, use_extended=False):
     ns_principals = Namespace('https://www.imdb.com/name/')
     ns_predicates = Namespace('http://example.org/props/')
 
+    # our_movies = '("' + '"), ("'.join(unique_movies.index) + '")'
+    # our_movies = '<' + '> <'.join(unique_movies.index) + '>'
+
     print('Loading rdf...')
     rdf = Graph().parse(rdf_path + ('movies_extended.nt' if use_extended else 'movies_pruned_actors.nt'), format='nt')
     print('done')
@@ -142,12 +145,12 @@ def save_set(matrix: pd.DataFrame, name: str):
 
 
 if __name__ == '__main__':
-    recalculate_metadata = False
+    recalculate_metadata = True
     use_genom_tags = True
     save_user_ratings = True
     random_vs_temporal_splitting = True
     create_user_embeddings_too = True
-    split_embeddings_from_train = False   # don't do this
+    split_embeddings_from_train = False  # don't do this
     use_audio = True
     LIMIT_USERS = None
     MIN_VOTES = 100  # 70
@@ -167,7 +170,7 @@ if __name__ == '__main__':
         # filter utility matrix as per users:
         user_votes = utility_matrix.groupby('userId')['rating'].count()
         print('Original users:', len(user_votes))
-        user_votes = user_votes[user_votes >= MIN_VOTES]   # at least these many votes on movies
+        user_votes = user_votes[user_votes >= MIN_VOTES]  # at least these many votes on movies
         print('Keeping this many users based on number of votes:', len(user_votes))
         utility_matrix = utility_matrix[utility_matrix.index.isin(user_votes.index)]
         print('Utility matrix:', utility_matrix.shape)
@@ -181,9 +184,11 @@ if __name__ == '__main__':
         if use_genom_tags:
             metadata = genome_metadata.join(imdb_metadata, on='movieId', how='inner')
             metadata = pd.DataFrame(index=metadata.index,
-                                    data={'features': metadata.apply(lambda x: np.concatenate([np.array(x.iloc[:-1], dtype=np.float64),
-                                                                                               np.array(x['features'], dtype=np.float64)], dtype=np.float64),
-                                                                     axis=1)})
+                                    data={'features': metadata.apply(
+                                        lambda x: np.concatenate([np.array(x.iloc[:-1], dtype=np.float64),
+                                                                  np.array(x['features'], dtype=np.float64)],
+                                                                 dtype=np.float64),
+                                        axis=1)})
         else:
             metadata = imdb_metadata
         print(f'Found {metadata.shape[0]} movies.\nSaving metadata...')
@@ -211,8 +216,8 @@ if __name__ == '__main__':
         np.random.shuffle(indices)
         val = utility_matrix.iloc[indices[:val_split]]
         test = utility_matrix.iloc[indices[val_split: test_split]]
-        if split_embeddings_from_train:    # bad idea, isn't helping
-            embedding_split = test_split + int(np.floor(0.35 * size))   # (1 - (0.15 + 0.15)) / 2 = 0.7 / 2 = 0.4
+        if split_embeddings_from_train:  # bad idea, isn't helping
+            embedding_split = test_split + int(np.floor(0.35 * size))  # (1 - (0.15 + 0.15)) / 2 = 0.7 / 2 = 0.4
             embeddings = utility_matrix.iloc[indices[test_split: embedding_split]]
             train = utility_matrix.iloc[indices[embedding_split:]]
         else:
@@ -229,11 +234,13 @@ if __name__ == '__main__':
         utility_matrix['test_split'] = test_splits
         # do train-val-test split according to the new broadcasted columns
         train = utility_matrix[utility_matrix['timestamp'] < utility_matrix['val_split']]
-        val = utility_matrix[(utility_matrix['timestamp'] >= utility_matrix['val_split']) & (utility_matrix['timestamp'] < utility_matrix['test_split'])]
+        val = utility_matrix[(utility_matrix['timestamp'] >= utility_matrix['val_split']) & (
+                    utility_matrix['timestamp'] < utility_matrix['test_split'])]
         test = utility_matrix[utility_matrix['timestamp'] >= utility_matrix['test_split']]
         embeddings = None
 
-    print(f'Training shape: {train.shape}, Validation shape: {val.shape}, Test shape: {test.shape}' + (f', Embedding shape: {embeddings.shape}' if split_embeddings_from_train else ''))
+    print(f'Training shape: {train.shape}, Validation shape: {val.shape}, Test shape: {test.shape}' + (
+        f', Embedding shape: {embeddings.shape}' if split_embeddings_from_train else ''))
 
     if save_user_ratings:
         # user_ratings: pd.DataFrame = utility_matrix.drop('timestamp', axis=1).groupby('userId').apply(list)
@@ -243,7 +250,8 @@ if __name__ == '__main__':
         else:
             ratings_to_use = train
         # IMPORTANT to sort by movieId
-        user_ratings: pd.DataFrame = ratings_to_use.drop('timestamp', axis=1).sort_values(by='movieId').groupby('userId').agg({'rating': list, 'movieId': list})
+        user_ratings: pd.DataFrame = ratings_to_use.drop('timestamp', axis=1).sort_values(by='movieId').groupby(
+            'userId').agg({'rating': list, 'movieId': list})
         user_ratings['rating'] = user_ratings['rating'].apply(lambda x: np.array(x))
         user_ratings['movieId'] = user_ratings['movieId'].apply(lambda x: np.array(x))
         user_ratings['meanRating'] = user_ratings['rating'].apply(lambda x: np.mean(x))
@@ -252,16 +260,20 @@ if __name__ == '__main__':
         print(user_ratings.shape)
         user_ratings.to_hdf(user_ratings_file + '.h5', key='user_ratings', mode='w')
         print('OK!')
-        print(f'Average number of ratings per user (in train set): {user_ratings["rating"].apply(lambda x: len(x)).mean()}')
+        print(
+            f'Average number of ratings per user (in train set): {user_ratings["rating"].apply(lambda x: len(x)).mean()}')
 
         if create_user_embeddings_too:
             # create user_embeddings from user ratings once beforehand
             # Note: This takes a very long time
             print('Creating user embeddings...')
 
+
             def create_user_embedding(user_ratings: pd.DataFrame, metadata: pd.DataFrame):
                 avg_rating = user_ratings['rating'].mean()
-                return ((user_ratings['rating'] - avg_rating) * metadata.loc[user_ratings['movieId']]['features'].values).mean()  # TODO: sum or mean?
+                return ((user_ratings['rating'] - avg_rating) * metadata.loc[user_ratings['movieId']][
+                    'features'].values).mean()  # TODO: sum or mean?
+
 
             user_embeddings = pd.DataFrame(index=user_ratings.index.unique().copy(), data={'embedding': object})
             for userId, user_ratings in tqdm(user_ratings.groupby('userId'), desc='Creating user embeddings...'):

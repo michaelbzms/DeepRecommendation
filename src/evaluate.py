@@ -19,7 +19,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 # perform attention visualization on top of evaluation
-visualize = True
+visualize = False
 keep_att_stats = False
 
 
@@ -98,7 +98,7 @@ if __name__ == '__main__':
     model_file = '../models/final_model.pt'
 
     # get metadata dim
-    item_dim = MovieLensDataset.get_metadata_dim()
+    item_dim = MovieLensDataset.get_item_feature_dim()
 
     # load model with correct layer sizes
     model = load_model(model_file, AttentionNCF)

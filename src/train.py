@@ -7,7 +7,7 @@ from datetime import datetime
 
 from datasets.dynamic_dataset import MovieLensDataset, my_collate_fn, my_collate_fn2
 from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, max_epochs, early_stop, \
-    stop_with_train_loss_instead, checkpoint_model_path, patience, dropout_rate, final_model_path, embeddings_lr, \
+    stop_with_train_loss_instead, checkpoint_model_path, patience, dropout_rate, final_model_path, \
     val_batch_size, features_to_use
 from models import NCF
 from models.AdvancedNCF import AdvancedNCF
@@ -27,11 +27,10 @@ def train_model(model: NCF, save=True, optimizer=None, writer: SummaryWriter=Non
     print('Training size:', len(train_dataset), ' - Validation size:', len(val_dataset))
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=my_collate_fn2)
-    val_loader = DataLoader(val_dataset, batch_size=val_batch_size, collate_fn=my_collate_fn)
+    val_loader = DataLoader(val_dataset, batch_size=val_batch_size, collate_fn=my_collate_fn2)
 
     # define optimizer and loss
-    # Fore separate lrs:
-
+    # For separate lrs:
     # optimizer = optim.Adam([
     #     {'params': model.item_embeddings.parameters(), 'lr': embeddings_lr},
     #     {'params': model.MLP.parameters(), 'lr': lr}
@@ -141,21 +140,21 @@ def train_model(model: NCF, save=True, optimizer=None, writer: SummaryWriter=Non
 
 if __name__ == '__main__':
     # get metadata dim
-    item_dim = MovieLensDataset.get_metadata_dim()
+    item_dim = MovieLensDataset.get_item_feature_dim()
 
     # create model
     if features_to_use == 'audio':
         model = AttentionNCF(item_dim, dropout_rate=dropout_rate,
-                             item_emb=256, user_emb=256, att_dense=5, mlp_dense_layers=[512, 256, 128])
+                             item_emb=256, user_emb=256, att_dense=8, mlp_dense_layers=[512, 256, 128])
 
         # model = AdvancedNCF(item_dim, item_emb=256, user_emb=256, mlp_dense_layers=[512, 256, 128], dropout_rate=dropout_rate)
 
     else:
 
-        # model = AttentionNCF(item_dim, dropout_rate=dropout_rate,
-        #                      item_emb=256, user_emb=256, att_dense=5, mlp_dense_layers=[512, 256, 128])
+        model = AttentionNCF(item_dim, dropout_rate=dropout_rate,
+                             item_emb=256, user_emb=256, att_dense=8, mlp_dense_layers=[512, 256, 128])
 
-        model = AdvancedNCF(item_dim, item_emb=256, user_emb=256, mlp_dense_layers=[512, 256, 128], dropout_rate=dropout_rate)
+        # model = AdvancedNCF(item_dim, item_emb=256, user_emb=256, mlp_dense_layers=[512, 256, 128], dropout_rate=dropout_rate)
 
     print(model)
 
