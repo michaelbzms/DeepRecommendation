@@ -33,3 +33,5 @@ dropout_rate = 0.2
 early_stop = True
 stop_with_train_loss_instead = False  # Note: useful if we are trying to overfit
 patience = 4
+
+USE_FEATURES = False

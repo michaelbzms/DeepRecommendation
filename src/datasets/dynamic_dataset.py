@@ -54,7 +54,7 @@ class MovieLensDataset(Dataset):
         return MovieLensDataset.item_names.loc[MovieLensDataset.item_ids].values.flatten()
 
     @staticmethod
-    def get_metadata_dim():
+    def get_item_feature_dim():
         if features_to_use == 'metadata':
             return len(MovieLensDataset.metadata['features'].iloc[0])
         elif features_to_use == 'audio':
@@ -63,6 +63,10 @@ class MovieLensDataset(Dataset):
             return len(MovieLensDataset.metadata['features'].iloc[0]) + MovieLensDataset.audio.shape[1]
         else:
             raise Exception('Invalid features_to_use parameter in dataset')
+
+    @staticmethod
+    def use_collate():
+        return my_collate_fn2
 
 
 class NamedMovieLensDataset(MovieLensDataset):

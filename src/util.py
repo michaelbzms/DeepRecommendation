@@ -1,4 +1,17 @@
+import numpy as np
+from sklearn.preprocessing import MultiLabelBinarizer, OneHotEncoder
 from torch import nn
+
+
+def one_hot_encode(actual_value, ordered_possible_values: np.array) -> np.array:
+    return np.array(ordered_possible_values == actual_value, dtype=np.float64)
+
+
+def multi_hot_encode(actual_values: set, ordered_possible_values: list) -> np.array:
+    """ Converts a categorical feature with multiple values to a multi-label binary encoding """
+    mlb = MultiLabelBinarizer(classes=ordered_possible_values)
+    binary_format = mlb.fit_transform([actual_values])
+    return binary_format
 
 
 def build_MLP_layers(input_size, layer_sizes: list, dropout_rate) -> nn.Sequential:

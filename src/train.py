@@ -6,28 +6,52 @@ from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 
 from datasets.dynamic_dataset import MovieLensDataset, my_collate_fn, my_collate_fn2
+from datasets.one_hot_dataset import OneHotMovieLensDataset
 from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, max_epochs, early_stop, \
     stop_with_train_loss_instead, checkpoint_model_path, patience, dropout_rate, final_model_path, \
-    val_batch_size, features_to_use
+    val_batch_size, features_to_use, USE_FEATURES
 from models import NCF
 from models.AdvancedNCF import AdvancedNCF
 from models.AttentionNCF import AttentionNCF
+from models.BasicNCF import BasicNCF
 from plots import plot_train_val_losses
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-def train_model(model: NCF, save=True, optimizer=None, writer: SummaryWriter=None):
+""" 
+Define different kind of forwards here 
+"""
+
+
+def NCF_withfeatures_forward(model: NCF, data):
+    # get the input matrices and the target
+    candidate_items, rated_items, user_matrix, y_batch = data
+    # forward model
+    out = model(candidate_items.float().to(device), rated_items.float().to(device), user_matrix.float().to(device))
+    return out, y_batch
+
+
+def NCF_onehot_forward(model: NCF, data):
+    # get the input matrices and the target
+    item_vec, user_vec, y_batch = data
+    # forward model
+    out = model(item_vec.float().to(device), user_vec.float().to(device))
+    return out, y_batch
+
+
+def train_model(model: NCF, forward_function, dataset_class,
+                save=True, optimizer=None, writer: SummaryWriter=None):
     # torch.autograd.set_detect_anomaly(True)   # this slows down training
     model.to(device)
 
     # load dataset
-    train_dataset = MovieLensDataset(train_set_file)
-    val_dataset = MovieLensDataset(val_set_file)
+    train_dataset = dataset_class(train_set_file)
+    val_dataset = dataset_class(val_set_file)
     print('Training size:', len(train_dataset), ' - Validation size:', len(val_dataset))
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=my_collate_fn2)
-    val_loader = DataLoader(val_dataset, batch_size=val_batch_size, collate_fn=my_collate_fn2)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=train_dataset.use_collate())
+    val_loader = DataLoader(val_dataset, batch_size=val_batch_size, collate_fn=val_dataset.use_collate())
 
     # define optimizer and loss
     # For separate lrs:
@@ -51,12 +75,10 @@ def train_model(model: NCF, save=True, optimizer=None, writer: SummaryWriter=Non
         train_size = 0
         model.train()  # gradients "on"
         for data in tqdm(train_loader, desc='Training'):                     # batch
-            # get the input matrices and the target
-            candidate_items, rated_items, user_matrix, y_batch = data
             # reset the gradients
             optimizer.zero_grad()
             # forward model
-            out = model(candidate_items.float().to(device), rated_items.float().to(device), user_matrix.float().to(device))
+            out, y_batch = forward_function(model, data)
             # calculate loss
             loss = criterion(out, y_batch.view(-1, 1).float().to(device))
             # backpropagation (compute gradients)
@@ -81,10 +103,8 @@ def train_model(model: NCF, save=True, optimizer=None, writer: SummaryWriter=Non
         val_size = 0
         with torch.no_grad():
             for data in tqdm(val_loader, desc='Validating'):
-                # get the input matrices and the target
-                candidate_items, rated_items, user_matrix, y_batch = data
                 # forward model
-                out = model(candidate_items.float().to(device), rated_items.float().to(device), user_matrix.float().to(device))
+                out, y_batch = forward_function(model, data)
                 # calculate loss
                 loss = criterion(out, y_batch.view(-1, 1).float().to(device))
                 # accumulate validation loss
@@ -139,22 +159,28 @@ def train_model(model: NCF, save=True, optimizer=None, writer: SummaryWriter=Non
 
 
 if __name__ == '__main__':
-    # get metadata dim
-    item_dim = MovieLensDataset.get_item_feature_dim()
+    if USE_FEATURES:
+        # get feature dim
+        item_dim = MovieLensDataset.get_item_feature_dim()
 
-    # create model
-    if features_to_use == 'audio':
-        model = AttentionNCF(item_dim, dropout_rate=dropout_rate,
-                             item_emb=256, user_emb=256, att_dense=8, mlp_dense_layers=[512, 256, 128])
+        # create model
+        if features_to_use == 'audio':
+            model = AttentionNCF(item_dim, dropout_rate=dropout_rate,
+                                 item_emb=256, user_emb=256, att_dense=8, mlp_dense_layers=[512, 256, 128])
+            # model = AdvancedNCF(item_dim, item_emb=256, user_emb=256, mlp_dense_layers=[512, 256, 128], dropout_rate=dropout_rate)
+        else:
 
-        # model = AdvancedNCF(item_dim, item_emb=256, user_emb=256, mlp_dense_layers=[512, 256, 128], dropout_rate=dropout_rate)
+            model = AttentionNCF(item_dim, dropout_rate=dropout_rate,
+                                 item_emb=256, user_emb=256, att_dense=8, mlp_dense_layers=[512, 256, 128])
+            # model = AdvancedNCF(item_dim, item_emb=256, user_emb=256, mlp_dense_layers=[512, 256, 128], dropout_rate=dropout_rate)
 
+        forward_function = NCF_withfeatures_forward
+        dataset_class = MovieLensDataset
     else:
-
-        model = AttentionNCF(item_dim, dropout_rate=dropout_rate,
-                             item_emb=256, user_emb=256, att_dense=8, mlp_dense_layers=[512, 256, 128])
-
-        # model = AdvancedNCF(item_dim, item_emb=256, user_emb=256, mlp_dense_layers=[512, 256, 128], dropout_rate=dropout_rate)
+        model = BasicNCF(item_dim=OneHotMovieLensDataset.get_item_dim(),
+                         user_dim=OneHotMovieLensDataset.get_user_dim())  # TODO
+        forward_function = NCF_onehot_forward
+        dataset_class = OneHotMovieLensDataset
 
     print(model)
 
@@ -166,4 +192,4 @@ if __name__ == '__main__':
     writer.add_hparams(hyperparams, {})
 
     # train and save result
-    train_model(model, writer=writer)
+    train_model(model, writer=writer, forward_function=forward_function, dataset_class=dataset_class)

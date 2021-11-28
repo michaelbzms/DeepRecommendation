@@ -1,12 +1,12 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import MultiLabelBinarizer
 from rdflib import Graph, Namespace
 from tqdm import tqdm
 import warnings
 
 from globals import movielens_path, rdf_path, item_metadata_file, train_set_file, val_set_file, test_set_file, seed, \
     user_ratings_file, user_embeddings_file, full_matrix_file
+from util import multi_hot_encode
 
 
 def load_user_ratings(movielens_data_folder, LIMIT_USERS=None):
@@ -36,13 +36,6 @@ def load_user_ratings(movielens_data_folder, LIMIT_USERS=None):
     genometags.index = 'tt' + genometags.index.map(links['imdbId'])
 
     return user_ratings, genometags
-
-
-def extract_binary_features(actual_values: set, ordered_possible_values: list) -> np.array:
-    """ Converts a categorical feature with multiple values to a multi-label binary encoding """
-    mlb = MultiLabelBinarizer(classes=ordered_possible_values)
-    binary_format = mlb.fit_transform([actual_values])
-    return binary_format
 
 
 def load_imdb_metadata_features(unique_movies: pd.Series, use_extended=False):
@@ -132,9 +125,9 @@ def load_imdb_metadata_features(unique_movies: pd.Series, use_extended=False):
         with warnings.catch_warnings():
             # hide user warnings about ignored missing values, ignoring these values is the desired behaviour
             warnings.simplefilter("ignore")
-            feats[: len(all_genres)] = extract_binary_features(genres, all_genres)
-            feats[len(all_genres): len(all_genres) + len(all_actors)] = extract_binary_features(actors, all_actors)
-            feats[len(all_genres) + len(all_actors):] = extract_binary_features(directors, all_directors)
+            feats[: len(all_genres)] = multi_hot_encode(genres, all_genres)
+            feats[len(all_genres): len(all_genres) + len(all_actors)] = multi_hot_encode(actors, all_actors)
+            feats[len(all_genres) + len(all_actors):] = multi_hot_encode(directors, all_directors)
             features.append(feats)
 
     return pd.DataFrame(index=movie_ids, data={'features': features})

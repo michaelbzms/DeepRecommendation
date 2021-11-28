@@ -9,9 +9,10 @@ class NCF(nn.Module):
         super(NCF, self).__init__()
 
     @abstractmethod
-    def forward(self, candidate_items_batch: np.array, rated_items_features: np.array, user_matrix: np.array):
+    def forward(self, *args):
         """
         Executes a forward pass of the network for a batch of B samples which are known cells in the utility matrix.
+        Example parameters for USE_FEATURES == True
         :param candidate_items_batch: (B, F)  B items with their features
         :param rated_items_features: (I, F) I rated items with their features
         :param user_matrix: (B, I) a subarray of the utility matrix with the (normalized?) ratings of B users on I items.

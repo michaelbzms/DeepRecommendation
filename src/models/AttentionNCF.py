@@ -40,7 +40,7 @@ class AttentionNCF(NCF):
             self.AttentionNet = nn.Sequential(
                 nn.Linear(2 * item_emb, 1)
             )
-        # Build MLP according to
+        # Build MLP according to params
         self.MLP = build_MLP_layers(item_emb + user_emb, mlp_dense_layers, dropout_rate=dropout_rate)
 
     def get_model_parameters(self) -> dict[str]:
