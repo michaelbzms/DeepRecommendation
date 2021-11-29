@@ -164,15 +164,9 @@ if __name__ == '__main__':
         item_dim = MovieLensDataset.get_item_feature_dim()
 
         # create model
-        if features_to_use == 'audio':
-            model = AttentionNCF(item_dim, dropout_rate=dropout_rate,
-                                 item_emb=256, user_emb=256, att_dense=8, mlp_dense_layers=[512, 256, 128])
-            # model = AdvancedNCF(item_dim, item_emb=256, user_emb=256, mlp_dense_layers=[512, 256, 128], dropout_rate=dropout_rate)
-        else:
-
-            model = AttentionNCF(item_dim, dropout_rate=dropout_rate,
-                                 item_emb=256, user_emb=256, att_dense=8, mlp_dense_layers=[512, 256, 128])
-            # model = AdvancedNCF(item_dim, item_emb=256, user_emb=256, mlp_dense_layers=[512, 256, 128], dropout_rate=dropout_rate)
+        model = AttentionNCF(item_dim, dropout_rate=dropout_rate,
+                             item_emb=256, user_emb=256, att_dense=5, mlp_dense_layers=[512, 256, 128])
+        # model = AdvancedNCF(item_dim, item_emb=256, user_emb=256, mlp_dense_layers=[512, 256, 128], dropout_rate=dropout_rate)
 
         forward_function = NCF_withfeatures_forward
         dataset_class = MovieLensDataset

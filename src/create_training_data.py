@@ -20,14 +20,23 @@ def load_user_ratings(movielens_data_folder, LIMIT_USERS=None):
         # user_ratings = user_ratings.loc[1: LIMIT_USERS]
         user_ratings = user_ratings.loc[user_ratings.index.max() - LIMIT_USERS: user_ratings.index.max()]
 
+    # load genome tags
+    genometags = pd.read_csv(movielens_data_folder + 'genome-scores.csv',
+                             index_col='movieId',
+                             usecols=['movieId', 'tagId', 'relevance'],
+                             dtype={'movieId': np.int32, 'tagId': np.int32, 'relevance': np.float64})
+    genometags = genometags.pivot_table('relevance', index='movieId', columns='tagId')
+
     # change movieId to IMDb ID, link movieIds with imdbIds
     links = pd.read_csv(movielens_data_folder + 'links.csv',
                         index_col='movieId',
                         usecols=['movieId', 'imdbId'],
                         dtype={'movieId': np.int32, 'imdbId': 'string'})
     user_ratings['movieId'] = 'tt' + user_ratings['movieId'].map(links['imdbId'])
+    genometags.index = 'tt' + genometags.index.map(links['imdbId'])
+    genometags.rename({c: f'genome_{c}' for c in genometags.columns.tolist()}, inplace=True, axis=1)   # needed for concat to work later
 
-    return user_ratings
+    return user_ratings, genometags
 
 
 def load_imdb_dfs(unique_movies: pd.Series):
@@ -73,15 +82,17 @@ def load_imdb_dfs(unique_movies: pd.Series):
                                 index_col='tconst',
                                 usecols=['tconst', 'nconst', 'category'])
     principals_df = principals_df[principals_df.index.isin(movies_df.index)]
-    principals_df = principals_df[principals_df['category'].isin(['actor', 'actress', 'writer', 'director', 'composer'])]  # TODO: change if more roles
+    principals_df = principals_df[principals_df['category'].isin(['actor', 'actress', 'writer', 'director', 'composer'])]
 
     print(movies_df)
+    print(movies_df.shape)
     print(principals_df)
+    print(principals_df.shape)
 
     return movies_df, principals_df
 
 
-def load_imdb_metadata_features(unique_movies: pd.Series, use_extended=False):
+def load_imdb_metadata_features(unique_movies: pd.Series, MIN_APPEARANCES=1):
     movies_df, principals_df = load_imdb_dfs(unique_movies)
 
     all_genres = [
@@ -100,9 +111,13 @@ def load_imdb_metadata_features(unique_movies: pd.Series, use_extended=False):
     # composer_mask = principals_df['category'] == 'composer'
     # all_composers = sorted(list(principals_df['nconst'][composer_mask].unique()))
 
-    all_personel = sorted(list(principals_df['nconst'].unique()))
+    print('Number of personel:', len(principals_df), f'. Removing those with less than {MIN_APPEARANCES} appearances...')
+    reduced_principals_df = principals_df.groupby('nconst').filter(lambda x: len(x) >= MIN_APPEARANCES)
+    print(f'Left with {len(reduced_principals_df)}')
 
-    F = len(all_genres) + len(all_personel)
+    all_personnel = sorted(list(reduced_principals_df['nconst'].unique()))
+
+    F = len(all_genres) + len(all_personnel)
     features = np.zeros((len(unique_movies), F))
     for i, movieId in tqdm(enumerate(unique_movies.index), total=len(unique_movies)):
         # multi-hot encode genres
@@ -110,11 +125,11 @@ def load_imdb_metadata_features(unique_movies: pd.Series, use_extended=False):
         genres = set([g.replace(' ', '') for g in genres])
         genres_feat = multi_hot_encode(genres, all_genres)
         # multi-hot encode personel
-        personel = set(principals_df.loc[movieId]['nconst'])
-        personel_feat = multi_hot_encode(personel, all_personel)
+        personnel = set(principals_df.loc[movieId]['nconst'])
+        personnel_feat = multi_hot_encode(personnel, all_personnel)
         # put together for features
         features[i, :len(all_genres)] = genres_feat
-        features[i, len(all_genres):] = personel_feat
+        features[i, len(all_genres):] = personnel_feat
     return pd.DataFrame(index=unique_movies.index, data=features)
 
 
@@ -123,8 +138,9 @@ def save_set(matrix: pd.DataFrame, name: str):
 
 
 if __name__ == '__main__':
-    recalculate_metadata = False
+    recalculate_metadata = True
     save_user_ratings = True
+    use_genome_tags = True
     random_vs_temporal_splitting = True
     create_user_embeddings_too = True
     split_embeddings_from_train = False  # don't do this
@@ -134,7 +150,7 @@ if __name__ == '__main__':
 
     # load user ratings (sparse representation of a utility matrix)
     print('Loading movieLens data...')
-    utility_matrix = load_user_ratings(movielens_path, LIMIT_USERS=LIMIT_USERS)
+    utility_matrix, genome_metadata = load_user_ratings(movielens_path, LIMIT_USERS=LIMIT_USERS)
     print(utility_matrix.shape)
 
     # load audio features
@@ -157,8 +173,16 @@ if __name__ == '__main__':
     if recalculate_metadata:
         print('Loading IMDb data...')
         unique_movies = pd.Series(index=utility_matrix['movieId'].unique().copy())
-        metadata = load_imdb_metadata_features(unique_movies, use_extended=use_audio)
+        imdb_metadata = load_imdb_metadata_features(unique_movies)
+        if use_genome_tags:
+            genome_metadata = genome_metadata[genome_metadata.index.isin(unique_movies.index)]
+            metadata = imdb_metadata.join(genome_metadata)
+            metadata = metadata.fillna(0.0)   # shouldn't be any but just in case
+        else:
+            metadata = imdb_metadata
         print(f'Found {metadata.shape[0]} movies.\nSaving metadata...')
+        print(metadata)
+        print(metadata.columns.tolist())
         metadata.to_hdf(item_metadata_file + '.h5', key='metadata', mode='w')
         print('OK!')
     else:
