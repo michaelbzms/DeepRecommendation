@@ -28,11 +28,11 @@ class MovieLensDataset(Dataset):
         target_rating = float(data['rating'])
         # get candidate item features
         if features_to_use == 'metadata':
-            candidate_items = torch.FloatTensor(self.metadata.loc[data['movieId']]['features'])
+            candidate_items = torch.FloatTensor(self.metadata.loc[data['movieId']])
         elif features_to_use == 'audio':
             candidate_items = torch.FloatTensor(self.audio.loc[data['movieId']].astype(np.float64))
         elif features_to_use == 'all' or features_to_use == 'both':
-            candidate_items = torch.cat((torch.FloatTensor(self.metadata.loc[data['movieId']]['features']),
+            candidate_items = torch.cat((torch.FloatTensor(self.metadata.loc[data['movieId']]),
                                          torch.FloatTensor(self.audio.loc[data['movieId']].astype(np.float64))))
         else:
             raise Exception('Invalid features_to_use parameter in dataset')
@@ -56,11 +56,11 @@ class MovieLensDataset(Dataset):
     @staticmethod
     def get_item_feature_dim():
         if features_to_use == 'metadata':
-            return len(MovieLensDataset.metadata['features'].iloc[0])
+            return len(MovieLensDataset.metadata.iloc[0])
         elif features_to_use == 'audio':
             return MovieLensDataset.audio.shape[1]
         elif features_to_use == 'all' or features_to_use == 'both':
-            return len(MovieLensDataset.metadata['features'].iloc[0]) + MovieLensDataset.audio.shape[1]
+            return len(MovieLensDataset.metadata.iloc[0]) + MovieLensDataset.audio.shape[1]
         else:
             raise Exception('Invalid features_to_use parameter in dataset')
 
@@ -122,11 +122,11 @@ def my_collate_fn(batch, with_names=False, ignore_ratings=False):
     user_matrix = torch.FloatTensor(user_matrix)       # convert to tensor
     # get features for all rated items in batch
     if features_to_use == 'metadata':
-        rated_items = torch.FloatTensor(np.stack(MovieLensDataset.metadata.loc[rated_items_ids]['features'].values))
+        rated_items = torch.FloatTensor(np.stack(MovieLensDataset.metadata.loc[rated_items_ids].values))
     elif features_to_use == 'audio':
         rated_items = torch.FloatTensor(MovieLensDataset.audio.loc[rated_items_ids].astype(np.float64).values)
     elif features_to_use == 'all' or features_to_use == 'both':
-        rated_items = torch.cat((torch.FloatTensor(np.stack(MovieLensDataset.metadata.loc[rated_items_ids]['features'].values)),
+        rated_items = torch.cat((torch.FloatTensor(np.stack(MovieLensDataset.metadata.loc[rated_items_ids].values)),
                                  torch.FloatTensor(MovieLensDataset.audio.loc[rated_items_ids].astype(np.float64).values)), dim=1)
     else:
         raise Exception('Invalid features_to_use parameter in dataset')
@@ -159,11 +159,11 @@ def my_collate_fn2(batch, with_names=False, ignore_ratings=False):
     user_matrix = torch.FloatTensor(user_matrix)  # convert to tensor
     # get features for ALL items
     if features_to_use == 'metadata':
-        all_item_features = torch.FloatTensor(np.stack(MovieLensDataset.metadata.loc[all_item_ids]['features'].values))    # (!) Note: .loc important to reorder all item features
+        all_item_features = torch.FloatTensor(np.stack(MovieLensDataset.metadata.loc[all_item_ids].values))    # (!) Note: .loc important to reorder all item features
     elif features_to_use == 'audio':
         all_item_features = torch.FloatTensor(MovieLensDataset.audio.loc[all_item_ids].astype(np.float64).values)
     elif features_to_use == 'all' or features_to_use == 'both':
-        all_item_features = torch.cat((torch.FloatTensor(np.stack(MovieLensDataset.metadata.loc[all_item_ids]['features'].values)),
+        all_item_features = torch.cat((torch.FloatTensor(np.stack(MovieLensDataset.metadata.loc[all_item_ids].values)),
                                        torch.FloatTensor(MovieLensDataset.audio.loc[all_item_ids].astype(np.float64).values)), dim=1)
         # TODO: audio features have more imbdIds?
     else:

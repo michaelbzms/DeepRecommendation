@@ -18,7 +18,7 @@ seed = 102
 
 # which features to use for items
 """ 'metadata', 'audio' or 'all' """
-features_to_use = 'all'
+features_to_use = 'metadata'
 
 """ NN hyperparameters """
 checkpoint_model_path = '../models/checkpoint.pt'
@@ -34,4 +34,4 @@ early_stop = True
 stop_with_train_loss_instead = False  # Note: useful if we are trying to overfit
 patience = 4
 
-USE_FEATURES = False
+USE_FEATURES = True
