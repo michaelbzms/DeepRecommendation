@@ -4,13 +4,14 @@ import pandas as pd
 import numpy as np
 
 from globals import user_ratings_file, train_set_file, val_set_file, test_set_file
+from neural_collaborative_filtering.datasets.fixed_dataset import FixedDataset
 from util import one_hot_encode
 
 
 # TODO: use_utility_matrix_instead = False
 
 
-class OneHotMovieLensDataset(Dataset):
+class OneHotMovieLensDataset(FixedDataset):
     print('Initializing common dataset prerequisites ...')
     user_ratings: pd.DataFrame = pd.read_hdf(user_ratings_file + '.h5')
     train_set = pd.read_csv(train_set_file + '.csv')
@@ -42,17 +43,13 @@ class OneHotMovieLensDataset(Dataset):
         return self.set.shape[0]
 
     @staticmethod
-    def get_I():
-        return len(OneHotMovieLensDataset.all_items)
-
-    @staticmethod
-    def get_user_dim():
+    def get_number_of_users():
         return len(OneHotMovieLensDataset.all_users)
 
     @staticmethod
-    def get_item_dim():
+    def get_number_of_items():
         return len(OneHotMovieLensDataset.all_items)
 
     @staticmethod
-    def use_collate():
-        return None       # no custom collate needed
+    def get_item_feature_dim():  # aka F
+        return len(OneHotMovieLensDataset.all_items)    # because of one-hot-encoding

@@ -1,7 +1,7 @@
 from globals import train_set_file, test_set_file
-from models.AdvancedNCF import AdvancedNCF
-from models.AttentionNCF import AttentionNCF
-from models.NCF import load_model
+from neural_collaborative_filtering.models.AdvancedNCF import AdvancedNCF
+from neural_collaborative_filtering.models.AttentionNCF import AttentionNCF
+from neural_collaborative_filtering.models.NCF import load_model
 from recommendation.recommender import NaiveBaselineRecommender, PerItemBaselineRecommender, NCF_Recommender
 from recommendation.utility_matrix import UtilityMatrix
 

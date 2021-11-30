@@ -3,9 +3,10 @@ from torch import nn
 import torch.nn.functional as F
 import numpy as np
 
-from models.NCF import NCF
+from neural_collaborative_filtering.datasets.dynamic_dataset import DynamicDataset
+from neural_collaborative_filtering.models.NCF import NCF
 from plots import visualize_attention
-from util import build_MLP_layers
+from neural_collaborative_filtering.util import build_MLP_layers
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -45,6 +46,9 @@ class AttentionNCF(NCF):
 
     def get_model_parameters(self) -> dict[str]:
         return self.kwargs
+
+    def is_dataset_compatible(self, dataset_class):
+        return issubclass(dataset_class, DynamicDataset)
 
     def forward(self, candidate_items, rated_items, user_matrix, candidate_names=None, rated_names=None, att_stats=None, visualize=False):
         I = rated_items.shape[0]      # == user_matrix.shape[1]

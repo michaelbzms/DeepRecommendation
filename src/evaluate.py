@@ -7,14 +7,13 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from datasets.dynamic_dataset import MovieLensDataset, my_collate_fn, my_collate_fn2, MyCollator, NamedMovieLensDataset
+from datasets.dynamic_movieLens_dataset import DynamicMovieLensDataset, MyCollator
 from datasets.one_hot_dataset import OneHotMovieLensDataset
 from globals import test_set_file, val_batch_size, USE_FEATURES
-from models import NCF
-from models.AdvancedNCF import AdvancedNCF
-from models.AttentionNCF import AttentionNCF
-from models.BasicNCF import BasicNCF
-from models.NCF import load_model_state_and_params, load_model
+from neural_collaborative_filtering.models import NCF
+from neural_collaborative_filtering.models.AttentionNCF import AttentionNCF
+from neural_collaborative_filtering.models.BasicNCF import BasicNCF
+from neural_collaborative_filtering.models.NCF import load_model
 from plots import plot_residuals, plot_stacked_residuals, plot_att_stats, plot_rated_items_counts
 from train import NCF_withfeatures_forward, NCF_onehot_forward
 
@@ -34,13 +33,13 @@ def evaluate_model(model: NCF, forward_function, dataset_class):
     print('Test size:', len(test_dataset))
 
     att_stats = None
-    I = test_dataset.get_I()
+    I = dataset_class.get_number_of_items()
     if visualize and isinstance(model, AttentionNCF):
         B = 1
         test_loader = DataLoader(test_dataset, batch_size=B, collate_fn=MyCollator(only_rated=True, with_names=True), shuffle=True)
     elif keep_att_stats and isinstance(model, AttentionNCF):
-        att_stats = {'sum': pd.DataFrame(index=MovieLensDataset.get_sorted_item_names(), columns=MovieLensDataset.get_sorted_item_names(), data=np.zeros((I, I))),
-                     'count': pd.DataFrame(index=MovieLensDataset.get_sorted_item_names(), columns=MovieLensDataset.get_sorted_item_names(), data=np.zeros((I, I), dtype=np.int32))}
+        att_stats = {'sum': pd.DataFrame(index=dataset_class.get_sorted_item_names(), columns=dataset_class.get_sorted_item_names(), data=np.zeros((I, I))),
+                     'count': pd.DataFrame(index=dataset_class.get_sorted_item_names(), columns=dataset_class.get_sorted_item_names(), data=np.zeros((I, I), dtype=np.int32))}
         test_loader = DataLoader(test_dataset, batch_size=val_batch_size, collate_fn=MyCollator(only_rated=False, with_names=True))
     else:
         test_loader = DataLoader(test_dataset, batch_size=val_batch_size, collate_fn=dataset_class.use_collate())
@@ -84,8 +83,8 @@ def evaluate_model(model: NCF, forward_function, dataset_class):
     print(f'Test loss (MSE): {test_mse:.6f} - RMSE: {sqrt(test_mse):.6f}')
 
     if keep_att_stats and isinstance(model, AttentionNCF):
-        plot_rated_items_counts(att_stats['count'], item_names=MovieLensDataset.get_sorted_item_names())
-        plot_att_stats(att_stats, item_names=MovieLensDataset.get_sorted_item_names())
+        plot_rated_items_counts(att_stats['count'], item_names=dataset_class.get_sorted_item_names())
+        plot_att_stats(att_stats, item_names=dataset_class.get_sorted_item_names())
     else:
         fitted_values = np.concatenate(fitted_values, dtype=np.float64).reshape(-1)
         ground_truth = np.concatenate(ground_truth, dtype=np.float64).reshape(-1)

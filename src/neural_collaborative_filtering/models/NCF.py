@@ -28,6 +28,10 @@ class NCF(nn.Module):
     def save_model(self, file):
         torch.save([self.state_dict(), self.get_model_parameters()], file)
 
+    @abstractmethod
+    def is_dataset_compatible(self, dataset_class):
+        raise Exception('Not Implemented')
+
 
 def load_model_state_and_params(file, ModelClass=None):
     state, kwargs = torch.load(file)

@@ -1,8 +1,9 @@
 import torch
 from torch import nn
 
-from models.NCF import NCF
-from util import build_MLP_layers
+from neural_collaborative_filtering.datasets.dynamic_dataset import DynamicDataset
+from neural_collaborative_filtering.models.NCF import NCF
+from neural_collaborative_filtering.util import build_MLP_layers
 
 
 class AdvancedNCF(NCF):
@@ -23,6 +24,9 @@ class AdvancedNCF(NCF):
 
     def get_model_parameters(self) -> dict[str]:
         return self.kwargs
+
+    def is_dataset_compatible(self, dataset_class):
+        return issubclass(dataset_class, DynamicDataset)
 
     def forward(self, candidate_items, item_matrix, user_matrix):
         # item part

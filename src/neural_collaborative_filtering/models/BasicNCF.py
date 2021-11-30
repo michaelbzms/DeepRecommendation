@@ -1,8 +1,9 @@
 import torch
 from torch import nn
 
-from models.NCF import NCF
-from util import build_MLP_layers
+from neural_collaborative_filtering.datasets.fixed_dataset import FixedDataset
+from neural_collaborative_filtering.models.NCF import NCF
+from neural_collaborative_filtering.util import build_MLP_layers
 
 
 class BasicNCF(NCF):
@@ -35,3 +36,6 @@ class BasicNCF(NCF):
 
     def get_model_parameters(self) -> dict[str]:
         return self.kwargs
+
+    def is_dataset_compatible(self, dataset_class):
+        return issubclass(dataset_class, FixedDataset)
