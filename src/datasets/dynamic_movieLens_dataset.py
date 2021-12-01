@@ -145,7 +145,7 @@ def my_collate_fn2(batch, with_names=False, ignore_ratings=False):
     user_ratings = DynamicMovieLensDataset.user_ratings.loc[user_ids]
     # multi-hot encode sparse ratings into a matrix form
     all_item_ids = DynamicMovieLensDataset.get_all_itemIds_sorted()
-    user_matrix = multi_hot_encode(user_ratings['movieId'], all_item_ids).astype(np.float64)
+    user_matrix = multi_hot_encode(user_ratings['movieId'], all_item_ids.tolist()).astype(np.float64)
     if not ignore_ratings:
         # TODO: This will work but ONLY IF ratings are ORDERED by movieId when we create the dataset. Else the ratings will be misplaced! Be careful!
         user_matrix[user_matrix == 1] = np.concatenate((user_ratings['rating'] - user_ratings['meanRating']).values)

@@ -123,10 +123,10 @@ def load_imdb_metadata_features(unique_movies: pd.Series, MIN_APPEARANCES=1):
         # multi-hot encode genres
         genres = movies_df.loc[movieId]['genres'].split(',')
         genres = set([g.replace(' ', '') for g in genres])
-        genres_feat = multi_hot_encode(genres, all_genres)
+        genres_feat = multi_hot_encode([genres], all_genres)
         # multi-hot encode personel
         personnel = set(principals_df.loc[movieId]['nconst'])
-        personnel_feat = multi_hot_encode(personnel, all_personnel)
+        personnel_feat = multi_hot_encode([personnel], all_personnel)
         # put together for features
         features[i, :len(all_genres)] = genres_feat
         features[i, len(all_genres):] = personnel_feat
