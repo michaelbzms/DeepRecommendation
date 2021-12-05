@@ -32,14 +32,14 @@ class AttentionNCF(NCF):
         # build attention network
         if att_dense is not None:
             self.AttentionNet = nn.Sequential(
-                nn.Linear(2*item_emb, att_dense),
+                nn.Linear(2 * item_dim, att_dense),
                 nn.ReLU(),
                 nn.Dropout(dropout_rate),
                 nn.Linear(att_dense, 1)
             )
         else:
             self.AttentionNet = nn.Sequential(
-                nn.Linear(2 * item_emb, 1)
+                nn.Linear(2 * item_dim, 1)
             )
         # Build MLP according to params
         self.MLP = build_MLP_layers(item_emb + user_emb, mlp_dense_layers, dropout_rate=dropout_rate)
@@ -58,12 +58,12 @@ class AttentionNCF(NCF):
         candidate_item_embeddings = self.ItemEmbeddings(candidate_items)
 
         # Note:  Use detach or not?  -> using it gives slightly worse results
-        rated_emb = self.ItemEmbeddings(rated_items)
+        # rated_emb = self.ItemEmbeddings(rated_items)
 
         # attention on rated items
         """ Note: the one that interleaves matters! I think this works correctly into (B, I) shape 
         because the first I elements contain all different rated items and they become the first row of length I """
-        attNetInput = torch.cat((candidate_item_embeddings.repeat_interleave(I, dim=0), rated_emb.repeat(B, 1)), dim=1)
+        attNetInput = torch.cat((candidate_items.repeat_interleave(I, dim=0), rated_items.repeat(B, 1)), dim=1)
         attention_scores = self.AttentionNet(attNetInput).view(B, I)
         # mask unrated items per user (!) - otherwise there may be high weights on 0 entries
         attention_scores[user_matrix == 0.0] = -float('inf')    # so that softmax gives this a 0 attention weight
