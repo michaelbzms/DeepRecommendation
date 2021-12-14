@@ -1,10 +1,8 @@
 import pandas as pd
 import numpy as np
-from rdflib import Graph, Namespace
 from tqdm import tqdm
-import warnings
 
-from globals import movielens_path, rdf_path, item_metadata_file, train_set_file, val_set_file, test_set_file, seed, \
+from globals import movielens_path, item_metadata_file, train_set_file, val_set_file, test_set_file, seed, \
     user_ratings_file, user_embeddings_file, full_matrix_file, imdb_path
 from util import multi_hot_encode
 

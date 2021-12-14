@@ -1,9 +1,9 @@
 imdb_path = '../data/imdb/'
 movielens_path = '../data/movielens/'
-rdf_path = '../data/rdf_data/'
 audio_features_path = '../data/audio_features_movies/'
 plots_path = '../plots/'
 
+data_folder = '../data'
 item_metadata_file = '../data/item_metadata'
 user_ratings_file = '../data/user_ratings'
 user_embeddings_file = '../data/user_embeddings'

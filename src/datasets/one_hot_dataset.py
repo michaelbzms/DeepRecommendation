@@ -1,5 +1,4 @@
 import torch
-from torch.utils.data import Dataset
 import pandas as pd
 import numpy as np
 
@@ -23,7 +22,6 @@ class OneHotMovieLensDataset(FixedDataset):
     print('Done')
 
     def __init__(self, file: str):
-        self.type = type
         if file == train_set_file:
             self.set = OneHotMovieLensDataset.train_set
         elif file == val_set_file:

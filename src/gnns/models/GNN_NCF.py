@@ -3,20 +3,19 @@ from torch import nn
 import torch
 
 
-class NCF(nn.Module):
+class GNN_NCF(nn.Module):
     def __init__(self):
-        super(NCF, self).__init__()
+        super(GNN_NCF, self).__init__()
 
     @abstractmethod
     def forward(self, *args):
         """
         Executes a forward pass of the network for a batch of B samples which are known cells in the utility matrix.
         Example parameters for USE_FEATURES == True
-        :param candidate_items_batch: (B, F)  B items with their features
-        :param rated_items_features: (I, F) I rated items with their features
-        :param user_matrix: (B, I) a subarray of the utility matrix with the (normalized?) ratings of B users on I items.
-            The order must match rated_items_feature's order on I axis.
-        :return:
+        :param items_features: (I, F) all I items with their features
+        :param items_batch: (B, 1) item IDs in batch
+        :param user_matrix: (B, 1) user IDs in batch
+        :return:  TODO: decide
         """
         raise Exception('Not Implemented')
 
