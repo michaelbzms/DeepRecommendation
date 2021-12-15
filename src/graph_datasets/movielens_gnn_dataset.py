@@ -22,7 +22,6 @@ def create_onehot_features(all):
 
 
 class MovieLensGNNDataset(GNN_Dataset):
-    # TODO
     print('Initializing common dataset prerequisites ...')
     user_ratings: pd.DataFrame = pd.read_hdf(user_ratings_file + '.h5')
     train_set = pd.read_csv(train_set_file + '.csv')
@@ -54,26 +53,27 @@ class MovieLensGNNDataset(GNN_Dataset):
         all_users = MovieLensGNNDataset.all_users
         all_items = MovieLensGNNDataset.all_items
 
-        all_users_index = {u: ind for ind, u in enumerate(all_users)}
-        all_items_index = {i: ind for ind, i in enumerate(all_items)}
+        self.all_users_index = {u: ind for ind, u in enumerate(all_users)}
+        self.all_items_index = {i: ind for ind, i in enumerate(all_items)}
 
-        edge_index = [[all_users_index[u] for u in self.graph_edges['userId']],
-                      [all_items_index[i] for i in self.graph_edges['movieId']]]
+        edge_index = [[self.all_users_index[u] for u in self.graph_edges['userId']],
+                      [self.all_items_index[i] for i in self.graph_edges['movieId']]]
         rev_edge_index = [edge_index[1], edge_index[0]]
 
         # TODO: use rating - avg user rating instead, should be better
         edge_attr = [[rating] for rating in self.graph_edges['rating']]
 
         # TODO: If I want to remove edges that are targets in the batch maybe I need to delay graph creation until the batch?
-        self.train_graph = HeteroData(
+        # maybe I can change edge_index and edge_attr directly
+        self.known_graph = HeteroData(
             user={'x': create_user_features()},  # NUM_USERS x FEAT_USERS
             item={'x': create_item_features()},  # NUM_ITEMS x FEAT_ITEMS
             user__rates__item={'edge_index': torch.tensor(edge_index, dtype=torch.long),   # 2 x NUM_EDGES
                                'edge_attr': torch.tensor(edge_attr, dtype=torch.float)},
-            items__ratedby__user={'edge_index': torch.tensor(rev_edge_index, dtype=torch.long),
+            item__ratedby__user={'edge_index': torch.tensor(rev_edge_index, dtype=torch.long),
                                   'edge_attr': torch.tensor(edge_attr, dtype=torch.float)}
         )
-        print(self.train_graph)
+        print(self.known_graph)
 
         # TODO: OMG There is a from networkx method! But it won't make a hetero graph
         # TODO: use rating - avg user rating instead, should be better
@@ -81,3 +81,19 @@ class MovieLensGNNDataset(GNN_Dataset):
         # self.train_graph2 = from_networkx(g)
         # print(self.train_graph2)
         # pass
+
+    def __getitem__(self, item):
+        """ returns (user_index, item_index, target rating) """
+        data = self.set.iloc[item]
+        return self.all_users_index[data['userId']], self.all_items_index[data['movieId']], float(data['rating'])
+
+    def __len__(self):
+        return self.set.shape[0]
+
+    @staticmethod
+    def get_number_of_users():
+        return len(MovieLensGNNDataset.all_users)
+
+    @staticmethod
+    def get_number_of_items():
+        return len(MovieLensGNNDataset.all_items)

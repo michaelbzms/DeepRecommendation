@@ -11,3 +11,8 @@ def build_MLP_layers(input_size, layer_sizes: list, dropout_rate) -> nn.Sequenti
         if dropout_rate is not None: mlp_layers.append(nn.Dropout(dropout_rate))
         mlp_layers.append(nn.Linear(mlp_dense_layers[i-1], mlp_dense_layers[i]))
     return nn.Sequential(*mlp_layers)
+
+
+def build_GNN_layers(input_size, layer_sizes: list, dropout_rate) -> nn.Sequential:
+    # TODO
+    pass

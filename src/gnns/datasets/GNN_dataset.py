@@ -15,11 +15,7 @@ class GNN_Dataset(Dataset):
 
     @staticmethod
     def use_collate():
-        return None  # no custom collate needed
-
-    @staticmethod
-    def get_item_feature_dim():   # aka F
-        raise Exception('Not Implemented')
+        return None  # no custom collate needed  TODO
 
     @staticmethod
     def forward(model: GNN_NCF, batch, device):
