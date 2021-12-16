@@ -34,13 +34,36 @@ class GCN_NCF(GNN_NCF):
     def get_model_parameters(self) -> dict[str]:
         return self.kwargs
 
-    def forward(self, graph, batch):
+    def forward(self, graph, batch, remove_edges_if_target: bool = False):  # needs to be True for training only I think
+        if remove_edges_if_target:
+            # Temporarily remove edges in graph that we are about to predict  -> in graph.edge_index
+            # TODO: can I speed this up?
+            black_list = set([(int(x), int(y)) for x, y in zip(batch[0], batch[1])]) \
+                .union(set([(int(y), int(x)) for x, y in zip(batch[0], batch[1])]))
+            edge_index = [[], []]
+            edge_attr = []
+            masked_out = 0
+            for i in range(len(graph.edge_index[0])):
+                if (int(graph.edge_index[0][i]), int(graph.edge_index[1][i])) not in black_list:
+                    edge_index[0].append(int(graph.edge_index[0][i]))
+                    edge_index[1].append(int(graph.edge_index[1][i]))
+                    edge_attr.append(graph.edge_attr[i])
+                else:
+                    masked_out += 1
+            assert(masked_out == 2 * len(batch[2]))  # assert everything is going as planned
+            edge_index = torch.tensor(edge_index, dtype=torch.long)
+            edge_attr = torch.tensor(edge_attr, dtype=torch.float)
+        else:
+            edge_index = graph.edge_index
+            edge_attr = graph.edge_attr
+
         # encode with GNN
         graph_emb = graph.x        # initial representation
         for gnn_conv in self.gnn_convs:
-            graph_emb = gnn_conv(graph_emb, graph.edge_index, edge_weight=graph.edge_attr)
+            graph_emb = gnn_conv(graph_emb, edge_index, edge_weight=edge_attr)
             graph_emb = F.leaky_relu(graph_emb)
         print(graph_emb)
+        # TODO: keep only the latest or keep previous (e.g. concat or use LSTM/GRU)
 
         # find embeddings of items in batch
         item_emb = graph_emb[batch[1]]

@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from torch_geometric.data import HeteroData, Data
 import networkx as nx
-from torch_geometric.utils import from_networkx
+from torch_geometric.utils import from_networkx, coalesce
 
 from globals import user_ratings_file, train_set_file, val_set_file, test_set_file
 from gnns.datasets.GNN_dataset import GNN_Dataset
@@ -67,6 +67,10 @@ class MovieLensGNNDataset(GNN_Dataset):
             num_items=len(all_items)
         )
         print(self.known_graph)
+        # remove duplicates
+        print('Removing duplicate edges...')
+        self.known_graph.edge_index, self.known_graph.edge_attr = coalesce(self.known_graph.edge_index, self.known_graph.edge_attr, reduce='mean')
+        print(self.known_graph)
 
         # TODO: OMG There is a from networkx method! But it won't make a hetero graph
         # TODO: use rating - avg user rating instead, should be better
@@ -85,8 +89,8 @@ class MovieLensGNNDataset(GNN_Dataset):
 
     @staticmethod
     def get_number_of_users():
-        return len(MovieLensGNNHeteroDataset.all_users)
+        return len(MovieLensGNNDataset.all_users)
 
     @staticmethod
     def get_number_of_items():
-        return len(MovieLensGNNHeteroDataset.all_items)
+        return len(MovieLensGNNDataset.all_items)
