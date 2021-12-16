@@ -1,7 +1,7 @@
 import torch
 from torch import nn
-from torch.fx import GraphModule
-from torch_geometric.nn import GCNConv, SAGEConv, to_hetero, HeteroConv, GATConv
+from torch_geometric.nn import GCNConv, SAGEConv, GATConv
+import torch.nn.functional as F
 
 from gnns.models.GNN_NCF import GNN_NCF
 from neural_collaborative_filtering.util import build_MLP_layers
@@ -16,17 +16,14 @@ class GCN_NCF(GNN_NCF):
                        'user_emb': user_emb,
                        'mlp_dense_layers': mlp_dense_layers}
 
-        self.conv = HeteroConv({
-            ('user', 'rates', 'item'): GATConv(in_channels=(-1, -1), out_channels=gnn_hidden, edge_dim=1),
-            ('item', 'ratedby', 'user'): GATConv(in_channels=(-1, -1), out_channels=gnn_hidden, edge_dim=1)
-        })
+        self.conv = GCNConv(in_channels=-1, out_channels=gnn_hidden)
 
         self.item_embeddings = nn.Sequential(
-            nn.Linear(0, item_emb),
+            nn.Linear(gnn_hidden, item_emb),
             nn.ReLU()
         )
         self.user_embeddings = nn.Sequential(
-            nn.Linear(0, user_emb),
+            nn.Linear(gnn_hidden, user_emb),
             nn.ReLU()
         )
         self.MLP = build_MLP_layers(item_emb + user_emb, mlp_dense_layers, dropout_rate=dropout_rate)
@@ -36,9 +33,21 @@ class GCN_NCF(GNN_NCF):
 
     def forward(self, graph, batch):
         # encode with GNN
-        graph_emb = self.conv(graph.x_dict, graph.edge_index_dict,  **{'edge_attr_dict': graph.edge_attr_dict})  # this works for adding weigths
+        graph_emb = self.conv(graph.x, graph.edge_index, edge_weight=graph.edge_attr)
+        graph_emb = F.leaky_relu(graph_emb)
+        print(graph_emb)
 
-        print(graph_emb)
-        print(graph_emb)
-        # use these embeddings forward
-        pass
+        # find embeddings of items in batch
+        item_emb = graph_emb[batch[1]]
+
+        # find embeddings of users in batch
+        user_emb = graph_emb[graph.num_items + batch[0]]
+
+        # use these to forward the NCF model
+        item_emb = self.item_embeddings(item_emb)
+        user_emb = self.user_embeddings(user_emb)
+        combined = torch.cat((item_emb, user_emb), dim=1)
+        out = self.MLP(combined)
+
+        return out
+
