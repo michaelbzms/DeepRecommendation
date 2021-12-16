@@ -10,5 +10,6 @@ mld = MovieLensGNNDataset(train_set_file)
 data_loader = DataLoader(mld, batch_size=16)
 
 model = GCN_NCF()
-model.forward(mld.known_graph, next(iter(data_loader)))
+batch = next(iter(data_loader))
+model.forward(mld.known_graph, batch[0], batch[1])
 

@@ -40,7 +40,9 @@ def train_model(model: GNN_NCF, dataset_class, train_set_file, val_set_file,
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     criterion = nn.MSELoss(reduction='sum')  # don't average the loss as we shall do that ourselves for the whole epoch
 
-    # TODO: create graph here or on the dataset? Probably on the dataset...
+    # get graphs
+    train_graph = train_dataset.get_graph().to(device)
+    val_graph = val_dataset.get_graph().to(device)
 
     early_stop_times = 0
     least_running_loss = None
@@ -56,7 +58,7 @@ def train_model(model: GNN_NCF, dataset_class, train_set_file, val_set_file,
             # reset the gradients
             optimizer.zero_grad()
             # forward model
-            out, y_batch = dataset_class.forward(model, batch, device)
+            out, y_batch = dataset_class.forward(model, train_graph, batch, device)
             # calculate loss
             loss = criterion(out, y_batch.view(-1, 1).float().to(device))
             # backpropagation (compute gradients)
@@ -82,7 +84,7 @@ def train_model(model: GNN_NCF, dataset_class, train_set_file, val_set_file,
         with torch.no_grad():
             for batch in tqdm(val_loader, desc='Validating'):
                 # forward model
-                out, y_batch = dataset_class.forward(model, batch, device)
+                out, y_batch = dataset_class.forward(model, val_graph, batch, device)
                 # calculate loss
                 loss = criterion(out, y_batch.view(-1, 1).float().to(device))
                 # accumulate validation loss

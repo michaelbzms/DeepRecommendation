@@ -3,6 +3,7 @@ from torch import nn
 from torch_geometric.nn import GCNConv, SAGEConv, GATConv
 import torch.nn.functional as F
 
+from gnns.datasets.GNN_dataset import GNN_Dataset
 from gnns.models.GNN_NCF import GNN_NCF
 from neural_collaborative_filtering.util import build_MLP_layers
 
@@ -34,12 +35,15 @@ class GCN_NCF(GNN_NCF):
     def get_model_parameters(self) -> dict[str]:
         return self.kwargs
 
-    def forward(self, graph, batch, remove_edges_if_target: bool = False):  # needs to be True for training only I think
+    def is_dataset_compatible(self, dataset_class):
+        return issubclass(dataset_class, GNN_Dataset)
+
+    def forward(self, graph, userIds, itemIds, remove_edges_if_target: bool = False):  # needs to be True for training only I think
         if remove_edges_if_target:
             # Temporarily remove edges in graph that we are about to predict  -> in graph.edge_index
             # TODO: can I speed this up?
-            black_list = set([(int(x), int(y)) for x, y in zip(batch[0], batch[1])]) \
-                .union(set([(int(y), int(x)) for x, y in zip(batch[0], batch[1])]))
+            black_list = set([(int(x), int(y)) for x, y in zip(userIds, itemIds)]) \
+                .union(set([(int(y), int(x)) for x, y in zip(userIds, itemIds)]))
             edge_index = [[], []]
             edge_attr = []
             masked_out = 0
@@ -50,7 +54,7 @@ class GCN_NCF(GNN_NCF):
                     edge_attr.append(graph.edge_attr[i])
                 else:
                     masked_out += 1
-            assert(masked_out == 2 * len(batch[2]))  # assert everything is going as planned
+            assert(masked_out == 2 * len(userIds))  # assert everything is going as planned
             edge_index = torch.tensor(edge_index, dtype=torch.long)
             edge_attr = torch.tensor(edge_attr, dtype=torch.float)
         else:
@@ -62,14 +66,13 @@ class GCN_NCF(GNN_NCF):
         for gnn_conv in self.gnn_convs:
             graph_emb = gnn_conv(graph_emb, edge_index, edge_weight=edge_attr)
             graph_emb = F.leaky_relu(graph_emb)
-        print(graph_emb)
         # TODO: keep only the latest or keep previous (e.g. concat or use LSTM/GRU)
 
         # find embeddings of items in batch
-        item_emb = graph_emb[batch[1]]
+        item_emb = graph_emb[itemIds.long()]
 
         # find embeddings of users in batch
-        user_emb = graph_emb[graph.num_items + batch[0]]
+        user_emb = graph_emb[(graph.num_items + userIds).long()]
 
         # use these to forward the NCF model
         item_emb = self.item_embeddings(item_emb)

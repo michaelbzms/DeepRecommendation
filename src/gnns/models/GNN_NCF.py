@@ -12,10 +12,10 @@ class GNN_NCF(nn.Module):
         """
         Executes a forward pass of the network for a batch of B samples which are known cells in the utility matrix.
         Example parameters for USE_FEATURES == True
-        :param items_features: (I, F) all I items with their features
-        :param items_batch: (B, 1) item IDs in batch
-        :param user_matrix: (B, 1) user IDs in batch
-        :return:  TODO: decide
+        :param   graph: PyG's Data graph with node features and edges
+        :param userIds: (B, 1) user IDs in batch
+        :param itemIds: (B, 1) item IDs in batch
+        :return:
         """
         raise Exception('Not Implemented')
 
