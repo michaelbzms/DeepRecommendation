@@ -19,7 +19,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 def train_model(model: GNN_NCF, dataset_class, train_set_file, val_set_file,
                 lr, weight_decay, batch_size, val_batch_size, early_stop,
                 final_model_path, checkpoint_model_path='temp.pt', max_epochs=100,
-                patience=5, stop_with_train_loss_instead=False,
+                patience=5, stop_with_train_loss_instead=False, mask_target_edges_when_training=True,
                 optimizer=None, save=True, writer: SummaryWriter=None):
     # torch.autograd.set_detect_anomaly(True)   # this slows down training
     model.to(device)
@@ -58,7 +58,7 @@ def train_model(model: GNN_NCF, dataset_class, train_set_file, val_set_file,
             # reset the gradients
             optimizer.zero_grad()
             # forward model
-            out, y_batch = dataset_class.forward(model, train_graph, batch, device)
+            out, y_batch = dataset_class.forward(model, train_graph, batch, device, mask_target_edges_when_training)
             # calculate loss
             loss = criterion(out, y_batch.view(-1, 1).float().to(device))
             # backpropagation (compute gradients)

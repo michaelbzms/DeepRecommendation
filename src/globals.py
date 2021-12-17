@@ -26,12 +26,13 @@ final_model_path = '../models/final_model.pt'
 max_epochs = 100
 batch_size = 128
 val_batch_size = 128
-embeddings_lr = 3e-4    # not currently used
-lr = 5e-4
+embeddings_lr = 0.01   # not currently used
+lr = 0.001
 weight_decay = 1e-5
 dropout_rate = 0.2
 early_stop = True
 stop_with_train_loss_instead = False  # Note: useful if we are trying to overfit
 patience = 5
+mask_target_edges_when_training = False
 
 USE_FEATURES = True

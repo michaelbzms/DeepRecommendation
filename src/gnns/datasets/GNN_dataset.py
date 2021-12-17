@@ -21,9 +21,9 @@ class GNN_Dataset(Dataset):
         return None  # no custom collate needed  TODO
 
     @staticmethod
-    def forward(model: GNN_NCF, graph, batch, device):
+    def forward(model: GNN_NCF, graph, batch, device, *args):
         # get the input matrices and the target
         userIds, itemIds, y_batch = batch
         # forward model
-        out = model(graph, userIds.float().to(device), itemIds.float().to(device))
+        out = model(graph, userIds.float().to(device), itemIds.float().to(device), *args)
         return out, y_batch

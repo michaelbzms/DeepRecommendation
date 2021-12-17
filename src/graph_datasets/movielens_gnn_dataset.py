@@ -1,9 +1,9 @@
 import pandas as pd
 import numpy as np
 import torch
-from torch_geometric.data import HeteroData, Data
-import networkx as nx
-from torch_geometric.utils import from_networkx, coalesce
+from torch_geometric.data import Data
+from torch_geometric.utils import coalesce
+from tqdm import tqdm
 
 from globals import user_ratings_file, train_set_file, val_set_file, test_set_file
 from gnns.datasets.GNN_dataset import GNN_Dataset
@@ -47,18 +47,35 @@ class MovieLensGNNDataset(GNN_Dataset):
         self.all_users_index = {u: ind for ind, u in enumerate(all_users)}
         self.all_items_index = {i: ind for ind, i in enumerate(all_items)}
 
+        # find edges
         edge_index = [[self.all_users_index[u] for u in self.graph_edges['userId']],
                       [self.all_items_index[i] for i in self.graph_edges['movieId']]]
-        rev_edge_index = [edge_index[1], edge_index[0]]
-        # append backward edges
+        # append backward edges too
         edge_index[0] += edge_index[1]
         edge_index[1] += edge_index[0][:self.graph_edges.shape[0]]
 
+        # TODO: This is dumb
+        # edge_attr = [[rating] for rating in self.graph_edges['rating']] * 2
 
-        # TODO: use rating - avg user rating instead, should be better
-        edge_attr = [[rating] for rating in self.graph_edges['rating']] * 2
+        # Note: use rating - avg user rating instead of just the rating. Sign is meaningful this way
+        # TODO: Negative weights give nan values. Why??? -> because of sqrt(node_degree). Setting normalize=False fixes it
+        edge_attr = [[(edge['rating'] - MovieLensGNNDataset.user_ratings.loc[int(edge['userId'])]['meanRating'])]
+                     for _, edge in tqdm(self.graph_edges.iterrows(), desc='Loading graph edges...', total=len(self.graph_edges))] * 2
 
-        # TODO: If I want to remove edges that are targets in the batch maybe I need to delay graph creation until the batch?
+        # edge_index = [[self.all_users_index[edge['userId']] for _, edge in self.graph_edges.iterrows()
+        #                if edge['rating'] > MovieLensGNNDataset.user_ratings.loc[int(edge['userId'])]['meanRating']],
+        #               [self.all_items_index[edge['movieId']] for _, edge in self.graph_edges.iterrows()
+        #                if edge['rating'] > MovieLensGNNDataset.user_ratings.loc[int(edge['userId'])]['meanRating']]]
+        # # append backward edges
+        # start_len = len(edge_index[0])
+        # edge_index[0] += edge_index[1]
+        # edge_index[1] += edge_index[0][:start_len]
+        #
+        # # Add only edges that are higher that the user's average ratings
+        # edge_attr = [[-edge['rating']]
+        #              for _, edge in tqdm(self.graph_edges.iterrows(), desc='Loading graph edges...', total=len(self.graph_edges))
+        #              if edge['rating'] > MovieLensGNNDataset.user_ratings.loc[int(edge['userId'])]['meanRating']] * 2
+
         # maybe I can change edge_index and edge_attr directly
         self.known_graph = Data(
             x=x,
