@@ -5,7 +5,8 @@ from torch_geometric.data import Data
 from torch_geometric.utils import coalesce
 from tqdm import tqdm
 
-from globals import user_ratings_file, train_set_file, val_set_file, test_set_file
+from globals import user_ratings_file, train_set_file, val_set_file, test_set_file, \
+    message_passing_vs_supervised_edges_ratio
 from gnns.datasets.GNN_dataset import GNN_Dataset
 
 
@@ -77,13 +78,21 @@ class MovieLensGNNDataset(GNN_Dataset):
     print('Done')
 
     def __init__(self, file: str, mask_target_edges_when_training=False):
+        self.mask_target_edges_when_training = mask_target_edges_when_training
         if file == train_set_file:
-            self.set = MovieLensGNNDataset.train_set
             if not mask_target_edges_when_training:
+                self.set = MovieLensGNNDataset.train_set
                 self.graph_edges = MovieLensGNNDataset.train_set
             else:
-                # TODO: split training edges to message passing ones and supervision edges
-                pass
+                # graph egdes are disjoint from train set -> split training edges to message passing ones and supervision edges
+                r = message_passing_vs_supervised_edges_ratio
+                # randomly select r % of each user's ratings to be used for graph edges
+                self.graph_edges = MovieLensGNNDataset.train_set.groupby('userId', as_index=False) \
+                    .apply(lambda obj: obj.loc[np.random.choice(obj.index, int(r * obj.shape[0]), replace=False), :]).reset_index(drop=True)
+                # and use the rest as supervised edges by removing the graph edges from the train set
+                self.set = pd.merge(MovieLensGNNDataset.train_set, self.graph_edges, on=['userId', 'movieId', 'rating'], how='outer', indicator=True) \
+                    .query("_merge != 'both'").drop('_merge', axis=1).reset_index(drop=True)
+
         elif file == val_set_file:
             self.set = MovieLensGNNDataset.val_set
             self.graph_edges = MovieLensGNNDataset.train_set
