@@ -23,11 +23,11 @@ features_to_use = 'all'
 """ NN hyperparameters """
 checkpoint_model_path = '../models/checkpoint.pt'
 final_model_path = '../models/final_model.pt'
-max_epochs = 100
-batch_size = 128
-val_batch_size = 128
-embeddings_lr = 0.01   # not currently used
-lr = 0.001
+max_epochs = 512
+batch_size = 256  # 16384
+val_batch_size = 256
+embeddings_lr = 0.001   # not currently used
+lr = 1e-3
 weight_decay = 1e-5
 dropout_rate = 0.2
 early_stop = True

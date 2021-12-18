@@ -6,6 +6,7 @@ from datetime import datetime
 from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, max_epochs, early_stop, \
     stop_with_train_loss_instead, checkpoint_model_path, patience, dropout_rate, final_model_path, \
     val_batch_size, features_to_use, embeddings_lr
+from gnns.models.GAT import GAT_NCF
 from gnns.models.GCN import GCN_NCF
 from graph_datasets.movielens_gnn_dataset import MovieLensGNNDataset
 from gnns.train_gnn_ncf import train_model
@@ -19,12 +20,13 @@ if __name__ == '__main__':
 
     # define optimizer and loss
     # For separate lrs:
-    optimizer = optim.Adam([
-        {'params': model.gnn_convs.parameters(), 'lr': embeddings_lr},
-        {'params': model.MLP.parameters(), 'lr': lr},
-        # {'params': model.item_embeddings.parameters(), 'lr': lr},
-        # {'params': model.user_embeddings.parameters(), 'lr': lr},
-    ], weight_decay=weight_decay)
+    # optimizer = optim.Adam([
+    #     {'params': model.gnn_convs.parameters(), 'lr': embeddings_lr},
+    #     {'params': model.MLP.parameters(), 'lr': lr},
+    #     {'params': model.item_embeddings.parameters(), 'lr': lr},
+    #     {'params': model.user_embeddings.parameters(), 'lr': lr},
+    # ], weight_decay=weight_decay)
+    optimizer = None
 
     # log training for later?
     now = datetime.now()

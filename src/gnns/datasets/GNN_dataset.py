@@ -10,6 +10,7 @@ class GNN_Dataset(Dataset):
     """
     @abstractmethod
     def __getitem__(self, item):
+        """ return (userId, itemId, target) or use custom collate to make batches of such """
         raise Exception('Not Implemented')
 
     @abstractmethod
@@ -22,6 +23,7 @@ class GNN_Dataset(Dataset):
 
     @staticmethod
     def forward(model: GNN_NCF, graph, batch, device, *args):
+        """ expects samples of  (userId, itemId, target) and a graph to pass on to the model """
         # get the input matrices and the target
         userIds, itemIds, y_batch = batch
         # forward model

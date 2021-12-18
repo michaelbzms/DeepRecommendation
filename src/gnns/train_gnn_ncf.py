@@ -29,7 +29,7 @@ def train_model(model: GNN_NCF, dataset_class, train_set_file, val_set_file,
         raise Exception('Model used is incompatible with this dataset.')
 
     # load dataset
-    train_dataset = dataset_class(train_set_file)
+    train_dataset = dataset_class(train_set_file, mask_target_edges_when_training=mask_target_edges_when_training)
     val_dataset = dataset_class(val_set_file)
     print('Training size:', len(train_dataset), ' - Validation size:', len(val_dataset))
 
@@ -46,6 +46,7 @@ def train_model(model: GNN_NCF, dataset_class, train_set_file, val_set_file,
 
     early_stop_times = 0
     least_running_loss = None
+    previous_running_loss = None
     checkpoint_epoch = -1
     train_losses = []
     val_losses = []
@@ -58,7 +59,7 @@ def train_model(model: GNN_NCF, dataset_class, train_set_file, val_set_file,
             # reset the gradients
             optimizer.zero_grad()
             # forward model
-            out, y_batch = dataset_class.forward(model, train_graph, batch, device, mask_target_edges_when_training)
+            out, y_batch = dataset_class.forward(model, train_graph, batch, device)
             # calculate loss
             loss = criterion(out, y_batch.view(-1, 1).float().to(device))
             # backpropagation (compute gradients)
@@ -99,15 +100,21 @@ def train_model(model: GNN_NCF, dataset_class, train_set_file, val_set_file,
             writer.add_scalar('Loss/val', val_loss, epoch)
 
         if early_stop:
-            if least_running_loss is None or (
-                    not stop_with_train_loss_instead and val_sum_loss < least_running_loss) \
-                    or (stop_with_train_loss_instead and train_sum_loss < least_running_loss):
+            if least_running_loss is None or (not stop_with_train_loss_instead and val_sum_loss < least_running_loss) \
+                                          or (stop_with_train_loss_instead and train_sum_loss < least_running_loss):
                 model.save_model(checkpoint_model_path)  # saves kwargs as well
                 checkpoint_epoch = epoch
                 least_running_loss = val_sum_loss if not stop_with_train_loss_instead else train_sum_loss
                 early_stop_times = 0  # reset
             else:
-                if early_stop_times >= patience:
+                # increase early stop times only if loss increased from previous time (not the least one overall)
+                if previous_running_loss is not None and (not stop_with_train_loss_instead and val_sum_loss > previous_running_loss) \
+                                                      or (stop_with_train_loss_instead and train_sum_loss > previous_running_loss):
+                    early_stop_times += 1
+                else:
+                    early_stop_times = max(0, early_stop_times - 1)  # go back one
+
+                if early_stop_times > patience:
                     print(f'Early stopping at epoch {epoch + 1}.')
                     print(f'Loading best model from checkpoint from epoch {checkpoint_epoch + 1} with loss: {least_running_loss / val_size:.6f}')
                     state, _ = load_model_state_and_params(checkpoint_model_path)  # ignore kwargs -> we know them
@@ -115,12 +122,15 @@ def train_model(model: GNN_NCF, dataset_class, train_set_file, val_set_file,
                     model.eval()
                     break
                 else:
-                    early_stop_times += 1
                     if epoch == max_epochs - 1:
                         print(f'Loss worsened in last epoch(s), loading best model from checkpoint from epoch {checkpoint_epoch}')
                         state, _ = load_model_state_and_params(checkpoint_model_path)  # ignore kwargs -> we know them
                         model.load_state_dict(state)
                         model.eval()
+
+            print(f'Patience remaining: {patience - early_stop_times}')
+
+            previous_running_loss = val_sum_loss if not stop_with_train_loss_instead else train_sum_loss
 
     # save model (its weights)
     if save:
