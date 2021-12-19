@@ -9,9 +9,9 @@ from neural_collaborative_filtering.util import build_MLP_layers
 
 
 class GAT_NCF(GNN_NCF):
-    def __init__(self, gnn_hidden_layers=None, item_emb=256, user_emb=256, mlp_dense_layers=None, dropout_rate=0.2):
+    def __init__(self, gnn_hidden_layers=None, item_emb=128, user_emb=128, mlp_dense_layers=None, dropout_rate=0.2):
         super(GAT_NCF, self).__init__()
-        if mlp_dense_layers is None: mlp_dense_layers = [512, 256, 128]         # default
+        if mlp_dense_layers is None: mlp_dense_layers = [256, 128]    # default
         if gnn_hidden_layers is None: gnn_hidden_layers = [256]       # default
         self.kwargs = {'gnn_hidden_layers': gnn_hidden_layers,
                        'item_emb': item_emb,
@@ -25,11 +25,11 @@ class GAT_NCF(GNN_NCF):
         )
 
         self.item_embeddings = nn.Sequential(
-            nn.Linear(gnn_hidden_layers[-1], item_emb),
+            nn.Linear(sum(gnn_hidden_layers), item_emb),
             nn.ReLU()
         )
         self.user_embeddings = nn.Sequential(
-            nn.Linear(gnn_hidden_layers[-1], user_emb),
+            nn.Linear(sum(gnn_hidden_layers), user_emb),
             nn.ReLU()
         )
         self.MLP = build_MLP_layers(item_emb + user_emb, mlp_dense_layers, dropout_rate=dropout_rate)
@@ -45,16 +45,19 @@ class GAT_NCF(GNN_NCF):
     def forward(self, graph, userIds, itemIds):  # needs to be True for training only I think
         # encode with GNN
         graph_emb = graph.x        # initial representation
+        hs = []
         for gnn_conv in self.gnn_convs:
             graph_emb = gnn_conv(graph_emb, graph.edge_index, edge_attr=graph.edge_attr)
             graph_emb = F.leaky_relu(graph_emb)
+            hs.append(graph_emb)
+        combined_graph_emb = torch.cat(hs, dim=1)
         # TODO: keep only the latest or keep previous (e.g. concat or use LSTM/GRU)
 
         # find embeddings of items in batch
-        item_emb = graph_emb[itemIds.long()]
+        item_emb = combined_graph_emb[itemIds.long()]
 
         # find embeddings of users in batch
-        user_emb = graph_emb[(graph.num_items + userIds).long()]
+        user_emb = combined_graph_emb[(graph.num_items + userIds).long()]
 
         # use these to forward the NCF model
         item_emb = self.item_embeddings(item_emb)

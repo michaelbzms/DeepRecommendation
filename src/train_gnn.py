@@ -15,7 +15,7 @@ from globals import mask_target_edges_when_training
 
 if __name__ == '__main__':
     dataset_class = MovieLensGNNDataset
-    model = GCN_NCF(dropout_rate=dropout_rate)
+    model = GAT_NCF(dropout_rate=dropout_rate)
     print(model)
 
     # define optimizer and loss
