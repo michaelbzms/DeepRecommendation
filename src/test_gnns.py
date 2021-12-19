@@ -7,9 +7,11 @@ from graph_datasets.movielens_gnn_dataset import MovieLensGNNDataset
 
 mld = MovieLensGNNDataset(train_set_file)
 
-data_loader = DataLoader(mld, batch_size=16)
+mld.draw_graph()
 
-model = GCN_NCF()
-batch = next(iter(data_loader))
-model.forward(mld.known_graph, batch[0], batch[1])
+# data_loader = DataLoader(mld, batch_size=16)
+#
+# model = GCN_NCF()
+# batch = next(iter(data_loader))
+# model.forward(mld.known_graph, batch[0], batch[1])
 

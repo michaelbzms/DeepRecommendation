@@ -4,7 +4,7 @@ from torch_geometric.nn import GCNConv, SAGEConv, GATConv
 import torch.nn.functional as F
 
 from gnns.datasets.GNN_dataset import GNN_Dataset
-from gnns.models.GNN_NCF import GNN_NCF
+from gnns.models.GNN import GNN_NCF
 from neural_collaborative_filtering.util import build_MLP_layers
 
 

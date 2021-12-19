@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 
-from gnns.models.GNN_NCF import GNN_NCF, load_model_state_and_params
+from gnns.models.GNN import GNN_NCF, load_model_state_and_params
 from plots import plot_train_val_losses
 
 

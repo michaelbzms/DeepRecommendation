@@ -2,12 +2,13 @@ import pandas as pd
 import numpy as np
 import torch
 from torch_geometric.data import Data
-from torch_geometric.utils import coalesce
+from torch_geometric.utils import coalesce, to_networkx
 from tqdm import tqdm
 
 from globals import user_ratings_file, train_set_file, val_set_file, test_set_file, \
     message_passing_vs_supervised_edges_ratio
 from gnns.datasets.GNN_dataset import GNN_Dataset
+from plots import plot_user_item_graph
 
 
 def create_onehot_graph(all_users: np.array, all_items: np.array, graph_edges, user_ratings):
@@ -16,8 +17,8 @@ def create_onehot_graph(all_users: np.array, all_items: np.array, graph_edges, u
     # First sorted items then sorted users as nodes with combined one-hot vector representations
     x = torch.eye(len(all_items) + len(all_users))
 
-    all_users_index = {u: ind for ind, u in enumerate(all_users)}
     all_items_index = {i: ind for ind, i in enumerate(all_items)}
+    all_users_index = {u: ind + len(all_items) for ind, u in enumerate(all_users)}       # IMPORTANT: add num items to user index!!!
 
     # find edges
     edge_index = [[all_users_index[u] for u in graph_edges['userId']],
@@ -114,6 +115,12 @@ class MovieLensGNNDataset(GNN_Dataset):
 
     def get_graph(self):
         return self.known_graph
+
+    def draw_graph(self):
+        g = to_networkx(self.known_graph, to_undirected=True)
+                        # node_attrs=list(self.all_items) + list(self.all_users),
+                        # edge_attrs=[str(w) for w in self.known_graph.edge_attr.numpy()]
+        plot_user_item_graph(g)
 
     def __len__(self):
         return self.set.shape[0]

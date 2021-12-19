@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from torch.utils.data import Dataset
 
-from gnns.models.GNN_NCF import GNN_NCF
+from gnns.models.GNN import GNN_NCF
 
 
 class GNN_Dataset(Dataset):

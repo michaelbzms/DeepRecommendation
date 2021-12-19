@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import networkx as nx
 import seaborn as sns
 import numpy as np
 import pandas as pd
@@ -216,5 +217,23 @@ def plot_rated_items_counts(counts, item_names):
 
     # save image
     plt.savefig(plots_path + 'rated_items_count_distribution.png', dpi=200)
+
+    plt.show()
+
+
+def plot_user_item_graph(g: nx.Graph, num_items=192):
+    plt.figure(figsize=(16, 10))
+
+    pos = nx.drawing.layout.bipartite_layout(g, list(range(num_items)))
+
+    # nx.draw_networkx(g, pos=pos, width=0.01, with_labels=False, node_size=1.0)
+
+    nx.draw_networkx_nodes(g, pos=pos, node_size=0.5, nodelist=list(range(num_items)), node_color='r')
+    nx.draw_networkx_nodes(g, pos=pos, node_size=0.5, nodelist=list(range(num_items, g.number_of_nodes())), node_color='b')
+
+    nx.draw_networkx_edges(g, pos=pos, width=0.01, alpha=0.2)
+
+    # save image
+    plt.savefig(plots_path + 'user_item_graph.png', dpi=128)
 
     plt.show()
