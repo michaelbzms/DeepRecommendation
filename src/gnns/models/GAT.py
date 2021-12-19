@@ -12,7 +12,7 @@ class GAT_NCF(GNN_NCF):
     def __init__(self, gnn_hidden_layers=None, item_emb=128, user_emb=128, mlp_dense_layers=None, dropout_rate=0.2):
         super(GAT_NCF, self).__init__()
         if mlp_dense_layers is None: mlp_dense_layers = [256, 128]    # default
-        if gnn_hidden_layers is None: gnn_hidden_layers = [256]       # default
+        if gnn_hidden_layers is None: gnn_hidden_layers = [128]       # default
         self.kwargs = {'gnn_hidden_layers': gnn_hidden_layers,
                        'item_emb': item_emb,
                        'user_emb': user_emb,
@@ -57,7 +57,7 @@ class GAT_NCF(GNN_NCF):
         item_emb = combined_graph_emb[itemIds.long()]
 
         # find embeddings of users in batch
-        user_emb = combined_graph_emb[(graph.num_items + userIds).long()]
+        user_emb = combined_graph_emb[userIds.long()]
 
         # use these to forward the NCF model
         item_emb = self.item_embeddings(item_emb)

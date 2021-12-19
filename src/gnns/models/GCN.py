@@ -55,7 +55,7 @@ class GCN_NCF(GNN_NCF):
         item_emb = graph_emb[itemIds.long()]
 
         # find embeddings of users in batch
-        user_emb = graph_emb[(graph.num_items + userIds).long()]
+        user_emb = graph_emb[userIds.long()]
 
         # use these to forward the NCF model
         item_emb = self.item_embeddings(item_emb)
