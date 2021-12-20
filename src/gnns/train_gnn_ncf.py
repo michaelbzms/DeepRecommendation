@@ -110,7 +110,7 @@ def train_model(model: GNN_NCF, dataset_class, train_set_file, val_set_file,
                 # increase early stop times only if loss increased from previous time (not the least one overall)
                 if previous_running_loss is not None and (not stop_with_train_loss_instead and val_sum_loss > previous_running_loss) \
                                                       or (stop_with_train_loss_instead and train_sum_loss > previous_running_loss):
-                    early_stop_times += 1
+                    early_stop_times += 0.5
                 else:
                     early_stop_times = max(0, early_stop_times - 1)  # go back one
 

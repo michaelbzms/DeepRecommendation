@@ -132,3 +132,8 @@ class MovieLensGNNDataset(GNN_Dataset):
     @staticmethod
     def get_number_of_items():
         return len(MovieLensGNNDataset.all_items)
+
+    @staticmethod
+    def get_initial_repr_dim():
+        # For one-hot dataset:
+        return MovieLensGNNDataset.get_number_of_items() + MovieLensGNNDataset.get_number_of_users()

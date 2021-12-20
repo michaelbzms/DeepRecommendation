@@ -9,20 +9,22 @@ from neural_collaborative_filtering.util import build_MLP_layers
 
 
 class GAT_NCF(GNN_NCF):
-    def __init__(self, gnn_hidden_layers=None, item_emb=128, user_emb=128,
-                 mlp_dense_layers=None, num_heads=1, extra_emb_layers=False, dropout_rate=0.2):
+    def __init__(self, initial_repr_dim=-1, gnn_hidden_layers=None, item_emb=128, user_emb=128,
+                 mlp_dense_layers=None, num_heads=1, extra_emb_layers=False,
+                 dropout_rate=0.2):
         super(GAT_NCF, self).__init__()
         if mlp_dense_layers is None: mlp_dense_layers = [256, 128]    # default
-        if gnn_hidden_layers is None: gnn_hidden_layers = [128]       # default
+        if gnn_hidden_layers is None: gnn_hidden_layers = [128, 128]       # default
         self.kwargs = {'gnn_hidden_layers': gnn_hidden_layers,
                        'item_emb': item_emb,
                        'user_emb': user_emb,
                        'mlp_dense_layers': mlp_dense_layers,
                        'num_heads': num_heads,
-                       'extra_emb_layers': extra_emb_layers}
+                       'extra_emb_layers': extra_emb_layers,
+                       'initial_repr_dim': initial_repr_dim}
 
         self.gnn_convs = nn.ModuleList(
-            [GATConv(in_channels=-1 if i == 0 else gnn_hidden_layers[i-1],
+            [GATConv(in_channels=initial_repr_dim if i == 0 else gnn_hidden_layers[i-1],
                      out_channels=gnn_hidden_layers[i],
                      edge_dim=1,
                      heads=num_heads) for i in range(len(gnn_hidden_layers))]
