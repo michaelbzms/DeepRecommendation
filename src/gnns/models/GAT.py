@@ -14,7 +14,7 @@ class GAT_NCF(GNN_NCF):
                  dropout_rate=0.2):
         super(GAT_NCF, self).__init__()
         if mlp_dense_layers is None: mlp_dense_layers = [256, 128]    # default
-        if gnn_hidden_layers is None: gnn_hidden_layers = [128, 128]       # default
+        if gnn_hidden_layers is None: gnn_hidden_layers = [128]       # default
         self.kwargs = {'gnn_hidden_layers': gnn_hidden_layers,
                        'item_emb': item_emb,
                        'user_emb': user_emb,

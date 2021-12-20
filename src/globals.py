@@ -27,13 +27,18 @@ max_epochs = 256
 batch_size = 256  # 16384
 val_batch_size = 256
 embeddings_lr = 0.001   # not currently used
-lr = 7e-4
+lr = 5e-4
 weight_decay = 1e-5
 dropout_rate = 0.2
 early_stop = True
 stop_with_train_loss_instead = False  # Note: useful if we are trying to overfit
 patience = 5
+
+# This doesn't help
 mask_target_edges_when_training = False
 message_passing_vs_supervised_edges_ratio = 0.7
+
+# Try weighted MSE loss
+use_weighted_mse_for_training = False
 
 USE_FEATURES = True

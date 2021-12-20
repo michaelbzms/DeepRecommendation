@@ -29,3 +29,8 @@ class GNN_Dataset(Dataset):
         # forward model
         out = model(graph, userIds.float().to(device), itemIds.float().to(device), *args)
         return out, y_batch
+
+    @abstractmethod
+    def get_class_counts(self):
+        raise Exception('Not Implemented')
+

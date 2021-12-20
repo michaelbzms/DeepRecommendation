@@ -15,7 +15,7 @@ keep_att_stats = False
 
 
 if __name__ == '__main__':
-    model_file = '../models/GAT_0491val.pt'
+    model_file = '../models/final_model.pt'
 
     dataset_class = MovieLensGNNDataset
     initial_repr_dim = dataset_class.get_initial_repr_dim()

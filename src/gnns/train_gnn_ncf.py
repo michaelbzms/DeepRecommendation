@@ -1,9 +1,12 @@
+import pandas as pd
 import torch
 from torch import optim, nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 
+from globals import use_weighted_mse_for_training
+from gnns.datasets import GNN_dataset
 from gnns.models.GNN import GNN_NCF, load_model_state_and_params
 from plots import plot_train_val_losses
 
@@ -16,7 +19,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 ###########################################
 #         Basic Training Loop             #
 ###########################################
-def train_model(model: GNN_NCF, dataset_class, train_set_file, val_set_file,
+def train_model(model: GNN_NCF, dataset_class: GNN_dataset, train_set_file, val_set_file,
                 lr, weight_decay, batch_size, val_batch_size, early_stop,
                 final_model_path, checkpoint_model_path='temp.pt', max_epochs=100,
                 patience=5, stop_with_train_loss_instead=False, mask_target_edges_when_training=True,
@@ -40,6 +43,19 @@ def train_model(model: GNN_NCF, dataset_class, train_set_file, val_set_file,
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     criterion = nn.MSELoss(reduction='sum')  # don't average the loss as we shall do that ourselves for the whole epoch
 
+    if use_weighted_mse_for_training:
+        def weighted_mse_loss(input, target, weight):
+            return torch.sum(weight * (input - target) ** 2)
+
+        class_counts: pd.Series = train_dataset.get_class_counts()
+        class_weights: pd.Series or None = 1.0 - (class_counts / class_counts.sum())   # TODO: are these the correct class weights?
+        # class_weights: pd.Series or None = 100.0 / class_counts   # INS * 100
+        print(class_weights)
+        weighted_criterion = weighted_mse_loss
+    else:
+        weighted_criterion = None
+        class_weights = None
+
     # get graphs
     train_graph = train_dataset.get_graph().to(device)
     val_graph = val_dataset.get_graph().to(device)
@@ -61,7 +77,11 @@ def train_model(model: GNN_NCF, dataset_class, train_set_file, val_set_file,
             # forward model
             out, y_batch = dataset_class.forward(model, train_graph, batch, device)
             # calculate loss
-            loss = criterion(out, y_batch.view(-1, 1).float().to(device))
+            if use_weighted_mse_for_training:
+                loss = weighted_criterion(out, y_batch.view(-1, 1).float().to(device),
+                                          torch.tensor(pd.Series(y_batch).map(class_weights).values).to(device))
+            else:
+                loss = criterion(out, y_batch.view(-1, 1).float().to(device))
             # backpropagation (compute gradients)
             loss.backward()
             # update weights according to optimizer
@@ -72,7 +92,7 @@ def train_model(model: GNN_NCF, dataset_class, train_set_file, val_set_file,
 
         train_loss = train_sum_loss / train_size
         train_losses.append(train_loss)
-        print(f'\nEpoch {epoch + 1}: Training loss: {train_loss:.6f}')
+        print(f'\nEpoch {epoch + 1}: Training {"weighted" if use_weighted_mse_for_training else ""} loss: {train_loss:.6f}')
 
         if writer is not None:
             writer.add_scalar('Loss/train', train_loss, epoch)
@@ -110,9 +130,9 @@ def train_model(model: GNN_NCF, dataset_class, train_set_file, val_set_file,
                 # increase early stop times only if loss increased from previous time (not the least one overall)
                 if previous_running_loss is not None and (not stop_with_train_loss_instead and val_sum_loss > previous_running_loss) \
                                                       or (stop_with_train_loss_instead and train_sum_loss > previous_running_loss):
-                    early_stop_times += 0.5
+                    early_stop_times += 1
                 else:
-                    early_stop_times = max(0, early_stop_times - 1)  # go back one
+                    early_stop_times = max(0, early_stop_times - 1 )  # go back one
 
                 if early_stop_times > patience:
                     print(f'Early stopping at epoch {epoch + 1}.')

@@ -99,7 +99,9 @@ class MovieLensGNNDataset(GNN_Dataset):
             self.graph_edges = MovieLensGNNDataset.train_set
         elif file == test_set_file:
             self.set = MovieLensGNNDataset.test_set
-            self.graph_edges = MovieLensGNNDataset.train_set.append(MovieLensGNNDataset.val_set)  # use validation edges too
+            self.graph_edges = MovieLensGNNDataset.train_set
+            # TODO: using val edges as well results in worse eval scores
+            # self.graph_edges = MovieLensGNNDataset.train_set.append(MovieLensGNNDataset.val_set)  # use validation edges too
         else:
             raise Exception('Invalid filepath for OneHot dataset')
         # create a corresponding graph depending on
@@ -124,6 +126,9 @@ class MovieLensGNNDataset(GNN_Dataset):
 
     def __len__(self):
         return self.set.shape[0]
+
+    def get_class_counts(self):
+        return self.set['rating'].value_counts()
 
     @staticmethod
     def get_number_of_users():
