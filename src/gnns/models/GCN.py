@@ -9,10 +9,10 @@ from neural_collaborative_filtering.util import build_MLP_layers
 
 
 class GCN_NCF(GNN_NCF):
-    def __init__(self, gnn_hidden_layers=None, item_emb=256, user_emb=256, mlp_dense_layers=None, dropout_rate=0.2):
+    def __init__(self, gnn_hidden_layers=None, item_emb=128, user_emb=128, mlp_dense_layers=None, dropout_rate=0.2):
         super(GCN_NCF, self).__init__()
-        if mlp_dense_layers is None: mlp_dense_layers = [512, 256, 128]         # default
-        if gnn_hidden_layers is None: gnn_hidden_layers = [256]       # default
+        if mlp_dense_layers is None: mlp_dense_layers = [256, 128]    # default
+        if gnn_hidden_layers is None: gnn_hidden_layers = [128, 128]       # default
         self.kwargs = {'gnn_hidden_layers': gnn_hidden_layers,
                        'item_emb': item_emb,
                        'user_emb': user_emb,
