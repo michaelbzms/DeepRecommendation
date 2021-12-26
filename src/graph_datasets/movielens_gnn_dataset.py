@@ -3,7 +3,7 @@ import numpy as np
 from torch_geometric.utils import to_networkx
 
 from globals import user_ratings_file, train_set_file, val_set_file, test_set_file, \
-    message_passing_vs_supervised_edges_ratio
+    message_passing_vs_supervised_edges_ratio, item_metadata_file, movie_imdb_df_file, use_genre_nodes
 from gnns.datasets.GNN_dataset import GNN_Dataset
 from graph_datasets.graph_creation import create_onehot_graph, create_onehot_graph_from_utility_matrix
 from plots import plot_user_item_graph
@@ -12,7 +12,8 @@ from recommendation.utility_matrix import UtilityMatrix
 
 class MovieLensGNNDataset(GNN_Dataset):
     print('Initializing common dataset prerequisites ...')
-    user_ratings: pd.DataFrame = pd.read_hdf(user_ratings_file + '.h5')
+    # user_ratings: pd.DataFrame = pd.read_hdf(user_ratings_file + '.h5')
+    genres_df: pd.DataFrame = pd.read_csv(movie_imdb_df_file + '.csv', index_col='tconst')
     train_set = pd.read_csv(train_set_file + '.csv')
     val_set = pd.read_csv(val_set_file + '.csv')
     test_set = pd.read_csv(test_set_file + '.csv')
@@ -49,14 +50,19 @@ class MovieLensGNNDataset(GNN_Dataset):
             util_matrix = UtilityMatrix(train_set_file)
             # TODO: using val edges as well results in worse eval scores
             # self.graph_edges = MovieLensGNNDataset.train_set.append(MovieLensGNNDataset.val_set)  # use validation edges too
+            # util_matrix = ???
         else:
             raise Exception('Invalid filepath for OneHot dataset')
         # create a corresponding graph depending on
+
         # self.known_graph, self.all_users_index, self.all_items_index = create_onehot_graph(MovieLensGNNDataset.all_users,
         #                                                                                    MovieLensGNNDataset.all_items,
         #                                                                                    self.graph_edges,
         #                                                                                    MovieLensGNNDataset.user_ratings)
-        self.known_graph, self.all_users_index, self.all_items_index = create_onehot_graph_from_utility_matrix(util_matrix)
+
+        self.known_graph, self.all_users_index, self.all_items_index = create_onehot_graph_from_utility_matrix(
+            util_matrix, genres=MovieLensGNNDataset.genres_df if use_genre_nodes else None
+        )
 
     def __getitem__(self, item):
         """ returns (user_index, item_index, target rating) """

@@ -5,6 +5,7 @@ plots_path = '../plots/'
 
 data_folder = '../data'
 item_metadata_file = '../data/item_metadata'
+movie_imdb_df_file = '../data/movies_imdb_df'
 user_ratings_file = '../data/user_ratings'
 user_embeddings_file = '../data/user_embeddings'
 audio_features_file = '../data/audio_features'
@@ -42,3 +43,4 @@ message_passing_vs_supervised_edges_ratio = 0.7
 use_weighted_mse_for_training = False
 
 USE_FEATURES = True
+use_genre_nodes = False

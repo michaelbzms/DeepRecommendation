@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm
 
 from globals import movielens_path, item_metadata_file, train_set_file, val_set_file, test_set_file, seed, \
-    user_ratings_file, user_embeddings_file, full_matrix_file, imdb_path
+    user_ratings_file, user_embeddings_file, full_matrix_file, imdb_path, movie_imdb_df_file
 from util import multi_hot_encode
 
 
@@ -90,8 +90,11 @@ def load_imdb_dfs(unique_movies: pd.Series):
     return movies_df, principals_df
 
 
-def load_imdb_metadata_features(unique_movies: pd.Series, MIN_APPEARANCES=1):
+def load_imdb_metadata_features(unique_movies: pd.Series, MIN_APPEARANCES=1, save=True):
     movies_df, principals_df = load_imdb_dfs(unique_movies)
+
+    if save:
+        movies_df.to_csv(movie_imdb_df_file + '.csv', columns=['genres'], mode='w')
 
     all_genres = [
         'Action', 'Adventure', 'Animation', 'Children', 'Comedy', 'Crime', 'Documentary', 'Drama',  'Fantasy',

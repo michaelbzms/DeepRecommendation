@@ -63,12 +63,8 @@ def create_onehot_graph(all_users: np.array, all_items: np.array, graph_edges, u
     return known_graph, all_users_index, all_items_index
 
 
-def create_onehot_graph_from_utility_matrix(utility_matrix: UtilityMatrix):
+def create_onehot_graph_from_utility_matrix(utility_matrix: UtilityMatrix, genres=None):
     print('Creating graph...')
-
-    # First sorted items then sorted users as nodes with combined one-hot vector representations
-    x = torch.eye(utility_matrix.matrix.shape[0] + utility_matrix.matrix.shape[1])
-
     # get all items and all users
     all_items = utility_matrix.get_all_items()
     all_users = utility_matrix.get_all_users()
@@ -79,6 +75,7 @@ def create_onehot_graph_from_utility_matrix(utility_matrix: UtilityMatrix):
 
     edge_index = [[], []]
     edge_attr = []
+    edge_dim = 2   # TODO
     for _, (userId, itemId, rating) in tqdm(utility_matrix.sparse_matrix.iterrows(), desc='Loading graph edges...', total=len(utility_matrix.sparse_matrix)):
         # add edge user ----> item with weight: rating - avg_user_rating
         edge_index[0].append(all_users_index[userId])
@@ -89,15 +86,41 @@ def create_onehot_graph_from_utility_matrix(utility_matrix: UtilityMatrix):
         edge_index[1].append(all_users_index[userId])
         edge_attr.append([rating, rating - utility_matrix.get_item_mean_rating(itemId)])
 
+    if genres is not None:
+        all_genres = [
+            'Action', 'Adventure', 'Animation', 'Children', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Fantasy',
+            'Film-Noir', 'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'War', 'Western', 'Biography', 'Music'
+            # Rare (for now) categories: 'History', 'Family', 'Sport'
+        ]
+        all_genres_index = {n: ind + len(all_items) + len(all_users) for ind, n in enumerate(all_genres)}
+        for itemId in tqdm(all_items, desc='Adding genre nodes...'):
+            try:
+                gs = genres.loc[itemId]['genres'].split(',')
+                for g in gs:
+                    if g in all_genres:
+                        # add item ---> genre edge
+                        edge_index[0].append(all_items_index[itemId])
+                        edge_index[1].append(all_genres_index[g])
+                        edge_attr.append([1] * edge_dim)   # default attributes
+                        # add genre ---> item edge
+                        edge_index[0].append(all_genres_index[g])
+                        edge_index[1].append(all_items_index[itemId])
+                        edge_attr.append([1] * edge_dim)
+            except KeyError:
+                print('Warning: Could not find genres for an item!')
+
+        x = torch.eye(utility_matrix.matrix.shape[0] + utility_matrix.matrix.shape[1] + len(all_genres))
+    else:
+        x = torch.eye(utility_matrix.matrix.shape[0] + utility_matrix.matrix.shape[1])
+
     known_graph = Data(
         x=x,
         edge_index=torch.tensor(edge_index, dtype=torch.long),
         edge_attr=torch.tensor(edge_attr, dtype=torch.float),
         num_items=len(all_items),
-        edge_dim=2
+        edge_dim=edge_dim
     )
     print(known_graph)
-
     print('done.')
 
     return known_graph, all_users_index, all_items_index
