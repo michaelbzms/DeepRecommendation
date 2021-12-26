@@ -31,9 +31,8 @@ if __name__ == '__main__':
     # log training for later?
     now = datetime.now()
     writer = SummaryWriter('../runs/' + type(model).__name__ + '/' + now.strftime("%d_%m_%Y_%H_%M") + '/')   # unique per model
-    hyperparams = {k: (torch.tensor(v) if isinstance(v, list) else v) for k, v in model.kwargs.items()}
-    hyperparams['features_used'] = features_to_use
-    writer.add_hparams(hyperparams, {})
+    # hyperparams = {k: (torch.tensor(v) if isinstance(v, list) else v) for k, v in model.kwargs.items()}
+    # writer.add_hparams(hyperparams, {})
 
     # train and save result
     train_model(model, dataset_class=dataset_class, train_set_file=train_set_file, val_set_file=val_set_file,

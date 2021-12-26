@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from globals import train_set_file, test_set_file
@@ -31,6 +32,12 @@ class UtilityMatrix:
 
     def get_overall_mean_rating(self):
         return self.matrix.sum().sum() / self.matrix.count().sum()
+
+    def get_all_users(self):
+        return np.sort(self.sparse_matrix['userId'].unique())
+
+    def get_all_items(self):
+        return np.sort(self.sparse_matrix['movieId'].unique())
 
 
 if __name__ == '__main__':

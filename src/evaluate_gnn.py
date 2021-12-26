@@ -19,8 +19,9 @@ if __name__ == '__main__':
 
     dataset_class = MovieLensGNNDataset
     initial_repr_dim = dataset_class.get_initial_repr_dim()
+    edge_dim = 2        # TODO
 
-    model = load_gnn_model(model_file, GAT_NCF, initial_repr_dim)
+    model = load_gnn_model(model_file, GAT_NCF, initial_repr_dim, edge_dim)
     print(model)
 
     # evaluate model on test set

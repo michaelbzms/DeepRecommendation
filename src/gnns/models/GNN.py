@@ -31,16 +31,17 @@ class GNN_NCF(nn.Module):
         raise Exception('Not Implemented')
 
 
-def load_model_state_and_params(file, ModelClass=None, initial_repr_dim=-1):
+def load_model_state_and_params(file, ModelClass=None, initial_repr_dim=-1, edge_dim=-1):
     state, kwargs = torch.load(file)
     if ModelClass is None:
         return state, kwargs
     else:
         if initial_repr_dim > 0: kwargs['initial_repr_dim'] = initial_repr_dim      # add this if known
+        if edge_dim > 0: kwargs['edge_dim'] = edge_dim                              # add this if known
         model = ModelClass(**kwargs)
         model.load_state_dict(state)
         return model
 
 
-def load_gnn_model(file, ModelClass, initial_repr_dim=-1):
-    return load_model_state_and_params(file, ModelClass, initial_repr_dim)
+def load_gnn_model(file, ModelClass, initial_repr_dim=-1, edge_dim=-1):
+    return load_model_state_and_params(file, ModelClass, initial_repr_dim, edge_dim)
