@@ -8,6 +8,7 @@ from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, 
 from datasets.dynamic_movieLens_dataset import DynamicMovieLensDataset
 from datasets.one_hot_dataset import OneHotMovieLensDataset
 from neural_collaborative_filtering.models.AttentionNCF import AttentionNCF
+from neural_collaborative_filtering.models.BasicMultimodalAttNCF import BasicMultimodalAttNCF
 from neural_collaborative_filtering.models.BasicNCF import BasicNCF
 from neural_collaborative_filtering.train_ncf import train_model
 
@@ -33,8 +34,8 @@ if __name__ == '__main__':
         # model = AdvancedNCF(item_dim, item_emb=256, user_emb=256, mlp_dense_layers=[512, 256, 128], dropout_rate=dropout_rate)
     else:
         dataset_class = OneHotMovieLensDataset
-        model = BasicNCF(item_dim=dataset_class.get_number_of_items(),
-                         user_dim=dataset_class.get_number_of_users())
+        model = BasicMultimodalAttNCF(item_dim=dataset_class.get_number_of_items(),
+                                      user_dim=dataset_class.get_number_of_users())
     print(model)
 
     # log training for later?

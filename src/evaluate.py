@@ -5,6 +5,7 @@ from datasets.one_hot_dataset import OneHotMovieLensDataset
 from globals import test_set_file, val_batch_size, USE_FEATURES
 from neural_collaborative_filtering.evaluate_ncf import eval_model
 from neural_collaborative_filtering.models.AttentionNCF import AttentionNCF
+from neural_collaborative_filtering.models.BasicMultimodalAttNCF import BasicMultimodalAttNCF
 from neural_collaborative_filtering.models.BasicNCF import BasicNCF
 from neural_collaborative_filtering.models.NCF import load_model
 
@@ -32,8 +33,8 @@ if __name__ == '__main__':
 
         # model = load_model(model_file, BasicNCF)
         state, _ = torch.load(model_file)
-        model = BasicNCF(item_dim=dataset_class.get_number_of_items(),
-                         user_dim=dataset_class.get_number_of_users())
+        model = BasicMultimodalAttNCF(item_dim=dataset_class.get_number_of_items(),
+                                      user_dim=dataset_class.get_number_of_users())
         model.load_state_dict(state)
 
         # make sure these are false
