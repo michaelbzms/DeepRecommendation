@@ -8,6 +8,19 @@ from neural_collaborative_filtering.models.base import GNN_NCF
 from neural_collaborative_filtering.util import build_MLP_layers
 
 
+def pass_gnn_layers(gnn_convs, graph, **kwargs):
+    # encode with GNN
+    graph_emb = graph.x  # initial representation
+    hs = []
+    for gnn_conv in gnn_convs:
+        graph_emb = gnn_conv(graph_emb, graph.edge_index, **kwargs)
+        graph_emb = F.leaky_relu(graph_emb)
+        hs.append(graph_emb)
+    # concat all intermediate representations
+    combined_graph_emb = torch.cat(hs, dim=1)
+    return combined_graph_emb
+
+
 class GCN_NCF(GNN_NCF):
     def __init__(self, gnn_hidden_layers=None, item_emb=128, user_emb=128, mlp_dense_layers=None, dropout_rate=0.2):
         super(GCN_NCF, self).__init__()
@@ -44,19 +57,14 @@ class GCN_NCF(GNN_NCF):
         return issubclass(dataset_class, GNN_Dataset)
 
     def forward(self, graph, userIds, itemIds):
-        # TODO: refactor common code into a module-level function?
-        # encode with GNN
-        graph_emb = graph.x        # initial representation
-        for gnn_conv in self.gnn_convs:
-            graph_emb = gnn_conv(graph_emb, graph.edge_index, edge_weight=graph.edge_attr)
-            graph_emb = F.leaky_relu(graph_emb)
-        # TODO: keep only the latest or keep previous (e.g. concat or use LSTM/GRU)
+        # encode all graph nodes with GNN
+        combined_graph_emb = pass_gnn_layers(self.gnn_convs, graph, edge_weight=graph.edge_attr)
 
         # find embeddings of items in batch
-        item_emb = graph_emb[itemIds.long()]
+        item_emb = combined_graph_emb[itemIds.long()]
 
         # find embeddings of users in batch
-        user_emb = graph_emb[userIds.long()]
+        user_emb = combined_graph_emb[userIds.long()]
 
         # use these to forward the NCF model
         item_emb = self.item_embeddings(item_emb)
@@ -112,15 +120,8 @@ class GAT_NCF(GNN_NCF):
         return issubclass(dataset_class, GNN_Dataset)
 
     def forward(self, graph, userIds, itemIds):  # needs to be True for training only I think
-        # encode with GNN
-        graph_emb = graph.x        # initial representation
-        hs = []
-        for gnn_conv in self.gnn_convs:
-            graph_emb = gnn_conv(graph_emb, graph.edge_index, edge_attr=graph.edge_attr)
-            graph_emb = F.leaky_relu(graph_emb)
-            hs.append(graph_emb)
-        # concat all intermediate representations
-        combined_graph_emb = torch.cat(hs, dim=1)
+        # encode all graph nodes with GNN
+        combined_graph_emb = pass_gnn_layers(self.gnn_convs, graph, edge_attr=graph.edge_attr)
 
         # find embeddings of items in batch
         item_emb = combined_graph_emb[itemIds.long()]
