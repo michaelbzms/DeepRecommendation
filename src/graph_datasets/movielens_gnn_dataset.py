@@ -2,12 +2,12 @@ import pandas as pd
 import numpy as np
 from torch_geometric.utils import to_networkx
 
-from globals import user_ratings_file, train_set_file, val_set_file, test_set_file, \
-    message_passing_vs_supervised_edges_ratio, item_metadata_file, movie_imdb_df_file, use_genre_nodes
-from gnns.datasets.GNN_dataset import GNN_Dataset
-from graph_datasets.graph_creation import create_onehot_graph, create_onehot_graph_from_utility_matrix
-from plots import plot_user_item_graph
+from neural_collaborative_filtering.datasets.gnn_dataset import GNN_Dataset
+from graph_datasets.graph_creation import create_onehot_graph_from_utility_matrix
+from neural_collaborative_filtering.plots import plot_user_item_graph
 from recommendation.utility_matrix import UtilityMatrix
+from globals import train_set_file, val_set_file, test_set_file, \
+    message_passing_vs_supervised_edges_ratio, movie_imdb_df_file, use_genre_nodes, mask_target_edges_when_training
 
 
 class MovieLensGNNDataset(GNN_Dataset):
@@ -23,7 +23,7 @@ class MovieLensGNNDataset(GNN_Dataset):
     all_items = np.array(sorted(list(set(train_set['movieId']).union(set(val_set['movieId'])).union(set(test_set['movieId'])))))
     print('Done')
 
-    def __init__(self, file: str, mask_target_edges_when_training=False):
+    def __init__(self, file: str):
         self.mask_target_edges_when_training = mask_target_edges_when_training
         if file == train_set_file:
             util_matrix = UtilityMatrix(train_set_file)
@@ -69,8 +69,8 @@ class MovieLensGNNDataset(GNN_Dataset):
         data = self.set.iloc[item]
         return int(self.all_users_index[data['userId']]), int(self.all_items_index[data['movieId']]), float(data['rating'])
 
-    def get_graph(self):
-        return self.known_graph
+    def get_graph(self, device):
+        return self.known_graph.to(device)
 
     def draw_graph(self):
         g = to_networkx(self.known_graph, to_undirected=True)

@@ -1,16 +1,16 @@
 from math import sqrt
-
-import numpy as np
 import pandas as pd
+import numpy as np
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from datasets.dynamic_movieLens_dataset import MyCollator
-from neural_collaborative_filtering.models import NCF
-from neural_collaborative_filtering.models.AttentionNCF import AttentionNCF
-from plots import plot_residuals, plot_stacked_residuals, plot_att_stats, plot_rated_items_counts
+from neural_collaborative_filtering.datasets.base import NCF_dataset
+from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF
+from neural_collaborative_filtering.models.base import NCF
+from neural_collaborative_filtering.plots import plot_residuals, plot_stacked_residuals, plot_rated_items_counts, plot_att_stats
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -20,7 +20,52 @@ visualize = False
 keep_att_stats = False
 
 
-def eval_model(model: NCF, dataset_class, test_set_file, batch_size):
+def eval_model(model: NCF, dataset_class: NCF_dataset, test_set_file, batch_size):
+    model.to(device)
+
+    # load dataset
+    test_dataset = dataset_class(test_set_file)
+    print('Test size:', len(test_dataset))
+
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, collate_fn=dataset_class.use_collate())
+
+    # get graphs if evaluating gnn (else it will be None)
+    test_graph = test_dataset.get_graph(device)
+
+    criterion = nn.MSELoss(reduction='sum')  # don't average the loss as we shall do that ourselves for the whole epoch
+
+    # Calculate val_loss and see if we need to stop
+    model.eval()  # gradients "off"
+    test_sum_loss = 0.0
+    test_size = 0
+    fitted_values = []
+    ground_truth = []
+    extra_test_args = [] if test_graph is None else [test_graph]
+    with torch.no_grad():
+        for batch in tqdm(test_loader, desc='Testing'):
+            # forward model
+            out, y_batch = dataset_class.forward(model, batch, device, *extra_test_args)
+            # calculate loss
+            loss = criterion(out, y_batch.view(-1, 1).float().to(device))
+            # accumulate validation loss
+            test_sum_loss += loss.detach().item()
+            test_size += len(y_batch)
+            # keep track of fitted values and their actual targets
+            fitted_values.append(out.cpu().detach().numpy())
+            ground_truth.append(y_batch.view(-1, 1).float().cpu().detach().numpy())
+
+    test_mse = test_sum_loss / test_size
+    print(f'Test loss (MSE): {test_mse:.4f} - RMSE: {sqrt(test_mse):.4f}')
+
+    fitted_values = np.concatenate(fitted_values, dtype=np.float64).reshape(-1)
+    ground_truth = np.concatenate(ground_truth, dtype=np.float64).reshape(-1)
+
+    # plot_fitted_vs_targets(fitted_values, ground_truth)
+    plot_stacked_residuals(fitted_values, ground_truth)
+    plot_residuals(fitted_values, ground_truth)
+
+
+def eval_model_with_visualization(model: NCF, dataset_class, test_set_file, batch_size):
     model.to(device)
 
     # load dataset
@@ -52,7 +97,6 @@ def eval_model(model: NCF, dataset_class, test_set_file, batch_size):
     test_size = 0
     fitted_values = []
     ground_truth = []
-
     with torch.no_grad():
         for batch in tqdm(test_loader, desc='Testing'):
             if visualize and isinstance(model, AttentionNCF):
@@ -90,7 +134,6 @@ def eval_model(model: NCF, dataset_class, test_set_file, batch_size):
     else:
         fitted_values = np.concatenate(fitted_values, dtype=np.float64).reshape(-1)
         ground_truth = np.concatenate(ground_truth, dtype=np.float64).reshape(-1)
-
         # plot_fitted_vs_targets(fitted_values, ground_truth)
         plot_stacked_residuals(fitted_values, ground_truth)
         plot_residuals(fitted_values, ground_truth)

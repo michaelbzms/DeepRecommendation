@@ -1,18 +1,16 @@
 from abc import abstractmethod
 
-from torch.utils.data import Dataset
+from neural_collaborative_filtering.datasets.base import NCF_dataset
+from neural_collaborative_filtering.models.base import NCF
 
-from neural_collaborative_filtering.models.NCF import NCF
 
-
-class FixedDataset(Dataset):
+class FixedDataset(NCF_dataset):
     """
     Use __getitem__() to return batches of (item_vec, user_vec, y) samples
     that are stacked by the default collate_fn()
     > item_vec could be one-hot encoded as in NCF or fixed item features or fixed item embeddings
     > user_vec could be one-hot encoded as in NCF or fixed user features or fixed user embeddings
     """
-
     @abstractmethod
     def __getitem__(self, item):
         raise Exception('Not Implemented')

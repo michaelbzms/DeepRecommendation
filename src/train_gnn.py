@@ -1,15 +1,12 @@
-import torch
-from torch import optim
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 
 from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, max_epochs, early_stop, \
     stop_with_train_loss_instead, checkpoint_model_path, patience, dropout_rate, final_model_path, \
-    val_batch_size, features_to_use, embeddings_lr
-from gnns.models.GAT import GAT_NCF
-from gnns.models.GCN import GCN_NCF
+    val_batch_size
+from neural_collaborative_filtering.models.gnn_ncf import GAT_NCF
 from graph_datasets.movielens_gnn_dataset import MovieLensGNNDataset
-from gnns.train_gnn_ncf import train_model
+from neural_collaborative_filtering.train import train_model
 from globals import mask_target_edges_when_training
 
 

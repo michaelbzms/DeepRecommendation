@@ -11,7 +11,7 @@ class NCF(nn.Module):
     def forward(self, *args):
         """
         Executes a forward pass of the network for a batch of B samples which are known cells in the utility matrix.
-        Example parameters for USE_FEATURES == True
+        Parameters for non one-hot input models
         :param candidate_items_batch: (B, F)  B items with their features
         :param rated_items_features: (I, F) I rated items with their features
         :param user_matrix: (B, I) a subarray of the utility matrix with the (normalized?) ratings of B users on I items.
@@ -32,15 +32,17 @@ class NCF(nn.Module):
         raise Exception('Not Implemented')
 
 
-def load_model_state_and_params(file, ModelClass=None):
-    state, kwargs = torch.load(file)
-    if ModelClass is None:
-        return state, kwargs
-    else:
-        model = ModelClass(**kwargs)
-        model.load_state_dict(state)
-        return model
+class GNN_NCF(NCF):
+    def __init__(self):
+        super(GNN_NCF, self).__init__()
 
-
-def load_model(file, ModelClass):
-    return load_model_state_and_params(file, ModelClass)
+    @abstractmethod
+    def forward(self, *args):
+        """
+        Executes a forward pass of the network for a batch of B samples which are known cells in the utility matrix.
+        :param   graph: PyG's Data graph with node features and edges
+        :param userIds: (B, 1) user IDs in batch
+        :param itemIds: (B, 1) item IDs in batch
+        :return:
+        """
+        raise Exception('Not Implemented')

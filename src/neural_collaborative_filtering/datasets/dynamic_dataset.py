@@ -1,11 +1,10 @@
 from abc import abstractmethod
 
-from torch.utils.data import Dataset
+from neural_collaborative_filtering.datasets.base import NCF_dataset
+from neural_collaborative_filtering.models.base import NCF
 
-from neural_collaborative_filtering.models.NCF import NCF
 
-
-class DynamicDataset(Dataset):
+class DynamicDataset(NCF_dataset):
     """
     Combine __getitem__() and possibly a custom collate_fn to return for each batch in a data loader:
     > candidate_items_batch: (B, F)  B items with their features

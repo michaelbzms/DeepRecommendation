@@ -5,9 +5,9 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
-from datasets.dynamic_dataset import NamedMovieLensDataset, my_collate_fn
+from datasets.dynamic_movieLens_dataset import NamedDynamicMovieLensDataset, my_collate_fn
 from globals import val_batch_size
-from neural_collaborative_filtering.models import NCF
+from neural_collaborative_filtering.models.base import NCF
 from recommendation.utility_matrix import UtilityMatrix
 
 
@@ -69,7 +69,7 @@ class NCF_Recommender(Recommender):
         if self.MSE is None:      # if not calculated already
             # load dataset and test loader for it
             test_set_file = test_utility_matrix.get_file()
-            test_dataset = NamedMovieLensDataset(test_set_file)
+            test_dataset = NamedDynamicMovieLensDataset(test_set_file)
             test_loader = DataLoader(test_dataset, batch_size=val_batch_size, collate_fn=my_collate_fn)
 
             criterion = nn.MSELoss(reduction='sum')  # don't average the loss as we shall do that ourselves for the whole epoch
