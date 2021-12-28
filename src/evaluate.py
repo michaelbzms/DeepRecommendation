@@ -44,4 +44,4 @@ if __name__ == '__main__':
     print(model)
 
     # evaluate model on test set
-    eval_model_with_visualization(model, dataset_class, test_set_file, val_batch_size)
+    eval_model_with_visualization(model, dataset_class(test_set_file), val_batch_size)

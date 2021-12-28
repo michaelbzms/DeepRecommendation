@@ -20,14 +20,12 @@ visualize = False
 keep_att_stats = False
 
 
-def eval_model(model: NCF, dataset_class: NCF_dataset, test_set_file, batch_size):
+def eval_model(model: NCF, test_dataset, batch_size):
     model.to(device)
 
-    # load dataset
-    test_dataset = dataset_class(test_set_file)
     print('Test size:', len(test_dataset))
 
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, collate_fn=dataset_class.use_collate())
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, collate_fn=test_dataset.__class__.use_collate())
 
     # get graphs if evaluating gnn (else it will be None)
     test_graph = test_dataset.get_graph(device)
@@ -44,7 +42,7 @@ def eval_model(model: NCF, dataset_class: NCF_dataset, test_set_file, batch_size
     with torch.no_grad():
         for batch in tqdm(test_loader, desc='Testing'):
             # forward model
-            out, y_batch = dataset_class.forward(model, batch, device, *extra_test_args)
+            out, y_batch = test_dataset.__class__.forward(model, batch, device, *extra_test_args)
             # calculate loss
             loss = criterion(out, y_batch.view(-1, 1).float().to(device))
             # accumulate validation loss
@@ -65,29 +63,28 @@ def eval_model(model: NCF, dataset_class: NCF_dataset, test_set_file, batch_size
     plot_residuals(fitted_values, ground_truth)
 
 
-def eval_model_with_visualization(model: NCF, dataset_class, test_set_file, batch_size):
+def eval_model_with_visualization(model: NCF, test_dataset, batch_size):
     model.to(device)
 
     # load dataset
-    test_dataset = dataset_class(test_set_file)
     print('Test size:', len(test_dataset))
 
     att_stats = None
-    I = dataset_class.get_number_of_items()
+    I = test_dataset.__class__.get_number_of_items()
     if visualize and isinstance(model, AttentionNCF):
         B = 1
         test_loader = DataLoader(test_dataset, batch_size=B, collate_fn=MyCollator(only_rated=True, with_names=True),
                                  shuffle=True)
     elif keep_att_stats and isinstance(model, AttentionNCF):
-        att_stats = {'sum': pd.DataFrame(index=dataset_class.get_sorted_item_names(),
-                                         columns=dataset_class.get_sorted_item_names(), data=np.zeros((I, I))),
-                     'count': pd.DataFrame(index=dataset_class.get_sorted_item_names(),
-                                           columns=dataset_class.get_sorted_item_names(),
+        att_stats = {'sum': pd.DataFrame(index=test_dataset.__class__.get_sorted_item_names(),
+                                         columns=test_dataset.__class__.get_sorted_item_names(), data=np.zeros((I, I))),
+                     'count': pd.DataFrame(index=test_dataset.__class__.get_sorted_item_names(),
+                                           columns=test_dataset.__class__.get_sorted_item_names(),
                                            data=np.zeros((I, I), dtype=np.int32))}
         test_loader = DataLoader(test_dataset, batch_size=batch_size,
                                  collate_fn=MyCollator(only_rated=False, with_names=True))
     else:
-        test_loader = DataLoader(test_dataset, batch_size=batch_size, collate_fn=dataset_class.use_collate())
+        test_loader = DataLoader(test_dataset, batch_size=batch_size, collate_fn=test_dataset.__class__.use_collate())
 
     criterion = nn.MSELoss(reduction='sum')  # don't average the loss as we shall do that ourselves for the whole epoch
 
@@ -115,7 +112,7 @@ def eval_model_with_visualization(model: NCF, dataset_class, test_set_file, batc
                             att_stats=att_stats, candidate_names=candidate_names, rated_names=rated_names)
             else:
                 # forward model
-                out, y_batch = dataset_class.forward(model, batch, device)
+                out, y_batch = test_dataset.__class__.forward(model, batch, device)
             # calculate loss
             loss = criterion(out, y_batch.view(-1, 1).float().to(device))
             # accumulate validation loss
@@ -129,8 +126,8 @@ def eval_model_with_visualization(model: NCF, dataset_class, test_set_file, batc
     print(f'Test loss (MSE): {test_mse:.6f} - RMSE: {sqrt(test_mse):.6f}')
 
     if keep_att_stats and isinstance(model, AttentionNCF):
-        plot_rated_items_counts(att_stats['count'], item_names=dataset_class.get_sorted_item_names())
-        plot_att_stats(att_stats, item_names=dataset_class.get_sorted_item_names())
+        plot_rated_items_counts(att_stats['count'], item_names=test_dataset.__class__.get_sorted_item_names())
+        plot_att_stats(att_stats, item_names=test_dataset.__class__.get_sorted_item_names())
     else:
         fitted_values = np.concatenate(fitted_values, dtype=np.float64).reshape(-1)
         ground_truth = np.concatenate(ground_truth, dtype=np.float64).reshape(-1)

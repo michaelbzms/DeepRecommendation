@@ -25,4 +25,4 @@ if __name__ == '__main__':
     print(model)
 
     # evaluate model on test set
-    eval_model(model, dataset_class, test_set_file, val_batch_size)
+    eval_model(model, dataset_class(test_set_file), val_batch_size)

@@ -18,25 +18,22 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 ###########################################
 #         Basic Training Loop             #
 ###########################################
-def train_model(model: NCF, dataset_class: NCF_dataset, train_set_file, val_set_file,
+def train_model(model: NCF, train_dataset, val_dataset,
                 lr, weight_decay, batch_size, val_batch_size, early_stop,
                 final_model_path, checkpoint_model_path='temp.pt', max_epochs=100,
-                patience=5, stop_with_train_loss_instead=False, mask_target_edges_when_training=True,
+                patience=5, stop_with_train_loss_instead=False,
                 optimizer=None, save=True, writer: SummaryWriter=None):
     # torch.autograd.set_detect_anomaly(True)   # this slows down training but detects errors
     model.to(device)
 
     # make sure we have compatible models and datasets (because batches and forward change)
-    if not model.is_dataset_compatible(dataset_class):
+    if not model.is_dataset_compatible(train_dataset.__class__) or not model.is_dataset_compatible(val_dataset.__class__):
         raise Exception('Model used is incompatible with this dataset.')
 
-    # load dataset
-    train_dataset = dataset_class(train_set_file)
-    val_dataset = dataset_class(val_set_file)
     print('Training size:', len(train_dataset), ' - Validation size:', len(val_dataset))
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=train_dataset.use_collate())
-    val_loader = DataLoader(val_dataset, batch_size=val_batch_size, collate_fn=val_dataset.use_collate())
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=train_dataset.__class__.use_collate())
+    val_loader = DataLoader(val_dataset, batch_size=val_batch_size, collate_fn=val_dataset.__class__.use_collate())
 
     if optimizer is None:
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -75,7 +72,7 @@ def train_model(model: NCF, dataset_class: NCF_dataset, train_set_file, val_set_
             # reset the gradients
             optimizer.zero_grad()
             # forward model
-            out, y_batch = dataset_class.forward(model, batch, device, *extra_train_args)
+            out, y_batch = train_dataset.__class__.forward(model, batch, device, *extra_train_args)
             # calculate loss
             if use_weighted_mse_for_training:
                 loss = weighted_criterion(out, y_batch.view(-1, 1).float().to(device),
@@ -106,7 +103,7 @@ def train_model(model: NCF, dataset_class: NCF_dataset, train_set_file, val_set_
         with torch.no_grad():
             for batch in tqdm(val_loader, desc='Validating'):
                 # forward model
-                out, y_batch = dataset_class.forward(model, batch, device, *extra_val_args)
+                out, y_batch = val_dataset.__class__.forward(model, batch, device, *extra_val_args)
                 # calculate loss
                 loss = criterion(out, y_batch.view(-1, 1).float().to(device))
                 # accumulate validation loss

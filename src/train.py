@@ -46,7 +46,7 @@ if __name__ == '__main__':
     writer.add_hparams(hyperparams, {})
 
     # train and save result
-    train_model(model, dataset_class=dataset_class, train_set_file=train_set_file, val_set_file=val_set_file,
+    train_model(model, train_dataset=dataset_class(train_set_file), val_dataset=dataset_class(val_set_file),
                 lr=lr, weight_decay=weight_decay, batch_size=batch_size, val_batch_size=val_batch_size,
                 early_stop=early_stop, final_model_path=final_model_path, checkpoint_model_path=checkpoint_model_path,
                 max_epochs=max_epochs, patience=patience, stop_with_train_loss_instead=stop_with_train_loss_instead,
