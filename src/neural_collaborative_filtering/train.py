@@ -130,7 +130,7 @@ def train_model(model: NCF, train_dataset, val_dataset,
                         or (stop_with_train_loss_instead and train_sum_loss > previous_running_loss):
                     early_stop_times += 1
                 else:
-                    early_stop_times = max(0, early_stop_times - 1 )  # go back one
+                    early_stop_times = max(0.0, early_stop_times - 0.5)  # go back half
 
                 if early_stop_times > patience:
                     print(f'Early stopping at epoch {epoch + 1}.')
