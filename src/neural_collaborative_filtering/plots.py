@@ -4,7 +4,8 @@ import seaborn as sns
 import numpy as np
 import pandas as pd
 
-from globals import plots_path
+try: from globals import plots_path
+except: plots_path = './'
 
 
 def plot_train_val_losses(train_losses: [float], val_losses: [float]):
@@ -19,7 +20,7 @@ def plot_train_val_losses(train_losses: [float], val_losses: [float]):
     plt.ylim(ymin=0)
 
     # save image
-    plt.savefig(plots_path +'train_val_loss.png')
+    plt.savefig(plots_path + 'train_val_loss.png')
 
     # show
     plt.show()
@@ -35,7 +36,7 @@ def plot_fitted_vs_targets(fitted_values: np.array, ground_truth: np.array):
     plt.title('Fitted values vs Ground truth')
 
     # save image
-    plt.savefig(plots_path +'fitted_vs_targets.png', dpi=128)
+    plt.savefig(plots_path + 'fitted_vs_targets.png', dpi=128)
 
     # show
     plt.show()
@@ -57,7 +58,7 @@ def plot_residuals(fitted_values: np.array, ground_truth: np.array):
             # axes[i][j].set_ylabel('Ground Truth')
 
     # save image
-    plt.savefig(plots_path +'fitted_vs_target_hists.png', dpi=200)
+    plt.savefig(plots_path + 'fitted_vs_target_hists.png', dpi=200)
 
     # show
     plt.show()
@@ -85,7 +86,7 @@ def plot_stacked_residuals(fitted_values, ground_truth, normalize=True):
     plt.ylabel('Frequency')
 
     # save image
-    plt.savefig(plots_path +'fitted_hist.png', dpi=150)
+    plt.savefig(plots_path + 'fitted_hist.png', dpi=150)
 
     # show
     plt.show()
