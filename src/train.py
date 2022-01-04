@@ -4,7 +4,7 @@ from datetime import datetime
 
 from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, max_epochs, early_stop, \
     stop_with_train_loss_instead, checkpoint_model_path, patience, dropout_rate, final_model_path, \
-    val_batch_size, features_to_use, USE_FEATURES
+    val_batch_size, features_to_use, USE_FEATURES, use_weighted_mse_for_training
 from datasets.dynamic_movieLens_dataset import DynamicMovieLensDataset
 from datasets.one_hot_dataset import OneHotMovieLensDataset
 from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF
@@ -50,4 +50,4 @@ if __name__ == '__main__':
                 lr=lr, weight_decay=weight_decay, batch_size=batch_size, val_batch_size=val_batch_size,
                 early_stop=early_stop, final_model_path=final_model_path, checkpoint_model_path=checkpoint_model_path,
                 max_epochs=max_epochs, patience=patience, stop_with_train_loss_instead=stop_with_train_loss_instead,
-                writer=writer)
+                use_weighted_mse_for_training=use_weighted_mse_for_training, writer=writer)

@@ -5,8 +5,6 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 
-from globals import use_weighted_mse_for_training
-from neural_collaborative_filtering.datasets.base import NCF_dataset
 from neural_collaborative_filtering.models.base import NCF
 from neural_collaborative_filtering.util import load_model_state_and_params
 from neural_collaborative_filtering.plots import plot_train_val_losses
@@ -21,7 +19,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 def train_model(model: NCF, train_dataset, val_dataset,
                 lr, weight_decay, batch_size, val_batch_size, early_stop,
                 final_model_path, checkpoint_model_path='temp.pt', max_epochs=100,
-                patience=5, stop_with_train_loss_instead=False,
+                patience=5, stop_with_train_loss_instead=False, use_weighted_mse_for_training=False,
                 optimizer=None, save=True, writer: SummaryWriter=None):
     # torch.autograd.set_detect_anomaly(True)   # this slows down training but detects errors
     model.to(device)

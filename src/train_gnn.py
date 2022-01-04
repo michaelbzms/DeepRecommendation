@@ -3,7 +3,7 @@ from datetime import datetime
 
 from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, max_epochs, early_stop, \
     stop_with_train_loss_instead, checkpoint_model_path, patience, dropout_rate, final_model_path, \
-    val_batch_size
+    val_batch_size, use_weighted_mse_for_training
 from neural_collaborative_filtering.models.gnn_ncf import GAT_NCF, GAT_NCF_Multimodal
 from graph_datasets.movielens_gnn_dataset import MovieLensGNNDataset
 from neural_collaborative_filtering.train import train_model
@@ -36,4 +36,4 @@ if __name__ == '__main__':
                 lr=lr, optimizer=optimizer, weight_decay=weight_decay, batch_size=batch_size, val_batch_size=val_batch_size,
                 early_stop=early_stop, final_model_path=final_model_path, checkpoint_model_path=checkpoint_model_path,
                 max_epochs=max_epochs, patience=patience, stop_with_train_loss_instead=stop_with_train_loss_instead,
-                writer=writer)
+                use_weighted_mse_for_training=use_weighted_mse_for_training, writer=writer)
