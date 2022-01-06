@@ -75,16 +75,16 @@ def create_onehot_graph_from_utility_matrix(utility_matrix: UtilityMatrix, genre
 
     edge_index = [[], []]
     edge_attr = []
-    edge_dim = 2   # TODO
+    edge_dim = 3   # TODO
     for _, (userId, itemId, rating) in tqdm(utility_matrix.sparse_matrix.iterrows(), desc='Loading graph edges...', total=len(utility_matrix.sparse_matrix)):
         # add edge user ----> item with weight: rating - avg_user_rating
         edge_index[0].append(all_users_index[userId])
         edge_index[1].append(all_items_index[itemId])
-        edge_attr.append([rating, rating - utility_matrix.get_user_mean_rating(userId)])
+        edge_attr.append([rating, rating - utility_matrix.get_user_mean_rating(userId), 0])
         # add edge item ----> user with weight: rating - avg_item_rating
         edge_index[0].append(all_items_index[itemId])
         edge_index[1].append(all_users_index[userId])
-        edge_attr.append([rating, rating - utility_matrix.get_item_mean_rating(itemId)])
+        edge_attr.append([rating, rating - utility_matrix.get_item_mean_rating(itemId), 0])
 
     if genres is not None:
         all_genres = [
@@ -101,11 +101,11 @@ def create_onehot_graph_from_utility_matrix(utility_matrix: UtilityMatrix, genre
                         # add item ---> genre edge
                         edge_index[0].append(all_items_index[itemId])
                         edge_index[1].append(all_genres_index[g])
-                        edge_attr.append([1] * edge_dim)   # default attributes
+                        edge_attr.append([0] * (edge_dim - 1) + [1])   # default attributes
                         # add genre ---> item edge
                         edge_index[0].append(all_genres_index[g])
                         edge_index[1].append(all_items_index[itemId])
-                        edge_attr.append([1] * edge_dim)
+                        edge_attr.append([0] * (edge_dim - 1) + [1])
             except KeyError:
                 print('Warning: Could not find genres for an item!')
 

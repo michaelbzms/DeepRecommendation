@@ -19,7 +19,7 @@ if __name__ == '__main__':
 
     dataset_class = MovieLensGNNDataset
     initial_repr_dim = dataset_class.get_initial_repr_dim()
-    edge_dim = 2        # TODO
+    edge_dim = 3        # TODO
 
     model = load_model(model_file, GAT_NCF, initial_repr_dim=initial_repr_dim, edge_dim=edge_dim)
     print(model)

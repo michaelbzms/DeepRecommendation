@@ -43,4 +43,4 @@ message_passing_vs_supervised_edges_ratio = 0.7
 use_weighted_mse_for_training = False
 
 USE_FEATURES = False
-use_genre_nodes = False
+use_genre_nodes = True
