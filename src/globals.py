@@ -25,7 +25,7 @@ features_to_use = 'all'
 checkpoint_model_path = '../models/checkpoint.pt'
 final_model_path = '../models/final_model.pt'
 max_epochs = 256
-batch_size = 256  # 16384
+batch_size = 128
 val_batch_size = 256
 embeddings_lr = 0.001   # not currently used
 lr = 1e-3  # 5e-4
@@ -43,4 +43,4 @@ message_passing_vs_supervised_edges_ratio = 0.7
 use_weighted_mse_for_training = False
 
 USE_FEATURES = False
-use_genre_nodes = True
+use_genre_nodes = False

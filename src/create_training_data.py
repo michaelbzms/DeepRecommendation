@@ -139,6 +139,7 @@ def save_set(matrix: pd.DataFrame, name: str):
 
 
 if __name__ == '__main__':
+    extract_features = True
     recalculate_metadata = True
     save_user_ratings = True
     use_genome_tags = True
@@ -154,50 +155,55 @@ if __name__ == '__main__':
     utility_matrix, genome_metadata = load_user_ratings(movielens_path, LIMIT_USERS=LIMIT_USERS)
     print(utility_matrix.shape)
 
-    # load audio features
-    if use_audio:
-        audio_features = pd.read_csv('../data/audio_features.csv', index_col='movieId', sep=';')
-        utility_matrix = utility_matrix[utility_matrix['movieId'].isin(audio_features.index)]
-        # utility_matrix = audio_features.join(utility_matrix, on='movieId', how='inner')
-        print(utility_matrix)
-        print(utility_matrix.shape)
-        # filter utility matrix as per users:
-        user_votes = utility_matrix.groupby('userId')['rating'].count()
-        print('Original users:', len(user_votes))
-        user_votes = user_votes[user_votes >= MIN_VOTES]  # at least these many votes on movies
-        print('Keeping this many users based on number of votes:', len(user_votes))
-        utility_matrix = utility_matrix[utility_matrix.index.isin(user_votes.index)]
-        print('Utility matrix:', utility_matrix.shape)
-        # utility_matrix['rating'].hist()
+    if extract_features:
+        # use audio features to restrict # of movies
+        if use_audio:
+            audio_features = pd.read_csv('../data/audio_features.csv', index_col='movieId', sep=';')
+            utility_matrix = utility_matrix[utility_matrix['movieId'].isin(audio_features.index)]
+            # utility_matrix = audio_features.join(utility_matrix, on='movieId', how='inner')
+            print(utility_matrix)
+            print(utility_matrix.shape)
 
-    # load movie features from only for movies in movieLens (for which we have ratings)
-    if recalculate_metadata:
-        print('Loading IMDb data...')
-        unique_movies = pd.Series(index=utility_matrix['movieId'].unique().copy())
-        imdb_metadata = load_imdb_metadata_features(unique_movies)
-        if use_genome_tags:
-            genome_metadata = genome_metadata[genome_metadata.index.isin(unique_movies.index)]
-            metadata = imdb_metadata.join(genome_metadata)
-            metadata = metadata.fillna(0.0)   # shouldn't be any but just in case
+    # filter utility matrix as per users:
+    user_votes = utility_matrix.groupby('userId')['rating'].count()
+    print('Original users:', len(user_votes))
+    user_votes = user_votes[user_votes >= MIN_VOTES]  # at least these many votes on movies
+    print('Keeping this many users based on number of votes:', len(user_votes))
+    utility_matrix = utility_matrix[utility_matrix.index.isin(user_votes.index)]
+    print('Utility matrix:', utility_matrix.shape)
+    # utility_matrix['rating'].hist()
+
+    if extract_features:
+        # load movie features from only for movies in movieLens (for which we have ratings)
+        if recalculate_metadata:
+            print('Loading IMDb data...')
+            unique_movies = pd.Series(index=utility_matrix['movieId'].unique().copy())
+            imdb_metadata = load_imdb_metadata_features(unique_movies)
+            if use_genome_tags:
+                genome_metadata = genome_metadata[genome_metadata.index.isin(unique_movies.index)]
+                metadata = imdb_metadata.join(genome_metadata)
+                metadata = metadata.fillna(0.0)   # shouldn't be any but just in case
+            else:
+                metadata = imdb_metadata
+            print(f'Found {metadata.shape[0]} movies.\nSaving metadata...')
+            print(metadata)
+            print(metadata.columns.tolist())
+            metadata.to_hdf(item_metadata_file + '.h5', key='metadata', mode='w')
+            print('OK!')
         else:
-            metadata = imdb_metadata
-        print(f'Found {metadata.shape[0]} movies.\nSaving metadata...')
-        print(metadata)
-        print(metadata.columns.tolist())
-        metadata.to_hdf(item_metadata_file + '.h5', key='metadata', mode='w')
-        print('OK!')
-    else:
-        metadata = pd.read_hdf(item_metadata_file + '.h5', key='metadata')
-    # Note to check statistics: metadata.sum(axis=0)
-    print(metadata.shape)
-    print('Statistics:')
-    print(metadata.sum(axis=0))
+            metadata = pd.read_hdf(item_metadata_file + '.h5', key='metadata')
+        # Note to check statistics: metadata.sum(axis=0)
+        print(metadata.shape)
+        print('Statistics:')
+        print(metadata.sum(axis=0))
 
-    # Note: there can still be movies in ratings for which we have no features
-    # so remove them like this:
-    print('Removing movies for which we have no features...')
-    utility_matrix = utility_matrix[utility_matrix['movieId'].isin(metadata.index)]
+        # Note: there can still be movies in ratings for which we have no features
+        # so remove them like this:
+        print('Removing movies for which we have no features...')
+        utility_matrix = utility_matrix[utility_matrix['movieId'].isin(metadata.index)]
+
     print('Final # of movies:', len(utility_matrix['movieId'].unique()))
+    print('Final # of users:', len(utility_matrix.index.unique()))
 
     # train-val-test split (global temporal splitting)
     print('Calculating train-val-test split...')
@@ -233,8 +239,7 @@ if __name__ == '__main__':
         test = utility_matrix[utility_matrix['timestamp'] >= utility_matrix['test_split']]
         embeddings = None
 
-    print(f'Training shape: {train.shape}, Validation shape: {val.shape}, Test shape: {test.shape}' + (
-        f', Embedding shape: {embeddings.shape}' if split_embeddings_from_train else ''))
+    print(f'Training shape: {train.shape}, Validation shape: {val.shape}, Test shape: {test.shape}' + (f', Embedding shape: {embeddings.shape}' if split_embeddings_from_train else ''))
 
     if save_user_ratings:
         # user_ratings: pd.DataFrame = utility_matrix.drop('timestamp', axis=1).groupby('userId').apply(list)
@@ -256,7 +261,7 @@ if __name__ == '__main__':
         print('OK!')
         print(f'Average number of ratings per user (in train set): {user_ratings["rating"].apply(lambda x: len(x)).mean()}')
 
-        if create_user_embeddings_too:
+        if extract_features and create_user_embeddings_too:
             # create user_embeddings from user ratings once beforehand
             # Note: This takes a very long time
             print('Creating user embeddings...')
