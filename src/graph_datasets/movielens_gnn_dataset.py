@@ -61,7 +61,7 @@ class MovieLensGNNDataset(GNN_Dataset):
         #                                                                                    MovieLensGNNDataset.user_ratings)
 
         self.known_graph, self.all_users_index, self.all_items_index = create_onehot_graph_from_utility_matrix(
-            util_matrix, genres=MovieLensGNNDataset.genres_df if use_genre_nodes else None
+            util_matrix, all_items=self.all_items, all_users=self.all_users, genres=MovieLensGNNDataset.genres_df if use_genre_nodes else None
         )
 
     def __getitem__(self, item):

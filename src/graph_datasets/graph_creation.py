@@ -63,11 +63,8 @@ def create_onehot_graph(all_users: np.array, all_items: np.array, graph_edges, u
     return known_graph, all_users_index, all_items_index
 
 
-def create_onehot_graph_from_utility_matrix(utility_matrix: UtilityMatrix, genres=None):
+def create_onehot_graph_from_utility_matrix(utility_matrix: UtilityMatrix, all_items, all_users, genres=None):
     print('Creating graph...')
-    # get all items and all users
-    all_items = utility_matrix.get_all_items()
-    all_users = utility_matrix.get_all_users()
 
     # mark unique index to all
     all_items_index = {i: ind for ind, i in enumerate(all_items)}
@@ -109,9 +106,9 @@ def create_onehot_graph_from_utility_matrix(utility_matrix: UtilityMatrix, genre
             except KeyError:
                 print('Warning: Could not find genres for an item!')
 
-        x = torch.eye(utility_matrix.matrix.shape[0] + utility_matrix.matrix.shape[1] + len(all_genres))
+        x = torch.eye(len(all_items) + len(all_users) + len(all_genres))
     else:
-        x = torch.eye(utility_matrix.matrix.shape[0] + utility_matrix.matrix.shape[1])
+        x = torch.eye(len(all_items) + len(all_users))
 
     known_graph = Data(
         x=x,
