@@ -3,7 +3,9 @@ import torch
 from torch_geometric.data import Data
 from torch_geometric.utils import coalesce
 from tqdm import tqdm
+import pandas as pd
 
+from globals import item_metadata_file, user_embeddings_file
 from recommendation.utility_matrix import UtilityMatrix
 
 
@@ -109,6 +111,80 @@ def create_onehot_graph_from_utility_matrix(utility_matrix: UtilityMatrix, all_i
         x = torch.eye(len(all_items) + len(all_users) + len(all_genres))
     else:
         x = torch.eye(len(all_items) + len(all_users))
+
+    known_graph = Data(
+        x=x,
+        edge_index=torch.tensor(edge_index, dtype=torch.long),
+        edge_attr=torch.tensor(edge_attr, dtype=torch.float),
+        num_items=len(all_items),
+        edge_dim=edge_dim
+    )
+    print(known_graph)
+    print('done.')
+
+    return known_graph, all_users_index, all_items_index
+
+
+def create_feature_graph_from_utility_matrix(utility_matrix: UtilityMatrix, all_items, all_users, genres=None):
+    print('Creating graph...')
+
+    # load features
+    metadata: pd.DataFrame = pd.read_hdf(item_metadata_file + '.h5')
+    user_embeddings: pd.DataFrame = pd.read_hdf(user_embeddings_file + '.h5')
+
+    item_x = torch.FloatTensor(metadata.loc[all_items].values)
+    user_x = torch.FloatTensor(user_embeddings.loc[all_users].values)
+
+    # mark unique index to all
+    all_items_index = {i: ind for ind, i in enumerate(all_items)}
+    all_users_index = {u: ind + len(all_items) for ind, u in enumerate(all_users)}  # IMPORTANT: add num items to user index!!!
+
+    edge_index = [[], []]
+    edge_attr = []
+    edge_dim = 3   # TODO
+    for _, (userId, itemId, rating) in tqdm(utility_matrix.sparse_matrix.iterrows(), desc='Loading graph edges...', total=len(utility_matrix.sparse_matrix)):
+        # add edge user ----> item with weight: rating - avg_user_rating
+        edge_index[0].append(all_users_index[userId])
+        edge_index[1].append(all_items_index[itemId])
+        edge_attr.append([rating, rating - utility_matrix.get_user_mean_rating(userId), 0])
+        # add edge item ----> user with weight: rating - avg_item_rating
+        edge_index[0].append(all_items_index[itemId])
+        edge_index[1].append(all_users_index[userId])
+        edge_attr.append([rating, rating - utility_matrix.get_item_mean_rating(itemId), 0])
+
+    if genres is not None:
+        all_genres = [
+            'Action', 'Adventure', 'Animation', 'Children', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Fantasy',
+            'Film-Noir', 'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'War', 'Western', 'Biography', 'Music'
+            # Rare (for now) categories: 'History', 'Family', 'Sport'
+        ]
+        all_genres_index = {n: ind + len(all_items) + len(all_users) for ind, n in enumerate(all_genres)}
+        for itemId in tqdm(all_items, desc='Adding genre nodes...'):
+            try:
+                gs = genres.loc[itemId]['genres'].split(',')
+                for g in gs:
+                    if g in all_genres:
+                        # add item ---> genre edge
+                        edge_index[0].append(all_items_index[itemId])
+                        edge_index[1].append(all_genres_index[g])
+                        edge_attr.append([0] * (edge_dim - 1) + [1])   # default attributes
+                        # add genre ---> item edge
+                        edge_index[0].append(all_genres_index[g])
+                        edge_index[1].append(all_items_index[itemId])
+                        edge_attr.append([0] * (edge_dim - 1) + [1])
+            except KeyError:
+                print('Warning: Could not find genres for an item!')
+
+        x = torch.vstack([
+            torch.hstack([item_x, torch.zeros((item_x.shape[0], user_x.shape[1])), len(all_genres)]),
+            torch.hstack([torch.zeros((user_x.shape[0], item_x.shape[1])), user_x, len(all_genres)]),
+            torch.hstack([torch.zeros((len(all_genres), user_x.shape[1] + item_x.shape[1])), torch.eye(len(all_genres))])
+        ])
+    else:
+        x = torch.vstack([
+            torch.hstack([item_x, torch.zeros((item_x.shape[0], user_x.shape[1]))]),
+            torch.hstack([torch.zeros((user_x.shape[0], item_x.shape[1])), user_x])
+        ])
 
     known_graph = Data(
         x=x,

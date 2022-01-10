@@ -3,7 +3,8 @@ import numpy as np
 from torch_geometric.utils import to_networkx
 
 from neural_collaborative_filtering.datasets.gnn_dataset import GNN_Dataset
-from graph_datasets.graph_creation import create_onehot_graph_from_utility_matrix
+from graph_datasets.graph_creation import create_onehot_graph_from_utility_matrix, \
+    create_feature_graph_from_utility_matrix
 from neural_collaborative_filtering.plots import plot_user_item_graph
 from recommendation.utility_matrix import UtilityMatrix
 from globals import train_set_file, val_set_file, test_set_file, \

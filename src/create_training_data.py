@@ -269,13 +269,13 @@ if __name__ == '__main__':
 
             def create_user_embedding(user_ratings: pd.DataFrame, metadata: pd.DataFrame):
                 avg_rating = user_ratings['rating'].mean()
-                return ((user_ratings['rating'] - avg_rating).reshape(-1, 1) * metadata.loc[user_ratings['movieId']].values).mean()  # TODO: sum or mean?
+                return ((user_ratings['rating'] - avg_rating).reshape(-1, 1) * metadata.loc[user_ratings['movieId']].values).mean(axis=0)
 
 
-            user_embeddings = pd.DataFrame(index=user_ratings.index.unique().copy(), data={'embedding': object})
+            user_embeddings = pd.DataFrame(index=user_ratings.index.unique().copy(), data=np.zeros((len(user_ratings.index.unique()), metadata.shape[1])))
             for userId, user_ratings in tqdm(user_ratings.groupby('userId'), desc='Creating user embeddings...'):
                 # Note: iloc[0] is needed because of some weird encapsulation idk
-                user_embeddings.at[userId, 'embedding'] = create_user_embedding(user_ratings.iloc[0], metadata)
+                user_embeddings.at[userId, :] = create_user_embedding(user_ratings.iloc[0], metadata)
             print('Saving...')
             user_embeddings.to_hdf(user_embeddings_file + '.h5', key='user_embeddings', mode='w')
             print('Done')
