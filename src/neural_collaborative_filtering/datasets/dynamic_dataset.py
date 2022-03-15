@@ -35,7 +35,7 @@ class DynamicDataset(NCF_dataset):
         raise Exception('Not Implemented')
 
     @staticmethod
-    def forward(model: NCF, batch, device):
+    def do_forward(model: NCF, batch, device):
         # get the input matrices and the target
         candidate_items, rated_items, user_matrix, y_batch = batch
         # forward model

@@ -10,6 +10,7 @@ from datasets.one_hot_dataset import OneHotMovieLensDataset
 from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF
 from neural_collaborative_filtering.models.basic_ncf import BasicMultimodalNCF
 from neural_collaborative_filtering.models.basic_ncf import BasicNCF
+from neural_collaborative_filtering.plots import plot_train_val_losses
 from neural_collaborative_filtering.train import train_model
 
 
@@ -47,8 +48,11 @@ if __name__ == '__main__':
     writer.add_hparams(hyperparams, {})
 
     # train and save result
-    train_model(model, train_dataset=dataset_class(train_set_file), val_dataset=dataset_class(val_set_file),
-                lr=lr, weight_decay=weight_decay, batch_size=batch_size, val_batch_size=val_batch_size,
-                early_stop=early_stop, final_model_path=final_model_path, checkpoint_model_path=checkpoint_model_path,
-                max_epochs=max_epochs, patience=patience, stop_with_train_loss_instead=stop_with_train_loss_instead,
-                use_weighted_mse_for_training=use_weighted_mse_for_training, writer=writer)
+    monitored_metrics = train_model(model, train_dataset=dataset_class(train_set_file), val_dataset=dataset_class(val_set_file),
+                                    lr=lr, weight_decay=weight_decay, batch_size=batch_size, val_batch_size=val_batch_size,
+                                    early_stop=early_stop, final_model_path=final_model_path, checkpoint_model_path=checkpoint_model_path,
+                                    max_epochs=max_epochs, patience=patience, stop_with_train_loss_instead=stop_with_train_loss_instead,
+                                    use_weighted_mse_for_training=use_weighted_mse_for_training, writer=writer)
+
+    # plot and save losses
+    plot_train_val_losses(monitored_metrics['train_loss'], monitored_metrics['val_loss'])

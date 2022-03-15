@@ -1,3 +1,5 @@
+import sys
+
 import pandas as pd
 import torch
 from torch import optim, nn
@@ -7,7 +9,6 @@ from torch.utils.tensorboard import SummaryWriter
 
 from neural_collaborative_filtering.models.base import NCF
 from neural_collaborative_filtering.util import load_model_state_and_params
-from neural_collaborative_filtering.plots import plot_train_val_losses
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -21,7 +22,20 @@ def train_model(model: NCF, train_dataset, val_dataset,
                 final_model_path, checkpoint_model_path='temp.pt', max_epochs=100,
                 patience=5, stop_with_train_loss_instead=False, use_weighted_mse_for_training=False,
                 optimizer=None, save=True, writer: SummaryWriter=None):
-    # torch.autograd.set_detect_anomaly(True)   # this slows down training but detects errors
+    """
+    Main logic for training a model. Hyperparameters (e.g. lr, batch_size, etc) as arguments.
+    On each loop (epoch), we forward the model on the training_dataset and backpropagate the loss
+    in mini-batch fashion. On each epoch, we also calculate the loss on the validation set which
+    we use for early stopping with a standard patience scheme.
+
+    Logic for how to call forward() on the given model is expected to be in the dataset's do_forward()
+    instead of here so that this code does not have to change for different model-dataset combos.
+    """
+
+    # For Debug: this slows down training but detects errors
+    # torch.autograd.set_detect_anomaly(True)
+
+    # move model to GPU if available
     model.to(device)
 
     # make sure we have compatible models and datasets (because batches and forward change)
@@ -30,11 +44,15 @@ def train_model(model: NCF, train_dataset, val_dataset,
 
     print('Training size:', len(train_dataset), ' - Validation size:', len(val_dataset))
 
+    # define data loaders - important to shuffle train set (!)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=train_dataset.__class__.use_collate())
     val_loader = DataLoader(val_dataset, batch_size=val_batch_size, collate_fn=val_dataset.__class__.use_collate())
 
+    # define optimizer if not given
     if optimizer is None:
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+
+    # define loss function TODO: move to Dataset's do_forward()?
     criterion = nn.MSELoss(reduction='sum')  # don't average the loss as we shall do that ourselves for the whole epoch
 
     if use_weighted_mse_for_training:
@@ -54,23 +72,33 @@ def train_model(model: NCF, train_dataset, val_dataset,
     train_graph = train_dataset.get_graph(device)
     val_graph = val_dataset.get_graph(device)
 
+    # early stopping variables
     early_stop_times = 0
     least_running_loss = None
     previous_running_loss = None
     checkpoint_epoch = -1
-    train_losses = []
-    val_losses = []
+
+    # keep track of training and validation losses
+    monitored_metrics = {
+        'train_loss': [],
+        'val_loss': [],
+    }
+
     for epoch in range(max_epochs):  # epoch
-        """ training """
+        print(f'\nEpoch {epoch + 1}')
+
+        ##################
+        #    Training    #
+        ##################
         train_sum_loss = 0.0
         train_size = 0
         model.train()  # gradients "on"
         extra_train_args = [] if train_graph is None else [train_graph]
-        for batch in tqdm(train_loader, desc='Training'):
+        for batch in tqdm(train_loader, desc='Training', file=sys.stdout):
             # reset the gradients
             optimizer.zero_grad()
             # forward model
-            out, y_batch = train_dataset.__class__.forward(model, batch, device, *extra_train_args)
+            out, y_batch = train_dataset.__class__.do_forward(model, batch, device, *extra_train_args)
             # calculate loss
             if use_weighted_mse_for_training:
                 loss = weighted_criterion(out, y_batch.view(-1, 1).float().to(device),
@@ -86,22 +114,23 @@ def train_model(model: NCF, train_dataset, val_dataset,
             train_size += len(y_batch)  # Note: a little redundant doing this every epoch but it should be negligible
 
         train_loss = train_sum_loss / train_size
-        train_losses.append(train_loss)
+        monitored_metrics['train_loss'].append(train_loss)
         print(f'\nEpoch {epoch + 1}: Training {"weighted" if use_weighted_mse_for_training else ""} loss: {train_loss:.4f}')
 
         if writer is not None:
             writer.add_scalar('Loss/train', train_loss, epoch)
 
-        """ validation """
-        # Calculate val_loss and see if we need to stop
+        ##################
+        #   Validation   #
+        ##################
         model.eval()  # gradients "off"
         val_sum_loss = 0.0
         val_size = 0
         extra_val_args = [] if train_graph is None else [val_graph]
         with torch.no_grad():
-            for batch in tqdm(val_loader, desc='Validating'):
+            for batch in tqdm(val_loader, desc='Validating', file=sys.stdout):
                 # forward model
-                out, y_batch = val_dataset.__class__.forward(model, batch, device, *extra_val_args)
+                out, y_batch = val_dataset.__class__.do_forward(model, batch, device, *extra_val_args)
                 # calculate loss
                 loss = criterion(out, y_batch.view(-1, 1).float().to(device))
                 # accumulate validation loss
@@ -109,26 +138,33 @@ def train_model(model: NCF, train_dataset, val_dataset,
                 val_size += len(y_batch)
 
         val_loss = val_sum_loss / val_size
-        val_losses.append(val_loss)
+        monitored_metrics['val_loss'].append(val_loss)
         print(f'Validation loss: {val_loss:.4f}')
 
         if writer is not None:
             writer.add_scalar('Loss/val', val_loss, epoch)
 
+        ######################
+        #   Early Stopping   #
+        ######################
         if early_stop:
             if least_running_loss is None or (not stop_with_train_loss_instead and val_sum_loss < least_running_loss) \
                     or (stop_with_train_loss_instead and train_sum_loss < least_running_loss):
-                model.save_model(checkpoint_model_path)  # saves kwargs as well
+                # always store the model with the least running loss achieved (saves kwargs as well)
+                model.save_model(checkpoint_model_path)
+                # write down latest checkpoint and best loss so far
                 checkpoint_epoch = epoch
                 least_running_loss = val_sum_loss if not stop_with_train_loss_instead else train_sum_loss
-                early_stop_times = 0  # reset
+                # reset counter for patience
+                early_stop_times = 0
             else:
                 # increase early stop times only if loss increased from previous time (not the least one overall)
                 if previous_running_loss is not None and (not stop_with_train_loss_instead and val_sum_loss > previous_running_loss) \
                         or (stop_with_train_loss_instead and train_sum_loss > previous_running_loss):
                     early_stop_times += 1
+                    if float(early_stop_times).is_integer(): early_stop_times = int(early_stop_times)  # aesthetics
                 else:
-                    early_stop_times = max(0.0, early_stop_times - 0.5)  # go back half
+                    early_stop_times = max(0, early_stop_times - 1)
 
                 if early_stop_times > patience:
                     print(f'Early stopping at epoch {epoch + 1}.')
@@ -139,6 +175,7 @@ def train_model(model: NCF, train_dataset, val_dataset,
                     break
                 else:
                     if epoch == max_epochs - 1:
+                        # special case where we reached max_epochs and our current loss is not the best
                         print(f'Loss worsened in last epoch(s), loading best model from checkpoint from epoch {checkpoint_epoch}')
                         state, _ = load_model_state_and_params(checkpoint_model_path)  # ignore kwargs -> we know them
                         model.load_state_dict(state)
@@ -146,6 +183,7 @@ def train_model(model: NCF, train_dataset, val_dataset,
 
             print(f'Patience remaining: {patience - early_stop_times}')
 
+            # update previous running loss
             previous_running_loss = val_sum_loss if not stop_with_train_loss_instead else train_sum_loss
 
     # save model (its weights)
@@ -158,7 +196,4 @@ def train_model(model: NCF, train_dataset, val_dataset,
         writer.flush()
         writer.close()
 
-    # plot and save losses
-    plot_train_val_losses(train_losses, val_losses)
-
-    return model
+    return monitored_metrics

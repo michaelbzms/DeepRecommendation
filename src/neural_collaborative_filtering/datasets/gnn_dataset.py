@@ -18,7 +18,7 @@ class GNN_Dataset(NCF_dataset):
         raise Exception('Not Implemented')
 
     @staticmethod
-    def forward(model: GNN_NCF, batch, device, graph, *args):
+    def do_forward(model: GNN_NCF, batch, device, graph, *args):
         """ expects samples of (userId, itemId, target) and a graph to pass on to the model """
         # get the input matrices and the target
         userIds, itemIds, y_batch = batch

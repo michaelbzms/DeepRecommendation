@@ -1,3 +1,4 @@
+import sys
 from math import sqrt
 import pandas as pd
 import numpy as np
@@ -20,15 +21,23 @@ keep_att_stats = False
 
 
 def eval_model(model: NCF, test_dataset, batch_size):
+    """
+    Main logic for evaluating a model for our task. Other than the loss we also calculate TP, FP, FN and TN
+    in order to calculate other metrics such as accuracy, recall and precision.
+    """
+
+    # move model to GPU if available
     model.to(device)
 
     print('Test size:', len(test_dataset))
 
+    # define data loader
     test_loader = DataLoader(test_dataset, batch_size=batch_size, collate_fn=test_dataset.__class__.use_collate())
 
     # get graphs if evaluating gnn (else it will be None)
     test_graph = test_dataset.get_graph(device)
 
+    # define loss
     criterion = nn.MSELoss(reduction='sum')  # don't average the loss as we shall do that ourselves for the whole epoch
 
     # Calculate val_loss and see if we need to stop
@@ -39,9 +48,9 @@ def eval_model(model: NCF, test_dataset, batch_size):
     ground_truth = []
     extra_test_args = [] if test_graph is None else [test_graph]
     with torch.no_grad():
-        for batch in tqdm(test_loader, desc='Testing'):
+        for batch in tqdm(test_loader, desc='Testing', file=sys.stdout):
             # forward model
-            out, y_batch = test_dataset.__class__.forward(model, batch, device, *extra_test_args)
+            out, y_batch = test_dataset.__class__.do_forward(model, batch, device, *extra_test_args)
             # calculate loss
             loss = criterion(out, y_batch.view(-1, 1).float().to(device))
             # accumulate validation loss
@@ -111,7 +120,7 @@ def eval_model_with_visualization(model: NCF, test_dataset, batch_size):
                             att_stats=att_stats, candidate_names=candidate_names, rated_names=rated_names)
             else:
                 # forward model
-                out, y_batch = test_dataset.__class__.forward(model, batch, device)
+                out, y_batch = test_dataset.__class__.do_forward(model, batch, device)
             # calculate loss
             loss = criterion(out, y_batch.view(-1, 1).float().to(device))
             # accumulate validation loss

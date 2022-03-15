@@ -24,7 +24,7 @@ class FixedDataset(NCF_dataset):
         raise Exception('Not Implemented')
 
     @staticmethod
-    def forward(model: NCF, batch, device):
+    def do_forward(model: NCF, batch, device):
         # get the input matrices and the target
         item_vec, user_vec, y_batch = batch
         # forward model

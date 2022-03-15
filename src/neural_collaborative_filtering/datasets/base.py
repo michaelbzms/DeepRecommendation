@@ -16,6 +16,6 @@ class NCF_dataset(Dataset):
         return None
 
     @staticmethod
-    def forward(*args):
+    def do_forward(*args):
         """ Define how a model compatible with this dataset should perform a forward pass """
         raise Exception('Not Implemented!')
