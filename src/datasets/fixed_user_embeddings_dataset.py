@@ -1,11 +1,11 @@
 import torch
-from torch.utils.data import Dataset
 import pandas as pd
 
 from globals import item_metadata_file, user_embeddings_file
+from neural_collaborative_filtering.datasets.fixed_dataset import FixedDataset
 
 
-class MovieLensDatasetPreloaded(Dataset):
+class MovieLensDatasetPreloaded(FixedDataset):
     # Static: same for all instances -> shared across train-val-test sets
     print('Initializing common dataset prerequisites (preloaded user embeddings)...')
     metadata: pd.DataFrame = pd.read_hdf(item_metadata_file + '.h5')

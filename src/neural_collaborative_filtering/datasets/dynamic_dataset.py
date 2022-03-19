@@ -6,6 +6,9 @@ from neural_collaborative_filtering.models.base import NCF
 
 class DynamicDataset(NCF_dataset):
     """
+    Use this dataset if user vector input not fixed but instead we want to construct it from item vectors for
+    items the user has interacted with.
+
     Combine __getitem__() and possibly a custom collate_fn to return for each batch in a data loader:
     > candidate_items_batch: (B, F)  B items with their features
     > rated_items_features: (I, F) I rated items with their features

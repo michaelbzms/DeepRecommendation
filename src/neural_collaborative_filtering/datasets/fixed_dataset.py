@@ -6,6 +6,8 @@ from neural_collaborative_filtering.models.base import NCF
 
 class FixedDataset(NCF_dataset):
     """
+    Use this dataset if both item vector input and user vector input is to be considered fixed.
+
     Use __getitem__() to return batches of (item_vec, user_vec, y) samples
     that are stacked by the default collate_fn()
     > item_vec could be one-hot encoded as in NCF or fixed item features or fixed item embeddings

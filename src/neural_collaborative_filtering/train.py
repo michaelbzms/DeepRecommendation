@@ -8,8 +8,7 @@ from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 
 from neural_collaborative_filtering.models.base import NCF
-from neural_collaborative_filtering.util import load_model_state_and_params
-
+from neural_collaborative_filtering.util import load_model
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -169,7 +168,7 @@ def train_model(model: NCF, train_dataset, val_dataset,
                 if early_stop_times > patience:
                     print(f'Early stopping at epoch {epoch + 1}.')
                     print(f'Loading best model from checkpoint from epoch {checkpoint_epoch + 1} with loss: {least_running_loss / val_size:.4f}')
-                    state, _ = load_model_state_and_params(checkpoint_model_path)  # ignore kwargs -> we know them
+                    state, _ = load_model(checkpoint_model_path)  # ignore kwargs -> we know them
                     model.load_state_dict(state)
                     model.eval()
                     break
@@ -177,7 +176,7 @@ def train_model(model: NCF, train_dataset, val_dataset,
                     if epoch == max_epochs - 1:
                         # special case where we reached max_epochs and our current loss is not the best
                         print(f'Loss worsened in last epoch(s), loading best model from checkpoint from epoch {checkpoint_epoch}')
-                        state, _ = load_model_state_and_params(checkpoint_model_path)  # ignore kwargs -> we know them
+                        state, _ = load_model(checkpoint_model_path)  # ignore kwargs -> we know them
                         model.load_state_dict(state)
                         model.eval()
 
