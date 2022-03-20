@@ -7,7 +7,7 @@ from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, 
     val_batch_size, features_to_use, USE_FEATURES, use_weighted_mse_for_training
 from datasets.dynamic_movieLens_dataset import DynamicMovieLensDataset
 from datasets.one_hot_dataset import OneHotMovieLensDataset
-from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF
+from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF, AdvancedNCF
 from neural_collaborative_filtering.models.basic_ncf import BasicMultimodalNCF
 from neural_collaborative_filtering.models.basic_ncf import BasicNCF
 from neural_collaborative_filtering.plots import plot_train_val_losses
@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
         # create model
         model = AttentionNCF(item_dim, dropout_rate=dropout_rate,
-                             item_emb=256, user_emb=256, att_dense=5, mlp_dense_layers=[512, 256, 128])
+                             item_emb=128, user_emb=128, att_dense=8, mlp_dense_layers=[200])
         # model = AdvancedNCF(item_dim, item_emb=256, user_emb=256, mlp_dense_layers=[512, 256, 128], dropout_rate=dropout_rate)
     else:
         dataset_class = OneHotMovieLensDataset

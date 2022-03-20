@@ -19,21 +19,21 @@ seed = 102
 
 # which features to use for items
 """ 'metadata', 'audio' or 'all' """
-features_to_use = 'all'
+features_to_use = 'metadata'
 
 """ NN hyperparameters """
 checkpoint_model_path = '../models/checkpoint.pt'
 final_model_path = '../models/final_model.pt'
 max_epochs = 256
-batch_size = 256
-val_batch_size = 256
+batch_size = 128
+val_batch_size = 128
 embeddings_lr = 0.001   # not currently used
 lr = 1e-3  # 5e-4
 weight_decay = 1e-5
 dropout_rate = 0.2
 early_stop = True
 stop_with_train_loss_instead = False  # Note: useful if we are trying to overfit
-patience = 5
+patience = 3
 
 # This doesn't help
 mask_target_edges_when_training = False
@@ -42,5 +42,5 @@ message_passing_vs_supervised_edges_ratio = 0.7
 # Try weighted MSE loss
 use_weighted_mse_for_training = False
 
-USE_FEATURES = False
+USE_FEATURES = True
 use_genre_nodes = False

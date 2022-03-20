@@ -10,10 +10,11 @@ from util import multi_hot_encode
 class DynamicMovieLensDataset(DynamicDataset):
     print('Initializing common dataset prerequisites...')
     metadata: pd.DataFrame = pd.read_hdf(item_metadata_file + '.h5')
-    audio: pd.DataFrame = pd.read_csv(audio_features_file + '.csv', sep=';', index_col='movieId')
-    item_names = pd.DataFrame(index=audio.index, data=audio['primaryTitle'].copy()).loc[metadata.index]
-    audio.drop(['primaryTitle', 'fileName'], axis=1, inplace=True)   # drop non-features if they exist
-    audio = audio.astype(np.float64)
+    if features_to_use == 'audio' or features_to_use == 'all':
+        audio: pd.DataFrame = pd.read_csv(audio_features_file + '.csv', sep=';', index_col='movieId')
+        item_names = pd.DataFrame(index=audio.index, data=audio['primaryTitle'].copy()).loc[metadata.index]
+        audio.drop(['primaryTitle', 'fileName'], axis=1, inplace=True)   # drop non-features if they exist
+        audio = audio.astype(np.float64)
     user_ratings: pd.DataFrame = pd.read_hdf(user_ratings_file + '.h5')
     item_ids = np.array(sorted(metadata.index.to_list()))
     print('Done')

@@ -114,7 +114,7 @@ def train_model(model: NCF, train_dataset, val_dataset,
 
         train_loss = train_sum_loss / train_size
         monitored_metrics['train_loss'].append(train_loss)
-        print(f'\nEpoch {epoch + 1}: Training {"weighted" if use_weighted_mse_for_training else ""} loss: {train_loss:.4f}')
+        print(f'Training {"weighted" if use_weighted_mse_for_training else ""} loss: {train_loss:.4f}')
 
         if writer is not None:
             writer.add_scalar('Loss/train', train_loss, epoch)
