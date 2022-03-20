@@ -56,7 +56,7 @@ class GCN_NCF(GNN_NCF):
     def is_dataset_compatible(self, dataset_class):
         return issubclass(dataset_class, GNN_Dataset)
 
-    def forward(self, graph, userIds, itemIds):
+    def forward(self, *, graph, userIds, itemIds):
         # encode all graph nodes with GNN
         combined_graph_emb = pass_gnn_layers(self.gnn_convs, graph, edge_weight=graph.edge_attr)
 
@@ -119,7 +119,7 @@ class GAT_NCF(GNN_NCF):
     def is_dataset_compatible(self, dataset_class):
         return issubclass(dataset_class, GNN_Dataset)
 
-    def forward(self, graph, userIds, itemIds):  # needs to be True for training only I think
+    def forward(self, *, graph, userIds, itemIds):  # needs to be True for training only I think
         # encode all graph nodes with GNN
         combined_graph_emb = pass_gnn_layers(self.gnn_convs, graph, edge_attr=graph.edge_attr)
 
@@ -180,7 +180,7 @@ class GAT_NCF_Multimodal(GNN_NCF):
     def is_dataset_compatible(self, dataset_class):
         return issubclass(dataset_class, GNN_Dataset)
 
-    def forward(self, graph, userIds, itemIds):  # needs to be True for training only I think
+    def forward(self, *, graph, userIds, itemIds):  # needs to be True for training only I think
         # encode all graph nodes with GNN
         combined_graph_emb = pass_gnn_layers(self.gnn_convs, graph, edge_attr=graph.edge_attr)
 

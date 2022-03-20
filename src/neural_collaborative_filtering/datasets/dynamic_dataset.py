@@ -1,10 +1,10 @@
 from abc import abstractmethod
 
-from neural_collaborative_filtering.datasets.base import NCF_dataset
+from neural_collaborative_filtering.datasets.base import PointwiseDataset
 from neural_collaborative_filtering.models.base import NCF
 
 
-class DynamicDataset(NCF_dataset):
+class DynamicDataset(PointwiseDataset):
     """
     Use this dataset if user vector input not fixed but instead we want to construct it from item vectors for
     items the user has interacted with.

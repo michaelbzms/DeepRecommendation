@@ -8,7 +8,7 @@ try: from globals import plots_path
 except: plots_path = './'
 
 
-def plot_train_val_losses(train_losses: [float], val_losses: [float]):
+def plot_train_val_losses(train_losses: [float], val_losses: [float], ymin=None):
     epochs = list(range(len(train_losses)))
     plt.plot(epochs, train_losses, '-b', label='training loss')
     plt.plot(epochs, val_losses, '-r', label='validation loss')
@@ -17,7 +17,7 @@ def plot_train_val_losses(train_losses: [float], val_losses: [float]):
     plt.xlabel('epoch')
     plt.legend(loc='upper right')
     plt.title('Training and Validation loss during training')
-    plt.ylim(ymin=0)
+    plt.ylim(ymin=ymin)
 
     # save image
     plt.savefig(plots_path + 'train_val_loss.png')

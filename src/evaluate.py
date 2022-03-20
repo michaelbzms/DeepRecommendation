@@ -1,9 +1,11 @@
 import torch
 
-from datasets.dynamic_movieLens_dataset import DynamicMovieLensDataset, MyCollator
-from datasets.one_hot_dataset import OneHotMovieLensDataset
+from content_providers.dynamic_movieLens_dataset import DynamicMovieLensDataset, MyCollator
+from content_providers.fixed_profiles_provider import FixedProfilesProvider
+from content_providers.one_hot_provider import OneHotProvider
 from globals import test_set_file, val_batch_size, USE_FEATURES
-from neural_collaborative_filtering.evaluate import eval_model_with_visualization
+from neural_collaborative_filtering.datasets.base import PointwiseDataset
+from neural_collaborative_filtering.eval import eval_model_with_visualization
 from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF
 from neural_collaborative_filtering.models.basic_ncf import BasicMultimodalNCF
 from neural_collaborative_filtering.models.basic_ncf import BasicNCF
@@ -21,21 +23,27 @@ if __name__ == '__main__':
     model_file = '../models/final_model.pt'
 
     if USE_FEATURES:
-        dataset_class = DynamicMovieLensDataset
+        # dataset_class = DynamicMovieLensDataset
+        #
+        # # get metadata dim
+        # item_dim = dataset_class.get_item_feature_dim()
+        #
+        # # load model with correct layer sizes
+        # model = load_model(model_file, AttentionNCF)
 
-        # get metadata dim
-        item_dim = dataset_class.get_item_feature_dim()
+        fixed_provider = FixedProfilesProvider()
+        test_dataset = PointwiseDataset(test_set_file, content_provider=fixed_provider)
 
-        # load model with correct layer sizes
-        model = load_model(model_file, AttentionNCF)
+        model = load_model(model_file, BasicNCF)
     else:
-        dataset_class = OneHotMovieLensDataset
+        onehot_provider = OneHotProvider()
+        test_dataset = PointwiseDataset(test_set_file, content_provider=onehot_provider)
 
-        # model = load_model(model_file, BasicNCF)
-        state, _ = torch.load(model_file)
-        model = BasicMultimodalNCF(item_dim=dataset_class.get_number_of_items(),
-                                   user_dim=dataset_class.get_number_of_users())
-        model.load_state_dict(state)
+        model = load_model(model_file, BasicNCF)
+        # state, _ = torch.load(model_file)
+        # model = BasicNCF(item_dim=onehot_provider.get_num_items(),
+        #                  user_dim=onehot_provider.get_num_users())
+        # model.load_state_dict(state)
 
         # make sure these are false
         visualize = False
@@ -44,4 +52,4 @@ if __name__ == '__main__':
     print(model)
 
     # evaluate model on test set
-    eval_model_with_visualization(model, dataset_class(test_set_file), val_batch_size)
+    eval_model_with_visualization(model, test_dataset, val_batch_size)

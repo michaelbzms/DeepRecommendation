@@ -1,10 +1,10 @@
 from abc import abstractmethod
 
-from neural_collaborative_filtering.datasets.base import NCF_dataset
+from neural_collaborative_filtering.datasets.base import PointwiseDataset
 from neural_collaborative_filtering.models.base import GNN_NCF
 
 
-class GNN_Dataset(NCF_dataset):
+class GNN_Dataset(PointwiseDataset):
     """
     Use __getitem__() to return batches of (user_index, item_index, target rating)
     """

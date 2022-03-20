@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from neural_collaborative_filtering.datasets.fixed_dataset import FixedDataset
+from neural_collaborative_filtering.datasets.base import PointwiseDataset, RankingDataset
 from neural_collaborative_filtering.models.base import NCF
 from neural_collaborative_filtering.util import build_MLP_layers
 
@@ -27,10 +27,10 @@ class BasicNCF(NCF):
         # Build MLP according to params
         self.MLP = build_MLP_layers(item_emb + user_emb, mlp_dense_layers, dropout_rate=dropout_rate)
 
-    def forward(self, X_item, X_user):
-        item_emb = self.item_embeddings(X_item)
+    def forward(self, X_user, X_item):
         user_emb = self.user_embeddings(X_user)
-        combined = torch.cat((item_emb, user_emb), dim=1)
+        item_emb = self.item_embeddings(X_item)
+        combined = torch.cat((user_emb, item_emb), dim=1)
         out = self.MLP(combined)
         return out
 
@@ -38,7 +38,7 @@ class BasicNCF(NCF):
         return self.kwargs
 
     def is_dataset_compatible(self, dataset_class):
-        return issubclass(dataset_class, FixedDataset)
+        return issubclass(dataset_class, PointwiseDataset) or issubclass(dataset_class, RankingDataset)
 
 
 class BasicMultimodalNCF(NCF):
@@ -75,7 +75,7 @@ class BasicMultimodalNCF(NCF):
         # Build MLP according to params
         self.MLP = build_MLP_layers(2 * att_dense, mlp_dense_layers, dropout_rate=dropout_rate)
 
-    def forward(self, X_item, X_user):
+    def forward(self, X_user, X_item):
         item_emb = self.item_embeddings(X_item)
         user_emb = self.user_embeddings(X_user)
 

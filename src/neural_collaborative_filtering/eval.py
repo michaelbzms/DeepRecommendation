@@ -6,8 +6,9 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from sklearn.metrics import ndcg_score
 
-from datasets.dynamic_movieLens_dataset import MyCollator
+from content_providers.dynamic_movieLens_dataset import MyCollator
 from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF
 from neural_collaborative_filtering.models.base import NCF
 from neural_collaborative_filtering.plots import plot_residuals, plot_stacked_residuals, plot_rated_items_counts, plot_att_stats
@@ -18,6 +19,11 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # perform attention visualization on top of evaluation
 visualize = False
 keep_att_stats = False
+
+
+def eval_ranking(model: NCF, test_file):
+    # TODO: how do we group predictions per user?
+    pass
 
 
 def eval_model(model: NCF, test_dataset, batch_size):
@@ -47,6 +53,9 @@ def eval_model(model: NCF, test_dataset, batch_size):
     fitted_values = []
     ground_truth = []
     extra_test_args = [] if test_graph is None else [test_graph]
+
+    # predictions = np.zeros((test_dataset.))
+
     with torch.no_grad():
         for batch in tqdm(test_loader, desc='Testing', file=sys.stdout):
             # forward model

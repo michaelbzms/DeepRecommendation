@@ -7,6 +7,9 @@ from neural_collaborative_filtering.datasets.dynamic_dataset import DynamicDatas
 from util import multi_hot_encode
 
 
+# TODO: Problem -> this dataset can not be expressed as a simple Content provider because user profiles are created at forward()
+
+
 class DynamicMovieLensDataset(DynamicDataset):
     print('Initializing common dataset prerequisites...')
     metadata: pd.DataFrame = pd.read_hdf(item_metadata_file + '.h5')

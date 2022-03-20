@@ -5,7 +5,7 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
-from datasets.dynamic_movieLens_dataset import NamedDynamicMovieLensDataset, my_collate_fn
+from content_providers.dynamic_movieLens_dataset import NamedDynamicMovieLensDataset, my_collate_fn
 from globals import val_batch_size
 from neural_collaborative_filtering.models.base import NCF
 from recommendation.utility_matrix import UtilityMatrix

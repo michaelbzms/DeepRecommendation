@@ -1,7 +1,7 @@
 import torch
 
 from globals import test_set_file, val_batch_size
-from neural_collaborative_filtering.evaluate import eval_model
+from neural_collaborative_filtering.eval import eval_model
 from neural_collaborative_filtering.models.gnn_ncf import GAT_NCF, GAT_NCF_Multimodal
 from neural_collaborative_filtering.util import load_model
 from graph_datasets.movielens_gnn_dataset import MovieLensGNNDataset

@@ -31,7 +31,7 @@ class AdvancedNCF(NCF):
     def is_dataset_compatible(self, dataset_class):
         return issubclass(dataset_class, DynamicDataset)
 
-    def forward(self, candidate_items, item_matrix, user_matrix):
+    def forward(self, *, candidate_items, item_matrix, user_matrix):
         # item part
         candidate_embeddings = self.item_embeddings(candidate_items)
         # user part
@@ -87,7 +87,7 @@ class AttentionNCF(NCF):
     def is_dataset_compatible(self, dataset_class):
         return issubclass(dataset_class, DynamicDataset)
 
-    def forward(self, candidate_items, rated_items, user_matrix, candidate_names=None, rated_names=None, att_stats=None, visualize=False):
+    def forward(self, *, candidate_items, rated_items, user_matrix, candidate_names=None, rated_names=None, att_stats=None, visualize=False):
         I = rated_items.shape[0]      # == user_matrix.shape[1]
         B = candidate_items.shape[0]  # == user_matrix.shape[0]
 
