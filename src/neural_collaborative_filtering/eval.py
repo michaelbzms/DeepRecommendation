@@ -21,7 +21,7 @@ visualize = False
 keep_att_stats = False
 
 
-def eval_ranking(model: NCF, samples: pd.DataFrame, cp: ContentProvider):
+def eval_ranking(model: NCF, samples: pd.DataFrame, cp: ContentProvider, cutoff=10):
     # load samples to evaluate ndcg on
     # samples: pd.DataFrame = pd.read_csv(file + '.csv')
 
@@ -53,13 +53,15 @@ def eval_ranking(model: NCF, samples: pd.DataFrame, cp: ContentProvider):
             y_true = np.array(row['rating'], dtype=np.float64)
 
             # calculate ndcg for this user
-            ndcg = ndcg_score([y_true], [y_pred])
+            ndcg = ndcg_score([y_true], [y_pred], k=cutoff)
 
             # append to ndcgs for all users
             ndcgs.append(ndcg)
 
     # average ndcgs for all users to get a general estimate
     final_ndcg = np.mean(ndcgs)
+
+    np.histogram(ndcg)
 
     return final_ndcg
 

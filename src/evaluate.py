@@ -33,6 +33,10 @@ if __name__ == '__main__':
         fixed_provider = FixedProfilesProvider()
         test_dataset = PointwiseDataset(test_set_file, content_provider=fixed_provider)
 
+        # random model
+        # model = BasicNCF(item_dim=fixed_provider.get_item_feature_dim(),
+        #                  user_dim=fixed_provider.get_item_feature_dim())
+
         model = load_model(model_file, BasicNCF)
     else:
         onehot_provider = OneHotProvider()
