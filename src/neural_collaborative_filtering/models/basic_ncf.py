@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from neural_collaborative_filtering.datasets.base import PointwiseDataset, RankingDataset
+from neural_collaborative_filtering.datasets.fixed_datasets import PointwiseDataset, RankingDataset
 from neural_collaborative_filtering.models.base import NCF
 from neural_collaborative_filtering.util import build_MLP_layers
 

@@ -2,9 +2,9 @@ import torch
 import pandas as pd
 import numpy as np
 
-from globals import item_metadata_file, user_ratings_file, audio_features_file, features_to_use
-from neural_collaborative_filtering.datasets.dynamic_dataset import DynamicContentProvider
+from neural_collaborative_filtering.content_providers import DynamicContentProvider
 from util import multi_hot_encode
+from globals import item_metadata_file, user_ratings_file
 
 
 class DynamicProfilesProvider(DynamicContentProvider):

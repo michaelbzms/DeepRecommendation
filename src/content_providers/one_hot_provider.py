@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from neural_collaborative_filtering.datasets.base import ContentProvider
+from neural_collaborative_filtering.content_providers import ContentProvider
 from util import one_hot_encode
 from globals import full_matrix_file
 

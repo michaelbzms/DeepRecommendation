@@ -3,7 +3,7 @@ from torch import nn
 from torch_geometric.nn import GATConv, GCNConv
 import torch.nn.functional as F
 
-from neural_collaborative_filtering.datasets.gnn_dataset import GNN_Dataset
+from neural_collaborative_filtering.datasets.gnn_datasets import GNN_Dataset
 from neural_collaborative_filtering.models.base import GNN_NCF
 from neural_collaborative_filtering.util import build_MLP_layers
 

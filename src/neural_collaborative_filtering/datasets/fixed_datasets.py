@@ -2,25 +2,8 @@ import torch
 from torch.utils.data import Dataset
 import pandas as pd
 
+from neural_collaborative_filtering.content_providers import ContentProvider
 from neural_collaborative_filtering.models.base import NCF
-
-
-class ContentProvider:
-    """ Extend this for specific features """
-    def get_item_profile(self, itemID):
-        raise NotImplementedError
-
-    def get_user_profile(self, userID):
-        raise NotImplementedError
-
-    def get_num_items(self):
-        raise NotImplementedError
-
-    def get_num_users(self):
-        raise NotImplementedError
-
-    def get_item_feature_dim(self):
-        raise NotImplementedError
 
 
 class PointwiseDataset(Dataset):

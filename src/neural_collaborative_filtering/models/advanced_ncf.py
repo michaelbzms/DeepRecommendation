@@ -3,7 +3,7 @@ from torch import nn
 import torch.nn.functional as F
 import numpy as np
 
-from neural_collaborative_filtering.datasets.dynamic_dataset import DynamicPointwiseDataset, DynamicRankingDataset
+from neural_collaborative_filtering.datasets.dynamic_datasets import DynamicPointwiseDataset, DynamicRankingDataset
 from neural_collaborative_filtering.models.base import NCF
 from neural_collaborative_filtering.plots import visualize_attention
 from neural_collaborative_filtering.util import build_MLP_layers
