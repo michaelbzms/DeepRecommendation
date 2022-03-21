@@ -1,19 +1,19 @@
-from abc import abstractmethod
+from torch.utils.data import Dataset
 
-from neural_collaborative_filtering.datasets.base import PointwiseDataset
 from neural_collaborative_filtering.models.base import GNN_NCF
 
 
-class GNN_Dataset(PointwiseDataset):
+class GraphPointwiseDataset(Dataset):
     """
     Use __getitem__() to return batches of (user_index, item_index, target rating)
     """
-    @abstractmethod
-    def __getitem__(self, item):
-        """ return (userId, itemId, target) or use custom collate to make batches of such """
-        raise Exception('Not Implemented')
 
-    @abstractmethod
+    def __getitem__(self, item):
+        # TODO return (user index, item index, target)
+        pass
+        # data = self.set.iloc[item]
+        # return int(self.all_users_index[data['userId']]), int(self.all_items_index[data['movieId']]), float(data['rating'])
+
     def get_graph(self, device):
         raise Exception('Not Implemented')
 
@@ -26,6 +26,5 @@ class GNN_Dataset(PointwiseDataset):
         out = model(graph, userIds.float().to(device), itemIds.float().to(device), *args)
         return out, y_batch
 
-    @abstractmethod
     def get_class_counts(self):
         raise Exception('Not Implemented')
