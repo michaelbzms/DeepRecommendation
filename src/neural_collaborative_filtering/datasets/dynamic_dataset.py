@@ -1,13 +1,32 @@
-from abc import abstractmethod
+import torch
+from torch.utils.data import Dataset
+import pandas as pd
 
-from neural_collaborative_filtering.datasets.base import PointwiseDataset
 from neural_collaborative_filtering.models.base import NCF
 
 
-class DynamicDataset(PointwiseDataset):
+class DynamicContentProvider:
+    """ Extend this for specific features """
+    def get_item_profile(self, itemID):
+        raise NotImplementedError
+
+    def get_num_items(self):
+        raise NotImplementedError
+
+    def get_num_users(self):
+        raise NotImplementedError
+
+    def get_item_feature_dim(self):
+        raise NotImplementedError
+
+    def collate_interacted_items(self, batch, for_ranking: bool):
+        raise NotImplementedError
+
+
+class DynamicPointwiseDataset(Dataset):
     """
     Use this dataset if user vector input not fixed but instead we want to construct it from item vectors for
-    items the user has interacted with.
+    items the user has interacted with. For point-wise learning.
 
     Combine __getitem__() and possibly a custom collate_fn to return for each batch in a data loader:
     > candidate_items_batch: (B, F)  B items with their features
@@ -16,26 +35,25 @@ class DynamicDataset(PointwiseDataset):
     The order must match rated_items_feature's order on I axis.
     """
 
-    @abstractmethod
+    def __init__(self, file: str, dynamic_provider: DynamicContentProvider):
+        # expects to read (user, item, rating) triplets
+        self.samples: pd.DataFrame = pd.read_csv(file + '.csv')
+        self.dynamic_provider = dynamic_provider
+
     def __getitem__(self, item):
-        raise Exception('Not Implemented')
+        # returns (userId, item_vec, rating)
+        data = self.samples.iloc[item]
+        candidate_items = self.dynamic_provider.get_item_profile(itemID=data['movieId'])
+        return data['userId'], torch.FloatTensor(candidate_items), float(data['rating'])
 
-    @staticmethod
-    def use_collate():
-        # Return collate_fn() function to use. If None will default to stacking samples from __getitem__()
-        raise Exception('Not Implemented')
+    def __len__(self):
+        return len(self.samples)
 
-    @staticmethod
-    def get_item_feature_dim():   # aka F
-        raise Exception('Not Implemented')
+    def get_graph(self, device):  # TODO: remove?
+        return None
 
-    @staticmethod
-    def get_number_of_items():    # aka I
-        raise Exception('Not Implemented')
-
-    @staticmethod
-    def get_sorted_item_names():
-        raise Exception('Not Implemented')
+    def use_collate(self):
+        return lambda batch: self.dynamic_provider.collate_interacted_items(batch, for_ranking=False)
 
     @staticmethod
     def do_forward(model: NCF, batch, device):
@@ -43,4 +61,42 @@ class DynamicDataset(PointwiseDataset):
         candidate_items, rated_items, user_matrix, y_batch = batch
         # forward model
         out = model(candidate_items.float().to(device), rated_items.float().to(device), user_matrix.float().to(device))
+        # TODO: loss here
         return out, y_batch
+
+
+class DynamicRankingDataset(Dataset):
+    """
+    Same but for pairwise learning.
+    """
+
+    def __init__(self, file: str, dynamic_provider: DynamicContentProvider):
+        # expects to read (user, item, rating) triplets
+        self.samples: pd.DataFrame = pd.read_csv(file + '.csv')
+        self.dynamic_provider = dynamic_provider
+
+    def __getitem__(self, item):
+        # returns (userId, item_vec1, item_vec2)
+        data = self.samples.iloc[item]
+        candidate_items1 = self.dynamic_provider.get_item_profile(itemID=data['movieId'])
+        candidate_items2 = self.dynamic_provider.get_item_profile(itemID=data['movieId'])
+        return data['userId'], torch.FloatTensor(candidate_items1), torch.FloatTensor(candidate_items2)
+
+    def __len__(self):
+        return len(self.samples)
+
+    def get_graph(self, device):  # TODO: remove?
+        return None
+
+    def use_collate(self):
+        return lambda batch: self.dynamic_provider.collate_interacted_items(batch, for_ranking=True)
+
+    @staticmethod
+    def do_forward(model: NCF, batch, device):
+        # get the input matrices and the target
+        candidate_items1, rated_items, user_matrix, candidate_items2 = batch
+        # forward model
+        out1 = model(candidate_items1.float().to(device), rated_items.float().to(device), user_matrix.float().to(device))
+        out2 = model(candidate_items2.float().to(device), rated_items.float().to(device), user_matrix.float().to(device))
+        # TODO: loss here
+        return out1, out2

@@ -38,7 +38,7 @@ def eval_model(model: NCF, test_dataset, batch_size):
     print('Test size:', len(test_dataset))
 
     # define data loader
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, collate_fn=test_dataset.__class__.use_collate())
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, collate_fn=test_dataset.use_collate())
 
     # get graphs if evaluating gnn (else it will be None)
     test_graph = test_dataset.get_graph(device)
@@ -101,7 +101,7 @@ def eval_model_with_visualization(model: NCF, test_dataset, batch_size):
         test_loader = DataLoader(test_dataset, batch_size=batch_size,
                                  collate_fn=MyCollator(only_rated=False, with_names=True))
     else:
-        test_loader = DataLoader(test_dataset, batch_size=batch_size, collate_fn=test_dataset.__class__.use_collate())
+        test_loader = DataLoader(test_dataset, batch_size=batch_size, collate_fn=test_dataset.use_collate())
 
     criterion = nn.MSELoss(reduction='sum')  # don't average the loss as we shall do that ourselves for the whole epoch
 

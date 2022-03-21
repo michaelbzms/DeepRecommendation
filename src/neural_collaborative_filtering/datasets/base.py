@@ -44,8 +44,7 @@ class PointwiseDataset(Dataset):
     def get_graph(self, device):    # TODO: remove?
         return None
 
-    @staticmethod
-    def use_collate():
+    def use_collate(self):
         return None
 
     @staticmethod
@@ -80,8 +79,7 @@ class RankingDataset(Dataset):
     def get_graph(self, device):  # TODO: remove?
         return None
 
-    @staticmethod
-    def use_collate():
+    def use_collate(self):
         return None
 
     @staticmethod

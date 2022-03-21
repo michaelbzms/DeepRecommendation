@@ -2,13 +2,14 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 
+from content_providers.dynamic_profiles_provider import DynamicProfilesProvider
 from content_providers.fixed_profiles_provider import FixedProfilesProvider
 from content_providers.one_hot_provider import OneHotProvider
 from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, max_epochs, early_stop, \
     stop_with_train_loss_instead, checkpoint_model_path, patience, dropout_rate, final_model_path, \
     val_batch_size, features_to_use, USE_FEATURES, use_weighted_mse_for_training
-from content_providers.dynamic_movieLens_dataset import DynamicMovieLensDataset
 from neural_collaborative_filtering.datasets.base import PointwiseDataset
+from neural_collaborative_filtering.datasets.dynamic_dataset import DynamicPointwiseDataset
 from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF, AdvancedNCF
 from neural_collaborative_filtering.models.basic_ncf import BasicNCF
 from neural_collaborative_filtering.plots import plot_train_val_losses
@@ -25,25 +26,26 @@ if __name__ == '__main__':
 
     if USE_FEATURES:
         # TODO: depricated
-        # # get feature dim
-        # training_dataset = DynamicMovieLensDataset(train_set_file)
-        # val_dataset = DynamicMovieLensDataset(val_set_file)
-        #
-        # # get F
-        # item_dim = training_dataset.get_item_feature_dim()
-        #
-        # # create model
-        # model = AttentionNCF(item_dim, dropout_rate=dropout_rate,
-        #                      item_emb=128, user_emb=128, att_dense=8, mlp_dense_layers=[200])
+        # get feature dim
+        dpp = DynamicProfilesProvider()
+        training_dataset = DynamicPointwiseDataset(train_set_file, dpp)
+        val_dataset = DynamicPointwiseDataset(val_set_file, dpp)
+
+        # get F
+        item_dim = dpp.get_item_feature_dim()
+
+        # create model
+        model = AttentionNCF(item_dim, dropout_rate=dropout_rate,
+                             item_emb=128, user_emb=128, att_dense=None, mlp_dense_layers=[200])
         # # model = AdvancedNCF(item_dim, item_emb=256, user_emb=256, mlp_dense_layers=[512, 256, 128], dropout_rate=dropout_rate)
 
-        fixed_provider = FixedProfilesProvider()
-        training_dataset = PointwiseDataset(train_set_file, content_provider=fixed_provider)
-        val_dataset = PointwiseDataset(val_set_file, content_provider=fixed_provider)
-
-        model = BasicNCF(item_dim=fixed_provider.get_item_feature_dim(),
-                         user_dim=fixed_provider.get_item_feature_dim(),
-                         item_emb=64, user_emb=64, mlp_dense_layers=[128])
+        # fixed_provider = FixedProfilesProvider()
+        # training_dataset = PointwiseDataset(train_set_file, content_provider=fixed_provider)
+        # val_dataset = PointwiseDataset(val_set_file, content_provider=fixed_provider)
+        #
+        # model = BasicNCF(item_dim=fixed_provider.get_item_feature_dim(),
+        #                  user_dim=fixed_provider.get_item_feature_dim(),
+        #                  item_emb=64, user_emb=64, mlp_dense_layers=[128])
     else:
         onehot_provider = OneHotProvider()
         training_dataset = PointwiseDataset(train_set_file, content_provider=onehot_provider)

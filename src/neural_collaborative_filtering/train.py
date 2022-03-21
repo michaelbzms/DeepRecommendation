@@ -44,8 +44,8 @@ def train_model(model: NCF, train_dataset, val_dataset,
     print('Training size:', len(train_dataset), ' - Validation size:', len(val_dataset))
 
     # define data loaders - important to shuffle train set (!)
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=train_dataset.__class__.use_collate())
-    val_loader = DataLoader(val_dataset, batch_size=val_batch_size, collate_fn=val_dataset.__class__.use_collate())
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=train_dataset.use_collate())
+    val_loader = DataLoader(val_dataset, batch_size=val_batch_size, collate_fn=val_dataset.use_collate())
 
     # define optimizer if not given
     if optimizer is None:

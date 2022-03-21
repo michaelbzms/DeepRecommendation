@@ -3,7 +3,7 @@ from torch import nn
 import torch.nn.functional as F
 import numpy as np
 
-from neural_collaborative_filtering.datasets.dynamic_dataset import DynamicDataset
+from neural_collaborative_filtering.datasets.dynamic_dataset import DynamicPointwiseDataset, DynamicRankingDataset
 from neural_collaborative_filtering.models.base import NCF
 from neural_collaborative_filtering.plots import visualize_attention
 from neural_collaborative_filtering.util import build_MLP_layers
@@ -29,9 +29,9 @@ class AdvancedNCF(NCF):
         return self.kwargs
 
     def is_dataset_compatible(self, dataset_class):
-        return issubclass(dataset_class, DynamicDataset)
+        return issubclass(dataset_class, DynamicPointwiseDataset) or issubclass(dataset_class, DynamicRankingDataset)
 
-    def forward(self, *, candidate_items, item_matrix, user_matrix):
+    def forward(self, candidate_items, item_matrix, user_matrix):
         # item part
         candidate_embeddings = self.item_embeddings(candidate_items)
         # user part
@@ -85,9 +85,9 @@ class AttentionNCF(NCF):
         return self.kwargs
 
     def is_dataset_compatible(self, dataset_class):
-        return issubclass(dataset_class, DynamicDataset)
+        return issubclass(dataset_class, DynamicPointwiseDataset) or issubclass(dataset_class, DynamicRankingDataset)
 
-    def forward(self, *, candidate_items, rated_items, user_matrix, candidate_names=None, rated_names=None, att_stats=None, visualize=False):
+    def forward(self, candidate_items, rated_items, user_matrix, candidate_names=None, rated_names=None, att_stats=None, visualize=False):
         I = rated_items.shape[0]      # == user_matrix.shape[1]
         B = candidate_items.shape[0]  # == user_matrix.shape[0]
 
