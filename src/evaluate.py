@@ -1,11 +1,10 @@
 import torch
 
-from content_providers.dynamic_movieLens_dataset import DynamicMovieLensDataset, MyCollator
 from content_providers.fixed_profiles_provider import FixedProfilesProvider
 from content_providers.one_hot_provider import OneHotProvider
 from globals import test_set_file, val_batch_size, USE_FEATURES
-from neural_collaborative_filtering.datasets.base import PointwiseDataset
-from neural_collaborative_filtering.eval import eval_model_with_visualization
+from neural_collaborative_filtering.datasets.fixed_datasets import PointwiseDataset
+from neural_collaborative_filtering.eval import eval_model
 from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF
 from neural_collaborative_filtering.models.basic_ncf import BasicMultimodalNCF
 from neural_collaborative_filtering.models.basic_ncf import BasicNCF
@@ -20,7 +19,7 @@ keep_att_stats = False
 
 
 if __name__ == '__main__':
-    model_file = '../models/final_model.pt'
+    model_file = '../models/checkpoint.pt'
 
     if USE_FEATURES:
         # dataset_class = DynamicMovieLensDataset
@@ -52,4 +51,4 @@ if __name__ == '__main__':
     print(model)
 
     # evaluate model on test set
-    eval_model_with_visualization(model, test_dataset, val_batch_size)
+    eval_model(model, test_dataset, val_batch_size)

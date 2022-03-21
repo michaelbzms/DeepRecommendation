@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from sklearn.metrics import ndcg_score
 
+from neural_collaborative_filtering.content_providers import ContentProvider
 from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF
 from neural_collaborative_filtering.models.base import NCF
 from neural_collaborative_filtering.plots import plot_residuals, plot_stacked_residuals, plot_rated_items_counts, plot_att_stats
@@ -20,12 +21,47 @@ visualize = False
 keep_att_stats = False
 
 
-def eval_ranking(model: NCF, test_file):
-    # TODO: how do we group predictions per user?
-    test_samples: pd.DataFrame = pd.read_csv(test_file + '.csv')
-    for userId, row in test_samples.groupby('userId').agg(list).iterrows():
-        print(userId, row)
-        # TODO
+def eval_ranking(model: NCF, samples: pd.DataFrame, cp: ContentProvider):
+    # load samples to evaluate ndcg on
+    # samples: pd.DataFrame = pd.read_csv(file + '.csv')
+
+    model.eval()
+    model.to(device)
+    ndcgs = []
+    with torch.no_grad():
+        for userId, row in tqdm(samples.groupby('userId').agg(list).iterrows(), total=len(samples['userId'].unique()), file=sys.stdout):
+            if len(row['movieId']) <= 0:
+                print("Warning: Found user with no interactions")
+                continue
+
+            # create user input from content provider - one user replicated once for each item he interacted with
+            user_vec = cp.get_user_profile(userId).values
+            user_vecs = np.tile(user_vec, (len(row['movieId']), 1))  # repeat vector on axis=0
+
+            # create item input fron content provider
+            item_vecs = cp.get_item_profile(row['movieId']).values
+
+            # forward the model
+            user_vecs = torch.FloatTensor(user_vecs).to(device)
+            item_vecs = torch.FloatTensor(item_vecs).to(device)
+            out = model(user_vecs, item_vecs)
+
+            # get y_pred from model in appropriate format
+            y_pred = np.array([x[0] for x in out.cpu().numpy()], dtype=np.float64)
+
+            # get y_true from known test labels
+            y_true = np.array(row['rating'], dtype=np.float64)
+
+            # calculate ndcg for this user
+            ndcg = ndcg_score([y_true], [y_pred])
+
+            # append to ndcgs for all users
+            ndcgs.append(ndcg)
+
+    # average ndcgs for all users to get a general estimate
+    final_ndcg = np.mean(ndcgs)
+
+    return final_ndcg
 
 
 def eval_model(model: NCF, test_dataset, batch_size):
@@ -73,6 +109,8 @@ def eval_model(model: NCF, test_dataset, batch_size):
 
     test_mse = test_sum_loss / test_size
     print(f'Test loss (MSE): {test_mse:.4f} - RMSE: {sqrt(test_mse):.4f}')
+
+    print(f'Ranking eval: NDCG = {eval_ranking(model, test_dataset.samples, test_dataset.content_provider)}')
 
     fitted_values = np.concatenate(fitted_values, dtype=np.float64).reshape(-1)
     ground_truth = np.concatenate(ground_truth, dtype=np.float64).reshape(-1)
