@@ -1,12 +1,12 @@
 import torch
-from torch.utils.data import Dataset
 import pandas as pd
 
 from neural_collaborative_filtering.content_providers import DynamicContentProvider
+from neural_collaborative_filtering.datasets.base import PointwiseDataset, RankingDataset
 from neural_collaborative_filtering.models.base import NCF
 
 
-class DynamicPointwiseDataset(Dataset):
+class DynamicPointwiseDataset(PointwiseDataset):
     """
     Use this dataset if user vector input not fixed but instead we want to construct it from item vectors for
     items the user has interacted with. For point-wise learning.
@@ -19,6 +19,7 @@ class DynamicPointwiseDataset(Dataset):
     """
 
     def __init__(self, file: str, dynamic_provider: DynamicContentProvider):
+        super().__init__()
         # expects to read (user, item, rating) triplets
         self.samples: pd.DataFrame = pd.read_csv(file + '.csv')
         self.dynamic_provider = dynamic_provider
@@ -48,12 +49,13 @@ class DynamicPointwiseDataset(Dataset):
         return out, y_batch
 
 
-class DynamicRankingDataset(Dataset):
+class DynamicRankingDataset(RankingDataset):
     """
     Same but for pairwise learning.
     """
 
     def __init__(self, file: str, dynamic_provider: DynamicContentProvider):
+        super().__init__()
         # expects to read (user, item, rating) triplets
         self.samples: pd.DataFrame = pd.read_csv(file + '.csv')
         self.dynamic_provider = dynamic_provider

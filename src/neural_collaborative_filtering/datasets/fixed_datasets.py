@@ -1,15 +1,16 @@
 import torch
-from torch.utils.data import Dataset
 import pandas as pd
 
 from neural_collaborative_filtering.content_providers import ContentProvider
+from neural_collaborative_filtering.datasets.base import PointwiseDataset, RankingDataset
 from neural_collaborative_filtering.models.base import NCF
 
 
-class PointwiseDataset(Dataset):
+class FixedPointwiseDataset(PointwiseDataset):
     """ Base template and functionality for point-wise learning and evaluation """
 
     def __init__(self, file: str, content_provider: ContentProvider):
+        super().__init__()
         # expects to read (user, item, rating) triplets
         self.samples: pd.DataFrame = pd.read_csv(file + '.csv')
         self.content_provider = content_provider
@@ -40,10 +41,11 @@ class PointwiseDataset(Dataset):
         return out, y_batch
 
 
-class RankingDataset(Dataset):
+class FixedRankingDataset(RankingDataset):
     """ Base template and functionality for pair-wise learning and evaluation """
 
     def __init__(self, ranking_file: str, content_provider: ContentProvider):
+        super().__init__()
         # expects to read (user, item1, item2) triplets where item1 > item2 for user
         self.samples: pd.DataFrame = pd.read_csv(ranking_file + '.csv')
         self.content_provider = content_provider

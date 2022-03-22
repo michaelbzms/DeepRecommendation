@@ -1,8 +1,7 @@
 import sys
 
-import pandas as pd
 import torch
-from torch import optim, nn
+from torch import optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
@@ -51,22 +50,6 @@ def train_model(model: NCF, train_dataset, val_dataset,
     if optimizer is None:
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
 
-    # define loss function TODO: move to Dataset's do_forward()?
-    criterion = nn.MSELoss(reduction='sum')  # don't average the loss as we shall do that ourselves for the whole epoch
-
-    if use_weighted_mse_for_training:
-        def weighted_mse_loss(input, target, weight):
-            return torch.sum(weight * (input - target) ** 2)
-
-        class_counts: pd.Series = train_dataset.get_class_counts()
-        class_weights: pd.Series or None = 1.0 - (class_counts / class_counts.sum())   # TODO: are these the correct class weights?
-        # class_weights: pd.Series or None = 100.0 / class_counts   # INS * 100
-        print(class_weights)
-        weighted_criterion = weighted_mse_loss
-    else:
-        weighted_criterion = None
-        class_weights = None
-
     # get graphs if training gnn (else it will be None)
     train_graph = train_dataset.get_graph(device)
     val_graph = val_dataset.get_graph(device)
@@ -90,29 +73,23 @@ def train_model(model: NCF, train_dataset, val_dataset,
         #    Training    #
         ##################
         train_sum_loss = 0.0
-        train_size = 0
         model.train()  # gradients "on"
         extra_train_args = [] if train_graph is None else [train_graph]
         for batch in tqdm(train_loader, desc='Training', file=sys.stdout):
             # reset the gradients
             optimizer.zero_grad()
             # forward model
-            out, y_batch = train_dataset.__class__.do_forward(model, batch, device, *extra_train_args)
+            out, y_true_or_out2 = train_dataset.__class__.do_forward(model, batch, device, *extra_train_args)
             # calculate loss
-            if use_weighted_mse_for_training:
-                loss = weighted_criterion(out, y_batch.view(-1, 1).float().to(device),
-                                          torch.tensor(pd.Series(y_batch).map(class_weights).values).to(device))
-            else:
-                loss = criterion(out, y_batch.view(-1, 1).float().to(device))
+            loss = train_dataset.calculate_loss(out, y_true_or_out2.to(device))
             # backpropagation (compute gradients)
             loss.backward()
             # update weights according to optimizer
             optimizer.step()
             # accumulate train loss
             train_sum_loss += loss.detach().item()
-            train_size += len(y_batch)  # Note: a little redundant doing this every epoch but it should be negligible
 
-        train_loss = train_sum_loss / train_size
+        train_loss = train_sum_loss / len(train_dataset)
         monitored_metrics['train_loss'].append(train_loss)
         print(f'Training {"weighted" if use_weighted_mse_for_training else ""} loss: {train_loss:.4f}')
 
@@ -124,19 +101,17 @@ def train_model(model: NCF, train_dataset, val_dataset,
         ##################
         model.eval()  # gradients "off"
         val_sum_loss = 0.0
-        val_size = 0
         extra_val_args = [] if train_graph is None else [val_graph]
         with torch.no_grad():
             for batch in tqdm(val_loader, desc='Validating', file=sys.stdout):
                 # forward model
-                out, y_batch = val_dataset.__class__.do_forward(model, batch, device, *extra_val_args)
+                out, y_true_or_out2 = val_dataset.__class__.do_forward(model, batch, device, *extra_val_args)
                 # calculate loss
-                loss = criterion(out, y_batch.view(-1, 1).float().to(device))
+                loss = val_dataset.calculate_loss(out, y_true_or_out2.to(device))
                 # accumulate validation loss
                 val_sum_loss += loss.detach().item()
-                val_size += len(y_batch)
 
-        val_loss = val_sum_loss / val_size
+        val_loss = val_sum_loss / len(val_dataset)
         monitored_metrics['val_loss'].append(val_loss)
         print(f'Validation loss: {val_loss:.4f}')
 

@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from neural_collaborative_filtering.datasets.fixed_datasets import PointwiseDataset, RankingDataset
+from neural_collaborative_filtering.datasets.fixed_datasets import FixedPointwiseDataset, FixedRankingDataset
 from neural_collaborative_filtering.models.base import NCF
 from neural_collaborative_filtering.util import build_MLP_layers
 
@@ -38,7 +38,7 @@ class BasicNCF(NCF):
         return self.kwargs
 
     def is_dataset_compatible(self, dataset_class):
-        return issubclass(dataset_class, PointwiseDataset) or issubclass(dataset_class, RankingDataset)
+        return issubclass(dataset_class, FixedPointwiseDataset) or issubclass(dataset_class, FixedRankingDataset)
 
 
 class BasicMultimodalNCF(NCF):
@@ -103,4 +103,4 @@ class BasicMultimodalNCF(NCF):
         return self.kwargs
 
     def is_dataset_compatible(self, dataset_class):
-        return issubclass(dataset_class, FixedDataset)
+        return issubclass(dataset_class, FixedPointwiseDataset)

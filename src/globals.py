@@ -12,6 +12,9 @@ audio_features_file = '../data/audio_features'
 train_set_file = '../data/train'
 val_set_file = '../data/val'
 test_set_file = '../data/test'
+ranking_train_set_file = '../data/ranking_train'
+ranking_val_set_file = '../data/ranking_val'
+ranking_test_set_file = '../data/ranking_test'
 full_matrix_file = '../data/full_utility_matrix'
 
 # random seed to use for data creation
@@ -25,10 +28,10 @@ features_to_use = 'metadata'
 checkpoint_model_path = '../models/checkpoint.pt'
 final_model_path = '../models/final_model.pt'
 max_epochs = 256
-batch_size = 128
-val_batch_size = 128
+batch_size = 512
+val_batch_size = 512
 embeddings_lr = 0.001   # not currently used
-lr = 1e-3  # 5e-4
+lr = 3e-4  # 5e-4
 weight_decay = 1e-5
 dropout_rate = 0.2
 early_stop = True
@@ -42,5 +45,5 @@ message_passing_vs_supervised_edges_ratio = 0.7
 # Try weighted MSE loss
 use_weighted_mse_for_training = False
 
-USE_FEATURES = True
+USE_FEATURES = False
 use_genre_nodes = False

@@ -1,12 +1,13 @@
-from torch.utils.data import Dataset
-
+from neural_collaborative_filtering.datasets.base import PointwiseDataset
 from neural_collaborative_filtering.models.base import GNN_NCF
 
 
-class GraphPointwiseDataset(Dataset):
+class GraphPointwiseDataset(PointwiseDataset):
     """
     Use __getitem__() to return batches of (user_index, item_index, target rating)
     """
+    def __init__(self):
+        super().__init__()
 
     def __getitem__(self, item):
         # TODO return (user index, item index, target)
