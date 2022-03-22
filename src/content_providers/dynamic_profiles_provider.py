@@ -14,7 +14,7 @@ class DynamicProfilesProvider(DynamicContentProvider):
         self.user_ratings: pd.DataFrame = pd.read_hdf(user_ratings_file + '.h5')
 
     def get_item_profile(self, itemID):  # ID or IDs
-        return self.metadata.loc[itemID]
+        return self.metadata.loc[itemID, :]
 
     def get_num_items(self):                     # TODO: what if we store more than are in our samples?
         return self.metadata.shape[0]
@@ -27,14 +27,18 @@ class DynamicProfilesProvider(DynamicContentProvider):
 
     def collate_interacted_items(self, batch, for_ranking: bool, ignore_ratings=False):
         """ It is more efficient to do all these batch-wise so one would have to repeat the same process
-            for other contents as well """
+            for other contents as well
+        """
 
         # turn per-row to per-column
         batch_data = list(zip(*batch))
 
-        # stack torch tensors from dataset
-        candidate_items = torch.stack(batch_data[1])
-        targets_or_items2 = torch.stack(batch_data[2]) if for_ranking else torch.FloatTensor(batch_data[2])
+        # get item profiles and stack them
+        candidate_items = torch.FloatTensor(self.get_item_profile(itemID=batch_data[1]).values)
+        if for_ranking:
+            targets_or_items2 = torch.FloatTensor(self.get_item_profile(itemID=batch_data[2]).values)
+        else:
+            targets_or_items2 = torch.FloatTensor(batch_data[2])
 
         # for the user part we do all the work here.
         # get user ids in batch and their ratings

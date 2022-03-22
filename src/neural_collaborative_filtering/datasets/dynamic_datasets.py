@@ -21,11 +21,11 @@ class DynamicPointwiseDataset(PointwiseDataset):
         super().__init__(file)
         self.dynamic_provider = dynamic_provider
 
-    def __getitem__(self, item):
-        # returns (userId, item_vec, rating)
-        data = self.samples.iloc[item]
-        candidate_items = self.dynamic_provider.get_item_profile(itemID=data['movieId'])
-        return data['userId'], torch.FloatTensor(candidate_items), float(data['rating'])
+    # def __getitem__(self, item):
+    #     # returns (userId, item_vec, rating)
+    #     data = self.samples.iloc[item]
+    #     candidate_items = self.dynamic_provider.get_item_profile(itemID=data['movieId'])
+    #     return data['userId'], torch.FloatTensor(candidate_items), float(data['rating'])
 
     def __len__(self):
         return len(self.samples)
@@ -54,12 +54,12 @@ class DynamicRankingDataset(RankingDataset):
         super().__init__(ranking_file)
         self.dynamic_provider = dynamic_provider
 
-    def __getitem__(self, item):
-        # returns (userId, item_vec1, item_vec2)
-        data = self.samples.iloc[item]
-        candidate_items1 = self.dynamic_provider.get_item_profile(itemID=data['movieId'])
-        candidate_items2 = self.dynamic_provider.get_item_profile(itemID=data['movieId'])
-        return data['userId'], torch.FloatTensor(candidate_items1), torch.FloatTensor(candidate_items2)
+    # def __getitem__(self, item):
+    #     # returns (userId, item_vec1, item_vec2)
+    #     data = self.samples.iloc[item]
+    #     candidate_items1 = self.dynamic_provider.get_item_profile(itemID=data['movieId'])
+    #     candidate_items2 = self.dynamic_provider.get_item_profile(itemID=data['movieId'])
+    #     return data['userId'], torch.FloatTensor(candidate_items1), torch.FloatTensor(candidate_items2)
 
     def __len__(self):
         return len(self.samples)
