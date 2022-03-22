@@ -45,5 +45,5 @@ message_passing_vs_supervised_edges_ratio = 0.7
 # Try weighted MSE loss
 use_weighted_mse_for_training = False
 
-USE_FEATURES = False
+USE_FEATURES = True
 use_genre_nodes = False

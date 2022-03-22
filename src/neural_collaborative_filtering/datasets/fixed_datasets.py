@@ -1,5 +1,4 @@
 import torch
-import pandas as pd
 
 from neural_collaborative_filtering.content_providers import ContentProvider
 from neural_collaborative_filtering.datasets.base import PointwiseDataset, RankingDataset
@@ -10,17 +9,8 @@ class FixedPointwiseDataset(PointwiseDataset):
     """ Base template and functionality for point-wise learning and evaluation """
 
     def __init__(self, file: str, content_provider: ContentProvider):
-        super().__init__()
-        # expects to read (user, item, rating) triplets
-        self.samples: pd.DataFrame = pd.read_csv(file + '.csv')
+        super().__init__(file)
         self.content_provider = content_provider
-
-    def __getitem__(self, item):
-        # return (user ID, item ID, rating) triplets
-        data = self.samples.iloc[item]
-        user_vec = self.content_provider.get_user_profile(userID=data['userId'])
-        item_vec = self.content_provider.get_item_profile(itemID=data['movieId'])
-        return torch.FloatTensor(user_vec), torch.FloatTensor(item_vec), float(data['rating'])
 
     def __len__(self):
         return len(self.samples)
@@ -28,8 +18,16 @@ class FixedPointwiseDataset(PointwiseDataset):
     def get_graph(self, device):    # TODO: remove?
         return None
 
-    def use_collate(self):
-        return None
+    def use_collate(self):          # much faster
+        def custom_collate(batch, cp: ContentProvider):
+            # turn per-row to per-column
+            batch_data = list(zip(*batch))
+            # get profiles in batches instead of one-by-one
+            user_vecs = cp.get_user_profile(userID=batch_data[0]).values
+            item_vecs = cp.get_item_profile(itemID=batch_data[1]).values
+            return torch.FloatTensor(user_vecs), torch.FloatTensor(item_vecs), torch.FloatTensor(batch_data[2])
+
+        return lambda batch: custom_collate(batch, self.content_provider)
 
     @staticmethod
     def do_forward(model: NCF, batch, device, *args):
@@ -45,18 +43,8 @@ class FixedRankingDataset(RankingDataset):
     """ Base template and functionality for pair-wise learning and evaluation """
 
     def __init__(self, ranking_file: str, content_provider: ContentProvider):
-        super().__init__()
-        # expects to read (user, item1, item2) triplets where item1 > item2 for user
-        self.samples: pd.DataFrame = pd.read_csv(ranking_file + '.csv')
+        super().__init__(ranking_file)
         self.content_provider = content_provider
-
-    def __getitem__(self, item):
-        # return (user ID, item1 ID, item2 ID) triplets
-        data = self.samples.iloc[item]
-        user_vec = self.content_provider.get_user_profile(userID=data['userId'])
-        item1_vec = self.content_provider.get_item_profile(itemID=data['movieId1'])
-        item2_vec = self.content_provider.get_item_profile(itemID=data['movieId2'])
-        return torch.FloatTensor(user_vec), torch.FloatTensor(item1_vec), torch.FloatTensor(item2_vec)
 
     def __len__(self):
         return len(self.samples)
@@ -64,8 +52,17 @@ class FixedRankingDataset(RankingDataset):
     def get_graph(self, device):  # TODO: remove?
         return None
 
-    def use_collate(self):
-        return None
+    def use_collate(self):        # much faster this way
+        def custom_collate(batch, cp: ContentProvider):
+            # turn per-row to per-column
+            batch_data = list(zip(*batch))
+            # get profiles in batches instead of one-by-one
+            user_vecs = cp.get_user_profile(userID=batch_data[0]).values
+            item1_vecs = cp.get_item_profile(itemID=batch_data[1]).values
+            item2_vecs = cp.get_item_profile(itemID=batch_data[2]).values
+            return torch.FloatTensor(user_vecs), torch.FloatTensor(item1_vecs), torch.FloatTensor(item2_vecs)
+
+        return lambda batch: custom_collate(batch, self.content_provider)
 
     @staticmethod
     def do_forward(model: NCF, batch, device, *args):

@@ -1,5 +1,4 @@
 import torch
-import pandas as pd
 
 from neural_collaborative_filtering.content_providers import DynamicContentProvider
 from neural_collaborative_filtering.datasets.base import PointwiseDataset, RankingDataset
@@ -19,9 +18,7 @@ class DynamicPointwiseDataset(PointwiseDataset):
     """
 
     def __init__(self, file: str, dynamic_provider: DynamicContentProvider):
-        super().__init__()
-        # expects to read (user, item, rating) triplets
-        self.samples: pd.DataFrame = pd.read_csv(file + '.csv')
+        super().__init__(file)
         self.dynamic_provider = dynamic_provider
 
     def __getitem__(self, item):
@@ -45,7 +42,6 @@ class DynamicPointwiseDataset(PointwiseDataset):
         candidate_items, rated_items, user_matrix, y_batch = batch
         # forward model
         out = model(candidate_items.float().to(device), rated_items.float().to(device), user_matrix.float().to(device))
-        # TODO: loss here
         return out, y_batch
 
 
@@ -54,10 +50,8 @@ class DynamicRankingDataset(RankingDataset):
     Same but for pairwise learning.
     """
 
-    def __init__(self, file: str, dynamic_provider: DynamicContentProvider):
-        super().__init__()
-        # expects to read (user, item, rating) triplets
-        self.samples: pd.DataFrame = pd.read_csv(file + '.csv')
+    def __init__(self, ranking_file: str, dynamic_provider: DynamicContentProvider):
+        super().__init__(ranking_file)
         self.dynamic_provider = dynamic_provider
 
     def __getitem__(self, item):
@@ -83,5 +77,4 @@ class DynamicRankingDataset(RankingDataset):
         # forward model
         out1 = model(candidate_items1.float().to(device), rated_items.float().to(device), user_matrix.float().to(device))
         out2 = model(candidate_items2.float().to(device), rated_items.float().to(device), user_matrix.float().to(device))
-        # TODO: loss here
         return out1, out2

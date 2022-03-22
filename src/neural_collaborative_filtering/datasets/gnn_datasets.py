@@ -6,14 +6,12 @@ class GraphPointwiseDataset(PointwiseDataset):
     """
     Use __getitem__() to return batches of (user_index, item_index, target rating)
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, file: str):
+        super().__init__(file)
 
     def __getitem__(self, item):
         # TODO return (user index, item index, target)
         pass
-        # data = self.set.iloc[item]
-        # return int(self.all_users_index[data['userId']]), int(self.all_items_index[data['movieId']]), float(data['rating'])
 
     def get_graph(self, device):
         raise Exception('Not Implemented')

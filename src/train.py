@@ -29,25 +29,33 @@ if __name__ == '__main__':
 
     if USE_FEATURES:
         # get feature dim
-        dpp = DynamicProfilesProvider()
-        training_dataset = DynamicPointwiseDataset(train_set_file, dpp)
-        val_dataset = DynamicPointwiseDataset(val_set_file, dpp)
+        # dpp = DynamicProfilesProvider()
+        # training_dataset = DynamicPointwiseDataset(train_set_file, dpp)
+        # val_dataset = DynamicPointwiseDataset(val_set_file, dpp)
+        #
+        # # get F
+        # item_dim = dpp.get_item_feature_dim()
+        #
+        # # create model
+        # model = AttentionNCF(item_dim, dropout_rate=dropout_rate,
+        #                      item_emb=128, user_emb=128, att_dense=None, mlp_dense_layers=[200])
+        # # # model = AdvancedNCF(item_dim, item_emb=256, user_emb=256, mlp_dense_layers=[512, 256, 128], dropout_rate=dropout_rate)
 
-        # get F
-        item_dim = dpp.get_item_feature_dim()
+        fixed_provider = FixedProfilesProvider()
+        training_dataset = FixedPointwiseDataset(train_set_file, content_provider=fixed_provider)
+        val_dataset = FixedPointwiseDataset(val_set_file, content_provider=fixed_provider)
 
-        # create model
-        model = AttentionNCF(item_dim, dropout_rate=dropout_rate,
-                             item_emb=128, user_emb=128, att_dense=None, mlp_dense_layers=[200])
-        # # model = AdvancedNCF(item_dim, item_emb=256, user_emb=256, mlp_dense_layers=[512, 256, 128], dropout_rate=dropout_rate)
+        model = BasicNCF(item_dim=fixed_provider.get_item_feature_dim(),
+                         user_dim=fixed_provider.get_item_feature_dim(),
+                         item_emb=128, user_emb=128, mlp_dense_layers=[256, 128])
 
         # fixed_provider = FixedProfilesProvider()
-        # training_dataset = FixedPointwiseDataset(train_set_file, content_provider=fixed_provider)
-        # val_dataset = FixedPointwiseDataset(val_set_file, content_provider=fixed_provider)
+        # training_dataset = FixedRankingDataset(ranking_train_set_file, content_provider=fixed_provider)
+        # val_dataset = FixedRankingDataset(ranking_val_set_file, content_provider=fixed_provider)
         #
         # model = BasicNCF(item_dim=fixed_provider.get_item_feature_dim(),
         #                  user_dim=fixed_provider.get_item_feature_dim(),
-        #                  item_emb=64, user_emb=64, mlp_dense_layers=[128])
+        #                  item_emb=128, user_emb=128, mlp_dense_layers=[256, 128])
     else:
         onehot_provider = OneHotProvider()
         training_dataset = FixedRankingDataset(ranking_train_set_file, content_provider=onehot_provider)
