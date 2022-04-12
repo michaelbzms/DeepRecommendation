@@ -12,12 +12,6 @@ class FixedPointwiseDataset(PointwiseDataset):
         super().__init__(file)
         self.content_provider = content_provider
 
-    def __len__(self):
-        return len(self.samples)
-
-    def get_graph(self, device):    # TODO: remove?
-        return None
-
     def use_collate(self):          # much faster
         def custom_collate(batch, cp: ContentProvider):
             # turn per-row to per-column
@@ -35,7 +29,6 @@ class FixedPointwiseDataset(PointwiseDataset):
         user_vec, item_vec, y_batch = batch
         # forward model
         out = model(user_vec.float().to(device), item_vec.float().to(device))
-        # TODO: loss here
         return out, y_batch
 
 
@@ -45,12 +38,6 @@ class FixedRankingDataset(RankingDataset):
     def __init__(self, ranking_file: str, content_provider: ContentProvider):
         super().__init__(ranking_file)
         self.content_provider = content_provider
-
-    def __len__(self):
-        return len(self.samples)
-
-    def get_graph(self, device):  # TODO: remove?
-        return None
 
     def use_collate(self):        # much faster this way
         def custom_collate(batch, cp: ContentProvider):
@@ -71,5 +58,4 @@ class FixedRankingDataset(RankingDataset):
         # forward model
         out1 = model(user_vec.float().to(device), item1_vec.float().to(device))
         out2 = model(user_vec.float().to(device), item2_vec.float().to(device))
-        # TODO: loss here
         return out1, out2

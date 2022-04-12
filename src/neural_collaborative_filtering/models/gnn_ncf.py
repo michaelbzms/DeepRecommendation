@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from torch_geometric.nn import MessagePassing
 from torch_geometric.utils import degree
 
+from neural_collaborative_filtering.datasets.gnn_datasets import GraphPointwiseDataset
 from neural_collaborative_filtering.models.base import GNN_NCF
 from neural_collaborative_filtering.util import build_MLP_layers
 
@@ -66,6 +67,8 @@ class NGCFConv(MessagePassing):
         deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
         norm = deg_inv_sqrt[from_] * deg_inv_sqrt[to_]
 
+        # TODO: maybe add edge weights to norm???
+
         # Start propagating messages
         out = self.propagate(edge_index, x=(x, x), norm=norm)
 
@@ -77,7 +80,11 @@ class NGCFConv(MessagePassing):
 
         return F.leaky_relu(out)
 
-    def message(self, x_j, x_i, norm):
+    def message(self, x_j, x_i, norm):    # TODO: incorporate the rating in this somehow (now it is assumed 1)
+        """
+        Implements message from node j to node i. To use extra args they must be passed in propagate().
+        Using '_i' and '_j' variable names somehow associates that arg with the node.
+        """
         return norm.view(-1, 1) * (self.W1(x_j) + self.W2(x_j * x_i))
 
     # Note: this is probably not needed because of aggr='add' in __init__()
@@ -119,7 +126,7 @@ class GCN_NCF(GNN_NCF):
         return self.kwargs
 
     def is_dataset_compatible(self, dataset_class):
-        return issubclass(dataset_class, GNN_Dataset)
+        return issubclass(dataset_class, GraphPointwiseDataset)
 
     def forward(self, *, graph, userIds, itemIds):
         # encode all graph nodes with GNN
@@ -183,7 +190,7 @@ class GAT_NCF(GNN_NCF):
         return self.kwargs
 
     def is_dataset_compatible(self, dataset_class):
-        return issubclass(dataset_class, GNN_Dataset)
+        return issubclass(dataset_class, GraphPointwiseDataset)  # TODO: add graph pairwise
 
     def forward(self, *, graph, userIds, itemIds):  # needs to be True for training only I think
         # encode all graph nodes with GNN

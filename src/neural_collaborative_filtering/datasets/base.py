@@ -16,8 +16,17 @@ class PointwiseDataset(Dataset):
         data = self.samples.iloc[item]
         return data['userId'], data['movieId'], data['rating']
 
+    def __len__(self):
+        return len(self.samples)
+
     def calculate_loss(self, y_pred, y_true):
         return self.loss_fn(y_pred, y_true.view(-1, 1).float())
+
+    def get_graph(self, device):   # default
+        return None
+
+    def use_collate(self):   # default
+        return None
 
 
 class RankingDataset(Dataset):
@@ -32,8 +41,17 @@ class RankingDataset(Dataset):
         data = self.samples.iloc[item]
         return data['userId'], data['movieId1'], data['movieId2']
 
+    def __len__(self):
+        return len(self.samples)
+
     def calculate_loss(self, out_pos, out_neg):
         return self.loss_fn(out_pos, out_neg)
+
+    def get_graph(self, device):   # default
+        return None
+
+    def use_collate(self):   # default
+        return None
 
 
 def BPR_loss(out_pos, out_neg):

@@ -19,12 +19,6 @@ class DynamicPointwiseDataset(PointwiseDataset):
         super().__init__(file)
         self.dynamic_provider = dynamic_provider
 
-    def __len__(self):
-        return len(self.samples)
-
-    def get_graph(self, device):  # TODO: remove?
-        return None
-
     def use_collate(self):
         return lambda batch: self.dynamic_provider.collate_interacted_items(batch, for_ranking=False)
 
@@ -45,12 +39,6 @@ class DynamicRankingDataset(RankingDataset):
     def __init__(self, ranking_file: str, dynamic_provider: DynamicContentProvider):
         super().__init__(ranking_file)
         self.dynamic_provider = dynamic_provider
-
-    def __len__(self):
-        return len(self.samples)
-
-    def get_graph(self, device):  # TODO: remove?
-        return None
 
     def use_collate(self):
         return lambda batch: self.dynamic_provider.collate_interacted_items(batch, for_ranking=True)
