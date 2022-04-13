@@ -34,3 +34,26 @@ class DynamicContentProvider:
 
     def collate_interacted_items(self, batch, for_ranking: bool):
         raise NotImplementedError
+
+
+class GraphContentProvider:
+    """ Extend this for specific features and graphs """
+    def get_num_items(self):
+        raise NotImplementedError
+
+    def get_num_users(self):
+        raise NotImplementedError
+
+    def get_node_feature_dim(self):
+        raise NotImplementedError
+
+    def get_user_nodeID(self, userID) -> int:
+        raise NotImplementedError
+
+    def get_item_nodeID(self, itemID) -> int:
+        raise NotImplementedError
+
+    def get_graph(self):
+        raise NotImplementedError     # returns graph (as in Data in PyG) reference
+
+    # TODO: methods to add more nodes (e.g. user nodes for inference on new users)?

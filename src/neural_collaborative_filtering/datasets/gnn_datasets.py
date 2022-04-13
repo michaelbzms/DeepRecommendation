@@ -1,5 +1,5 @@
-from neural_collaborative_filtering.content_providers import ContentProvider
-from neural_collaborative_filtering.datasets.base import PointwiseDataset
+from neural_collaborative_filtering.content_providers import ContentProvider, GraphContentProvider
+from neural_collaborative_filtering.datasets.base import PointwiseDataset, RankingDataset
 from neural_collaborative_filtering.models.base import GNN_NCF
 
 
@@ -7,19 +7,20 @@ class GraphPointwiseDataset(PointwiseDataset):
     """
     Use __getitem__() to return batches of (user_index, item_index, target rating)
     """
-    def __init__(self, file: str, content_provider: ContentProvider):
+    def __init__(self, file: str, graph_content_provider: GraphContentProvider):
         super().__init__(file)
-        self.cp = content_provider
-        # TODO: create graph from content provider and file
+        self.gcp = graph_content_provider
 
     def __getitem__(self, item):
-        # TODO return (user node index in graph, item node index in graph, target)
+        # return (user node index in graph, item node index in graph, target)
         userID, itemID, target = super().__getitem__(item)
-        # todo from user & item IDs get their node IDs in the graph
-        pass
+        # from user & item IDs get their node IDs in the graph
+        userNodeID = self.gcp.get_user_nodeID(userID)
+        itemNodeID = self.gcp.get_item_nodeID(itemID)
+        return userNodeID, itemNodeID, target
 
     def get_graph(self, device):
-        raise NotImplementedError
+        return self.gcp.get_graph().to(device)
 
     @staticmethod
     def do_forward(model: GNN_NCF, batch, device, graph, *args):
@@ -27,8 +28,36 @@ class GraphPointwiseDataset(PointwiseDataset):
         # get the input matrices and the target
         userIds, itemIds, y_batch = batch
         # forward model
-        out = model(graph, userIds.float().to(device), itemIds.float().to(device), *args)
+        out = model(graph.to(device), userIds.float().to(device), itemIds.float().to(device), *args)
         return out, y_batch
 
-    def get_class_counts(self):
-        raise NotImplementedError
+
+class GraphRankingDataset(RankingDataset):
+    """
+    Use __getitem__() to return batches of (user_index, item_index, target rating)
+    """
+    def __init__(self, file: str, graph_content_provider: GraphContentProvider):
+        super().__init__(file)
+        self.gcp = graph_content_provider
+
+    def __getitem__(self, item):
+        # return (user node index in graph, item 1 node index in graph, item 2 node index in graph)
+        userID, item1ID, item2ID = super().__getitem__(item)
+        # from user & item IDs get their node IDs in the graph
+        userNodeID = self.gcp.get_user_nodeID(userID)
+        item1NodeID = self.gcp.get_item_nodeID(item1ID)
+        item2NodeID = self.gcp.get_item_nodeID(item2ID)
+        return userNodeID, item1NodeID, item2NodeID
+
+    def get_graph(self, device):
+        return self.gcp.get_graph().to(device)
+
+    @staticmethod
+    def do_forward(model: GNN_NCF, batch, device, graph, *args):
+        """ expects samples of (userId, item1Id, item2Id) and a graph to pass on to the model """
+        # get the input matrices and the target
+        userIds, item1Ids, item2Ids = batch
+        # forward model
+        out1 = model(graph.to(device), userIds.float().to(device), item1Ids.float().to(device), *args)
+        out2 = model(graph.to(device), userIds.float().to(device), item2Ids.float().to(device), *args)
+        return out1, out2
