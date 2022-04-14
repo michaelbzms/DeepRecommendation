@@ -1,3 +1,4 @@
+from torch_geometric.data import Data
 
 
 class ContentProvider:
@@ -53,7 +54,7 @@ class GraphContentProvider:
     def get_item_nodeID(self, itemID) -> int:
         raise NotImplementedError
 
-    def get_graph(self):
+    def get_graph(self) -> Data:
         raise NotImplementedError     # returns graph (as in Data in PyG) reference
 
     # TODO: methods to add more nodes (e.g. user nodes for inference on new users)?
