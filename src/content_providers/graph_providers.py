@@ -3,13 +3,13 @@ import torch
 from torch_geometric.data import Data
 from tqdm import tqdm
 
-from globals import full_matrix_file
+from globals import full_matrix_file, item_metadata_file, user_embeddings_file
 from neural_collaborative_filtering.content_providers import GraphContentProvider
 
 
 def create_graph(interactions: pd.DataFrame, node_feat, item_to_node_ID, user_to_node_ID):
     """ Assume node features where item nodes go first and then users (we might want to add more users) """
-    # TODO: check these
+    # calculate mean ratings per user and per item as an edge attribute
     user_mean_ratings = interactions.groupby('userId')['rating'].mean()
     item_mean_ratings = interactions.groupby('movieId')['rating'].mean()
     # create edges and edge attributes
@@ -21,11 +21,11 @@ def create_graph(interactions: pd.DataFrame, node_feat, item_to_node_ID, user_to
         # add edge user ----> item with weight: rating - avg_user_rating
         edge_index[0].append(user_to_node_ID[userId])
         edge_index[1].append(item_to_node_ID[itemId])
-        edge_attr.append([rating - user_mean_ratings])
+        edge_attr.append([rating - user_mean_ratings.loc[userId]])
         # add edge item ----> user with weight: rating - avg_item_rating
         edge_index[0].append(item_to_node_ID[itemId])
         edge_index[1].append(user_to_node_ID[userId])
-        edge_attr.append([rating - item_mean_ratings])
+        edge_attr.append([rating - item_mean_ratings.loc[itemId]])
     # return Data object representing the graph
     return Data(
         x=node_feat,
@@ -63,13 +63,13 @@ class GraphProvider(GraphContentProvider):
         return len(self.all_items)
 
     def get_num_users(self):
-        raise len(self.all_users)
+        return len(self.all_users)
 
     def get_user_nodeID(self, userID) -> int:
         return self.user_to_node_ID[userID]
 
     def get_item_nodeID(self, itemID) -> int:
-        raise self.item_to_node_ID[itemID]
+        return self.item_to_node_ID[itemID]
 
     def get_graph(self) -> Data:
         return self.graph
@@ -90,9 +90,16 @@ class ProfilesGraphProvider(GraphProvider):
         super(ProfilesGraphProvider, self).__init__(file)
 
     def get_node_features(self):
-        # TODO: load stuff here if not already, will be called in constructor, can add stuff to self here as well!
-        return None
+        # add metadata and user embeddings to state if not in a previous call
+        if not hasattr(self, 'metadata'):
+            self.metadata: pd.DataFrame = pd.read_hdf(item_metadata_file + '.h5')
+        if not hasattr(self, 'user_embeddings'):
+            self.user_embeddings: pd.DataFrame = pd.read_hdf(user_embeddings_file + '.h5')
+        # get item and user profiles
+        item_profiles = self.metadata.loc[self.all_items, :]
+        user_profiles = self.user_embeddings.loc[self.all_users, :]
+        # concat them into node features TODO: check
+        return torch.vstack([torch.Tensor(item_profiles.values), torch.Tensor(user_profiles.values)])
 
     def get_node_feature_dim(self):
-        # TODO
-        return None
+        return self.metadata.shape[1]
