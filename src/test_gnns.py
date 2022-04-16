@@ -1,7 +1,7 @@
 from torch.utils.data import DataLoader
 
 from globals import train_set_file
-from neural_collaborative_filtering.models.gnn_ncf import GCN_NCF
+from neural_collaborative_filtering.models.gnn_ncf import NGCF
 from graph_datasets.movielens_gnn_dataset import MovieLensGNNDataset
 
 

@@ -11,7 +11,7 @@ from neural_collaborative_filtering.datasets.fixed_datasets import FixedPointwis
 from neural_collaborative_filtering.datasets.gnn_datasets import GraphPointwiseDataset, GraphRankingDataset
 from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF
 from neural_collaborative_filtering.models.basic_ncf import BasicNCF
-from neural_collaborative_filtering.models.gnn_ncf import GCN_NCF
+from neural_collaborative_filtering.models.gnn_ncf import NGCF
 from neural_collaborative_filtering.plots import plot_train_val_losses
 from neural_collaborative_filtering.train import train_model
 from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, max_epochs, early_stop, \
@@ -86,18 +86,20 @@ def prepare_graph_ncf(ranking=False, use_features=False):
         # content provider
         gcp = ProfilesGraphProvider(train_set_file)
         # model
-        model = GCN_NCF(gnn_hidden_layers=[64, 64],
-                        item_emb=128, user_emb=128,
-                        mlp_dense_layers=[256, 128],
-                        dropout_rate=dropout_rate)
+        model = NGCF(node_feature_dim=gcp.get_node_feature_dim(),
+                     gnn_hidden_layers=[64, 64],
+                     item_emb=128, user_emb=128,
+                     mlp_dense_layers=[256, 128],
+                     dropout_rate=dropout_rate)
     else:
         # content provider
         gcp = OneHotGraphProvider(train_set_file)
         # model
-        model = GCN_NCF(gnn_hidden_layers=[64, 64],
-                        item_emb=128, user_emb=128,
-                        mlp_dense_layers=[256, 128],
-                        dropout_rate=dropout_rate)
+        model = NGCF(node_feature_dim=gcp.get_node_feature_dim(),
+                     gnn_hidden_layers=[64, 64],
+                     item_emb=128, user_emb=128,
+                     mlp_dense_layers=[256, 128],
+                     dropout_rate=dropout_rate)
     # datasets
     if ranking:
         training_dataset = GraphRankingDataset(ranking_train_set_file, graph_content_provider=gcp)
