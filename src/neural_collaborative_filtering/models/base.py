@@ -28,7 +28,7 @@ class GNN_NCF(NCF):
         super(GNN_NCF, self).__init__()
 
     @abstractmethod
-    def forward(self, *args):
+    def forward(self, *args, **kwargs):
         """
         Executes a forward pass of the network for a batch of B samples which are known cells in the utility matrix.
         :param   graph: PyG's Data graph with node features and edges

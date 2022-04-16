@@ -7,7 +7,7 @@ from globals import full_matrix_file, item_metadata_file, user_embeddings_file
 from neural_collaborative_filtering.content_providers import GraphContentProvider
 
 
-def create_graph(interactions: pd.DataFrame, node_feat, item_to_node_ID, user_to_node_ID):
+def create_graph(interactions: pd.DataFrame, item_features, user_features, item_to_node_ID, user_to_node_ID):
     """ Assume node features where item nodes go first and then users (we might want to add more users) """
     # calculate mean ratings per user and per item as an edge attribute
     user_mean_ratings = interactions.groupby('userId')['rating'].mean()
@@ -28,7 +28,8 @@ def create_graph(interactions: pd.DataFrame, node_feat, item_to_node_ID, user_to
         edge_attr.append([rating - item_mean_ratings.loc[itemId]])
     # return Data object representing the graph
     return Data(
-        x=node_feat,
+        item_features=item_features,
+        user_features=user_features,
         edge_index=torch.tensor(edge_index, dtype=torch.long),
         edge_attr=torch.tensor(edge_attr, dtype=torch.float),
     )
@@ -48,15 +49,20 @@ class GraphProvider(GraphContentProvider):
 
         # load interactions to use for the graph from the file
         self.interactions = pd.read_csv(file + '.csv')
-        # one-hot vectors for node features
-        node_features = self.get_node_features()
+        # node features
+        item_features = self.get_item_features()
+        user_features = self.get_user_features()
         # create graph
-        self.graph = create_graph(self.interactions, node_features, self.item_to_node_ID, self.user_to_node_ID)
+        self.graph = create_graph(self.interactions, item_features, user_features, self.item_to_node_ID, self.user_to_node_ID)
 
-    def get_node_features(self):
+    def get_item_features(self):
         raise NotImplementedError
 
-    def get_node_feature_dim(self):
+    def get_user_features(self):
+        raise NotImplementedError
+
+    def get_node_features(self):
+        # Note: not used currently in favor of always having separate item and user features
         raise NotImplementedError
 
     def get_num_items(self):
@@ -64,6 +70,12 @@ class GraphProvider(GraphContentProvider):
 
     def get_num_users(self):
         return len(self.all_users)
+
+    def get_item_dim(self):
+        raise NotImplementedError
+
+    def get_user_dim(self):
+        raise NotImplementedError
 
     def get_user_nodeID(self, userID) -> int:
         return self.user_to_node_ID[userID]
@@ -77,29 +89,46 @@ class GraphProvider(GraphContentProvider):
 
 class OneHotGraphProvider(GraphProvider):
     """ A graph where the initial node embeddings are onehot vectors. """
-    def get_node_features(self):
-        return torch.eye(self.get_node_feature_dim())
+    def get_item_features(self):
+        return torch.eye(self.get_num_items())
 
-    def get_node_feature_dim(self):
-        return self.get_num_users() + self.get_num_items()
+    def get_user_features(self):
+        return torch.eye(self.get_num_users())
+
+    def get_item_dim(self):
+        return self.get_num_items()
+
+    def get_user_dim(self):
+        return self.get_num_users()
+
+    def get_node_features(self):   # not used
+        return torch.eye(self.get_num_items() + self.get_num_items())
 
 
 class ProfilesGraphProvider(GraphProvider):
     """ A graph where the initial node embeddings are content-based profiles """
     def __init__(self, file):
+        self.metadata: pd.DataFrame = pd.read_hdf(item_metadata_file + '.h5')
+        self.user_embeddings: pd.DataFrame = pd.read_hdf(user_embeddings_file + '.h5')
         super(ProfilesGraphProvider, self).__init__(file)
 
-    def get_node_features(self):
-        # add metadata and user embeddings to state if not in a previous call
-        if not hasattr(self, 'metadata'):
-            self.metadata: pd.DataFrame = pd.read_hdf(item_metadata_file + '.h5')
-        if not hasattr(self, 'user_embeddings'):
-            self.user_embeddings: pd.DataFrame = pd.read_hdf(user_embeddings_file + '.h5')
-        # get item and user profiles
-        item_profiles = self.metadata.loc[self.all_items, :]
-        user_profiles = self.user_embeddings.loc[self.all_users, :]
-        # concat them into node features
-        return torch.vstack([torch.Tensor(item_profiles.values), torch.Tensor(user_profiles.values)])
+    def get_item_features(self):
+        item_profiles = self.metadata.loc[self.all_items, :].values
+        return torch.FloatTensor(item_profiles)
 
-    def get_node_feature_dim(self):
+    def get_user_features(self):
+        user_profiles = self.user_embeddings.loc[self.all_users, :].values
+        return torch.FloatTensor(user_profiles)
+
+    def get_item_dim(self):
         return self.metadata.shape[1]
+
+    def get_user_dim(self):
+        return self.user_embeddings.shape[1]
+
+    def get_node_features(self):     # not used
+        # get item and user profiles
+        item_profiles = self.get_item_features()
+        user_profiles = self.get_user_features()
+        # concat them into node features
+        return torch.vstack([item_profiles, user_profiles])

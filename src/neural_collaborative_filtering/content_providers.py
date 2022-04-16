@@ -45,9 +45,6 @@ class GraphContentProvider:
     def get_num_users(self):
         raise NotImplementedError
 
-    def get_node_feature_dim(self):
-        raise NotImplementedError
-
     def get_user_nodeID(self, userID) -> int:
         raise NotImplementedError
 

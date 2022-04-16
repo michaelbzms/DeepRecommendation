@@ -86,18 +86,20 @@ def prepare_graph_ncf(ranking=False, use_features=False):
         # content provider
         gcp = ProfilesGraphProvider(train_set_file)
         # model
-        model = NGCF(node_feature_dim=gcp.get_node_feature_dim(),
+        model = NGCF(item_dim=gcp.get_item_dim(),
+                     user_dim=gcp.get_user_dim(),
                      gnn_hidden_layers=[64, 64],
-                     item_emb=128, user_emb=128,
+                     node_emb=64,
                      mlp_dense_layers=[256, 128],
                      dropout_rate=dropout_rate)
     else:
         # content provider
         gcp = OneHotGraphProvider(train_set_file)
         # model
-        model = NGCF(node_feature_dim=gcp.get_node_feature_dim(),
+        model = NGCF(item_dim=gcp.get_item_dim(),
+                     user_dim=gcp.get_user_dim(),
                      gnn_hidden_layers=[64, 64],
-                     item_emb=128, user_emb=128,
+                     node_emb=64,
                      mlp_dense_layers=[256, 128],
                      dropout_rate=dropout_rate)
     # datasets
@@ -115,10 +117,12 @@ if __name__ == '__main__':
 
     # prepare model, train and val datasets
     # model, training_dataset, val_dataset = prepare_fixedinput_ncf(ranking=False, use_features=False)
-    model, training_dataset, val_dataset = prepare_fixedinput_ncf(ranking=False, use_features=True)
+    # model, training_dataset, val_dataset = prepare_fixedinput_ncf(ranking=False, use_features=True)
     # model, training_dataset, val_dataset = prepare_attention_ncf(ranking=False)
-    # model, training_dataset, val_dataset = prepare_graph_ncf(ranking=False, use_features=False)
+    model, training_dataset, val_dataset = prepare_graph_ncf(ranking=False, use_features=False)
     # model, training_dataset, val_dataset = prepare_graph_ncf(ranking=False, use_features=True)
+
+    print(model)
 
     # log training for later?
     now = datetime.now()
