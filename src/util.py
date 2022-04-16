@@ -1,9 +1,12 @@
 import numpy as np
-from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.preprocessing import LabelBinarizer, MultiLabelBinarizer
 
 
 def one_hot_encode(actual_value, ordered_possible_values: np.array) -> np.array:
-    return np.array(ordered_possible_values == actual_value, dtype=np.float64)
+    lb = LabelBinarizer()
+    lb.fit(ordered_possible_values)
+    binary_format = lb.transform(actual_value)
+    return binary_format
 
 
 def multi_hot_encode(actual_values: list[set] or list[list], ordered_possible_values) -> np.array:

@@ -7,10 +7,9 @@ from content_providers.fixed_profiles_provider import FixedProfilesProvider
 from content_providers.one_hot_provider import OneHotProvider
 from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, max_epochs, early_stop, \
     stop_with_train_loss_instead, checkpoint_model_path, patience, dropout_rate, final_model_path, \
-    val_batch_size, features_to_use, USE_FEATURES, use_weighted_mse_for_training, ranking_train_set_file, \
+    val_batch_size, features_to_use, use_weighted_mse_for_training, ranking_train_set_file, \
     ranking_val_set_file
-from neural_collaborative_filtering.datasets.base import PointwiseDataset
-from neural_collaborative_filtering.datasets.dynamic_datasets import DynamicPointwiseDataset
+from neural_collaborative_filtering.datasets.dynamic_datasets import DynamicPointwiseDataset, DynamicRankingDataset
 
 from neural_collaborative_filtering.datasets.fixed_datasets import FixedPointwiseDataset, FixedRankingDataset
 from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF, AdvancedNCF
@@ -19,52 +18,70 @@ from neural_collaborative_filtering.plots import plot_train_val_losses
 from neural_collaborative_filtering.train import train_model
 
 
-if __name__ == '__main__':
-    # define optimizer and loss
-    # For separate lrs:
-    # optimizer = optim.Adam([
-    #     {'params': model.item_embeddings.parameters(), 'lr': embeddings_lr},
-    #     {'params': model.MLP.parameters(), 'lr': lr}
-    # ], weight_decay=weight_decay)
+def prepare_fixedinput_ncf(ranking=False, use_features=False):
+    """
+    Set up the model and datasets to train an NCF model on fixed input.
+    """
 
-    if USE_FEATURES:
-        # get feature dim
-        # dpp = DynamicProfilesProvider()
-        # training_dataset = DynamicPointwiseDataset(train_set_file, dpp)
-        # val_dataset = DynamicPointwiseDataset(val_set_file, dpp)
-        #
-        # # get F
-        # item_dim = dpp.get_item_feature_dim()
-        #
-        # # create model
-        # model = AttentionNCF(item_dim, dropout_rate=dropout_rate,
-        #                      item_emb=128, user_emb=128, att_dense=None, mlp_dense_layers=[200])
-        # # # model = AdvancedNCF(item_dim, item_emb=256, user_emb=256, mlp_dense_layers=[512, 256, 128], dropout_rate=dropout_rate)
-
-        fixed_provider = FixedProfilesProvider()
-        training_dataset = FixedPointwiseDataset(train_set_file, content_provider=fixed_provider)
-        val_dataset = FixedPointwiseDataset(val_set_file, content_provider=fixed_provider)
-
-        model = BasicNCF(item_dim=fixed_provider.get_item_feature_dim(),
-                         user_dim=fixed_provider.get_item_feature_dim(),
-                         item_emb=128, user_emb=128, mlp_dense_layers=[256, 128])
-
-        # fixed_provider = FixedProfilesProvider()
-        # training_dataset = FixedRankingDataset(ranking_train_set_file, content_provider=fixed_provider)
-        # val_dataset = FixedRankingDataset(ranking_val_set_file, content_provider=fixed_provider)
-        #
-        # model = BasicNCF(item_dim=fixed_provider.get_item_feature_dim(),
-        #                  user_dim=fixed_provider.get_item_feature_dim(),
-        #                  item_emb=128, user_emb=128, mlp_dense_layers=[256, 128])
+    if use_features:
+        # content provider
+        cp = FixedProfilesProvider()
+        # model
+        model = BasicNCF(item_dim=cp.get_item_feature_dim(),
+                         user_dim=cp.get_item_feature_dim(),
+                         item_emb=128, user_emb=128,
+                         mlp_dense_layers=[256, 128],
+                         dropout_rate=dropout_rate)
     else:
-        onehot_provider = OneHotProvider()
-        training_dataset = FixedRankingDataset(ranking_train_set_file, content_provider=onehot_provider)
-        val_dataset = FixedRankingDataset(ranking_val_set_file, content_provider=onehot_provider)
+        # content provider
+        cp = OneHotProvider()
+        # model
+        model = BasicNCF(item_dim=cp.get_num_items(),
+                         user_dim=cp.get_num_users(),
+                         item_emb=128, user_emb=128,
+                         mlp_dense_layers=[256, 128],
+                         dropout_rate=dropout_rate)
+    # datasets
+    if ranking:
+        training_dataset = FixedRankingDataset(ranking_train_set_file, content_provider=cp)
+        val_dataset = FixedRankingDataset(ranking_val_set_file, content_provider=cp)
+    else:
+        training_dataset = FixedPointwiseDataset(train_set_file, content_provider=cp)
+        val_dataset = FixedPointwiseDataset(val_set_file, content_provider=cp)
 
-        model = BasicNCF(item_dim=onehot_provider.get_num_items(),
-                         user_dim=onehot_provider.get_num_users(),
-                         item_emb=128, user_emb=128, mlp_dense_layers=[256, 128])
-    print(model)
+    return model, training_dataset, val_dataset
+
+
+def prepare_attention_ncf(ranking=False):
+    """
+    Set up the model and datasets to train the attention NCF model on dynamic input
+    (i.e. dynamic user profiles).
+    """
+    # content provider
+    dpp = DynamicProfilesProvider()
+    # model
+    model = AttentionNCF(dpp.get_item_feature_dim(), dropout_rate=dropout_rate,
+                         item_emb=128, user_emb=128,
+                         att_dense=None,
+                         mlp_dense_layers=[256])
+
+    # datasets
+    if ranking:
+        training_dataset = DynamicRankingDataset(ranking_train_set_file, dynamic_provider=dpp)
+        val_dataset = DynamicRankingDataset(ranking_val_set_file, dynamic_provider=dpp)
+    else:
+        training_dataset = DynamicPointwiseDataset(train_set_file, dynamic_provider=dpp)
+        val_dataset = DynamicPointwiseDataset(val_set_file, dynamic_provider=dpp)
+
+    return model, training_dataset, val_dataset
+
+
+if __name__ == '__main__':
+
+    # prepare model, train and val datasets
+    # model, training_dataset, val_dataset = prepare_fixedinput_ncf(ranking=False, use_features=False)
+    model, training_dataset, val_dataset = prepare_fixedinput_ncf(ranking=False, use_features=True)
+    # model, training_dataset, val_dataset = prepare_attention_ncf(ranking=False)
 
     # log training for later?
     now = datetime.now()

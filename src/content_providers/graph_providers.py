@@ -98,7 +98,7 @@ class ProfilesGraphProvider(GraphProvider):
         # get item and user profiles
         item_profiles = self.metadata.loc[self.all_items, :]
         user_profiles = self.user_embeddings.loc[self.all_users, :]
-        # concat them into node features TODO: check
+        # concat them into node features
         return torch.vstack([torch.Tensor(item_profiles.values), torch.Tensor(user_profiles.values)])
 
     def get_node_feature_dim(self):

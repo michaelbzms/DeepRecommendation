@@ -17,8 +17,8 @@ class FixedPointwiseDataset(PointwiseDataset):
             # turn per-row to per-column
             batch_data = list(zip(*batch))
             # get profiles in batches instead of one-by-one
-            user_vecs = cp.get_user_profile(userID=batch_data[0]).values
-            item_vecs = cp.get_item_profile(itemID=batch_data[1]).values
+            user_vecs = cp.get_user_profile(userID=batch_data[0])
+            item_vecs = cp.get_item_profile(itemID=batch_data[1])
             return torch.FloatTensor(user_vecs), torch.FloatTensor(item_vecs), torch.FloatTensor(batch_data[2])
 
         return lambda batch: custom_collate(batch, self.content_provider)
