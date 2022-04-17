@@ -21,11 +21,11 @@ def create_graph(interactions: pd.DataFrame, item_features, user_features, item_
         # add edge user ----> item with weight: rating - avg_user_rating
         edge_index[0].append(user_to_node_ID[userId])
         edge_index[1].append(item_to_node_ID[itemId])
-        edge_attr.append([rating - user_mean_ratings.loc[userId]])
+        edge_attr.append(rating - user_mean_ratings.loc[userId])
         # add edge item ----> user with weight: rating - avg_item_rating
         edge_index[0].append(item_to_node_ID[itemId])
         edge_index[1].append(user_to_node_ID[userId])
-        edge_attr.append([rating - item_mean_ratings.loc[itemId]])
+        edge_attr.append(rating - item_mean_ratings.loc[itemId])
     # return Data object representing the graph
     return Data(
         item_features=item_features,

@@ -1,5 +1,6 @@
 import torch
 import torch_scatter
+import random
 from torch import nn
 import torch.nn.functional as F
 from torch_geometric.nn import MessagePassing
@@ -15,55 +16,69 @@ class NGCFConv(MessagePassing):
     NGCF Conv layer implementation taken and modified from:
     https://medium.com/stanford-cs224w/recommender-systems-with-gnns-in-pyg-d8301178e377
     """
-    def __init__(self, in_channels, out_channels, dropout, bias=True, **kwargs):
+    def __init__(self, in_channels, out_channels,
+                 dropout=0.1, message_dropout=None,
+                 bias=True, **kwargs):
         super(NGCFConv, self).__init__(aggr='add', **kwargs)
-        self.dropout = dropout
-        self.W1 = nn.Linear(in_channels, out_channels, bias=bias)
-        self.W2 = nn.Linear(in_channels, out_channels, bias=bias)
+        self.message_dropout = message_dropout
+        self.W1 = nn.Sequential(
+            nn.Linear(in_channels, out_channels, bias=bias),
+            nn.Dropout(dropout)
+        )
+        self.W2 = nn.Sequential(
+            nn.Linear(in_channels, out_channels, bias=bias),
+            nn.Dropout(dropout)
+        )
         self.init_parameters()
 
     def init_parameters(self):
-        nn.init.xavier_uniform_(self.W1.weight)
-        nn.init.xavier_uniform_(self.W2.weight)
+        nn.init.xavier_uniform_(self.W1[0].weight)
+        nn.init.xavier_uniform_(self.W2[0].weight)
 
-    def forward(self, x, edge_index):
-        # Compute normalization
-        from_, to_ = edge_index
+    def forward(self, x, edge_index, edge_attr=None):
+        if self.message_dropout is not None:
+            # TODO: this is way too slow (4-5 times slower than without it
+            # message dropout -> randomly ignore p % of edges in the graph i.e. keep only (1-p) % of them
+            random_keep_inx = random.sample(range(edge_index.shape[1]), int((1.0 - self.message_dropout) * edge_index.shape[1]))
+            edge_index_to_use = edge_index[:, random_keep_inx]
+            edge_attr_to_use = edge_attr[random_keep_inx] if edge_attr is not None else None
+        else:
+            edge_index_to_use = edge_index
+            edge_attr_to_use = edge_attr
+
+        # Compute normalization 1/sqrt{|Ni|*|Nj|} where i = from_ and j = to_
+        from_, to_ = edge_index_to_use
         deg = degree(to_, x.size(0), dtype=x.dtype)
         deg_inv_sqrt = deg.pow(-0.5)
         deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
         norm = deg_inv_sqrt[from_] * deg_inv_sqrt[to_]
 
-        # TODO: maybe add edge weights to norm???
-
         # Start propagating messages
-        out = self.propagate(edge_index, x=(x, x), norm=norm)
+        out = self.propagate(edge_index_to_use, x=(x, x), norm=norm, weight=edge_attr_to_use)
 
         # add self-message
         out += self.W1(x)
 
-        # TODO: Is this message dropout??? --> I don't think it is...
-        out = F.dropout(out, self.dropout, self.training)
-
         return F.leaky_relu(out)
 
-    def message(self, x_j, x_i, norm):    # TODO: incorporate the rating in this somehow (now it is assumed 1)
+    def message(self, x_j, x_i, norm, weight):    # TODO: incorporate the rating in this somehow (now it is assumed 1)
         """
         Implements message from node j to node i. To use extra args they must be passed in propagate().
         Using '_i' and '_j' variable names somehow associates that arg with the node.
+        Both norm and the rest are a vector of 1d length [num_edges].
         """
-        return norm.view(-1, 1) * (self.W1(x_j) + self.W2(x_j * x_i))
-
-    # Note: this is probably not needed because of aggr='add' in __init__()
-    # def aggregate(self, x, messages, index):
-    #     out = torch_scatter.scatter(messages, index, self.node_dim, reduce="sum")
-    #     return out
+        # calculate all messages
+        if weight is not None:
+            messages = weight.view(-1, 1) * norm.view(-1, 1) * (self.W1(x_j) + self.W2(x_j * x_i))
+        else:
+            messages = norm.view(-1, 1) * (self.W1(x_j) + self.W2(x_j * x_i))
+        return messages
 
 
 class NGCF(GNN_NCF):
     def __init__(self, item_dim, user_dim, gnn_hidden_layers=None,
-                 node_emb=64, mlp_dense_layers=None,
-                 extra_emb_layers=True, dropout_rate=0.2):
+                 node_emb=64, mlp_dense_layers=None, extra_emb_layers=True,
+                 dropout_rate=0.2, gnn_dropout_rate=0.1):
         super(NGCF, self).__init__()
         if mlp_dense_layers is None: mlp_dense_layers = [256, 128]  # default
         if gnn_hidden_layers is None: gnn_hidden_layers = [64, 64]  # default
@@ -93,7 +108,7 @@ class NGCF(GNN_NCF):
         self.gnn_convs = nn.ModuleList(
             [NGCFConv(in_channels=gnn_input_dim if i == 0 else gnn_hidden_layers[i - 1],
                       out_channels=gnn_hidden_layers[i],
-                      dropout=dropout_rate)
+                      dropout=gnn_dropout_rate)
              for i in range(len(gnn_hidden_layers))]
         )
 
@@ -124,7 +139,7 @@ class NGCF(GNN_NCF):
         graph_emb = torch.vstack([item_emb, user_emb])          # stack nodes with items first!
         hs = []
         for gnn_conv in self.gnn_convs:
-            graph_emb = gnn_conv(graph_emb, graph.edge_index)   # TODO: add weights
+            graph_emb = gnn_conv(graph_emb, graph.edge_index, graph.edge_attr)   # TODO: add weights
             graph_emb = F.leaky_relu(graph_emb)
             hs.append(graph_emb)
 
