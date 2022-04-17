@@ -1,6 +1,4 @@
 import torch
-import torch_scatter
-import random
 from torch import nn
 import torch.nn.functional as F
 from torch_geometric.nn import MessagePassing
@@ -17,7 +15,7 @@ class NGCFConv(MessagePassing):
     https://medium.com/stanford-cs224w/recommender-systems-with-gnns-in-pyg-d8301178e377
     """
     def __init__(self, in_channels, out_channels,
-                 dropout=0.1, message_dropout=None,
+                 dropout=0.1, message_dropout=0.1,
                  bias=True, **kwargs):
         super(NGCFConv, self).__init__(aggr='add', **kwargs)
         self.message_dropout = message_dropout
@@ -37,11 +35,10 @@ class NGCFConv(MessagePassing):
 
     def forward(self, x, edge_index, edge_attr=None):
         if self.message_dropout is not None:
-            # TODO: this is way too slow (4-5 times slower than without it
-            # message dropout -> randomly ignore p % of edges in the graph i.e. keep only (1-p) % of them
-            random_keep_inx = random.sample(range(edge_index.shape[1]), int((1.0 - self.message_dropout) * edge_index.shape[1]))
-            edge_index_to_use = edge_index[:, random_keep_inx]
-            edge_attr_to_use = edge_attr[random_keep_inx] if edge_attr is not None else None
+            # message dropout -> randomly ignore p % of edges in the graph
+            mask = F.dropout(torch.ones(edge_index.shape[1]), self.message_dropout, self.training) > 0
+            edge_index_to_use = edge_index[:, mask]
+            edge_attr_to_use = edge_attr[mask] if edge_attr is not None else None
         else:
             edge_index_to_use = edge_index
             edge_attr_to_use = edge_attr
