@@ -34,7 +34,7 @@ class NGCFConv(MessagePassing):
         nn.init.xavier_uniform_(self.W2[0].weight)
 
     def forward(self, x, edge_index, edge_attr=None):
-        if self.message_dropout is not None:
+        if self.message_dropout is not None and self.training:
             # message dropout -> randomly ignore p % of edges in the graph
             mask = F.dropout(torch.ones(edge_index.shape[1]), self.message_dropout, self.training) > 0
             edge_index_to_use = edge_index[:, mask]
@@ -58,7 +58,7 @@ class NGCFConv(MessagePassing):
 
         return F.leaky_relu(out)
 
-    def message(self, x_j, x_i, norm, weight):    # TODO: incorporate the rating in this somehow (now it is assumed 1)
+    def message(self, x_j, x_i, norm, weight):
         """
         Implements message from node j to node i. To use extra args they must be passed in propagate().
         Using '_i' and '_j' variable names somehow associates that arg with the node.
@@ -83,7 +83,10 @@ class NGCF(GNN_NCF):
                        'user_dim': user_dim,
                        'gnn_hidden_layers': gnn_hidden_layers,
                        'node_emb': node_emb,
-                       'mlp_dense_layers': mlp_dense_layers}
+                       'mlp_dense_layers': mlp_dense_layers,
+                       'extra_emb_layers': extra_emb_layers,
+                       'dropout_rate': dropout_rate,
+                       'gnn_dropout_rate': gnn_dropout_rate}
 
         # optionally embed the user and item (fixed) input vectors before passing through GNNs
         self.extra_emb_layers = extra_emb_layers
@@ -136,7 +139,7 @@ class NGCF(GNN_NCF):
         graph_emb = torch.vstack([item_emb, user_emb])          # stack nodes with items first!
         hs = []
         for gnn_conv in self.gnn_convs:
-            graph_emb = gnn_conv(graph_emb, graph.edge_index, graph.edge_attr)   # TODO: add weights
+            graph_emb = gnn_conv(graph_emb, graph.edge_index, graph.edge_attr)
             graph_emb = F.leaky_relu(graph_emb)
             hs.append(graph_emb)
 

@@ -14,7 +14,8 @@ class AdvancedNCF(NCF):
         super(AdvancedNCF, self).__init__()
         if mlp_dense_layers is None:
             mlp_dense_layers = [256, 128]         # default
-        self.kwargs = {'item_dim': item_dim, 'item_emb': item_emb, 'user_emb': user_emb, 'mlp_dense_layers': mlp_dense_layers}
+        self.kwargs = {'item_dim': item_dim, 'item_emb': item_emb, 'user_emb': user_emb,
+                       'mlp_dense_layers': mlp_dense_layers, 'dropout_rate': dropout_rate}
         self.item_embeddings = nn.Sequential(
             nn.Linear(item_dim, item_emb),
             nn.ReLU()
@@ -56,7 +57,7 @@ class AttentionNCF(NCF):
             mlp_dense_layers = [256, 128]           # default
         # save the (hyper) parameters needed to construct this object when saving model
         self.kwargs = {'item_dim': item_dim, 'item_emb': item_emb, 'user_emb': user_emb, 'att_dense': att_dense,
-                       'mlp_dense_layers': mlp_dense_layers}
+                       'mlp_dense_layers': mlp_dense_layers, 'dropout_rate': dropout_rate}
         # embedding layers
         self.ItemEmbeddings = nn.Sequential(
             nn.Linear(item_dim, item_emb),

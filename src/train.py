@@ -1,6 +1,5 @@
-import torch
-from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
+import wandb
 
 from content_providers.dynamic_profiles_provider import DynamicProfilesProvider
 from content_providers.fixed_profiles_provider import FixedProfilesProvider
@@ -16,7 +15,7 @@ from neural_collaborative_filtering.plots import plot_train_val_losses
 from neural_collaborative_filtering.train import train_model
 from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, max_epochs, early_stop, \
     stop_with_train_loss_instead, checkpoint_model_path, patience, dropout_rate, final_model_path, \
-    val_batch_size, features_to_use, use_weighted_mse_for_training, ranking_train_set_file, \
+    val_batch_size, ranking_train_set_file, \
     ranking_val_set_file
 
 
@@ -114,29 +113,41 @@ def prepare_graph_ncf(ranking=False, use_features=False):
 
 
 if __name__ == '__main__':
+    use_features = False
 
     # prepare model, train and val datasets
-    # model, training_dataset, val_dataset = prepare_fixedinput_ncf(ranking=False, use_features=False)
-    # model, training_dataset, val_dataset = prepare_fixedinput_ncf(ranking=False, use_features=True)
+    model, training_dataset, val_dataset = prepare_fixedinput_ncf(ranking=False, use_features=use_features)
     # model, training_dataset, val_dataset = prepare_attention_ncf(ranking=False)
-    model, training_dataset, val_dataset = prepare_graph_ncf(ranking=False, use_features=False)
-    # model, training_dataset, val_dataset = prepare_graph_ncf(ranking=False, use_features=True)
+    # model, training_dataset, val_dataset = prepare_graph_ncf(ranking=False, use_features=use_features)
 
     print(model)
 
-    # log training for later?
+    # log
     now = datetime.now()
-    writer = SummaryWriter('../runs/' + type(model).__name__ + '/' + now.strftime("%d_%m_%Y_%H_%M") + '/')   # unique per model
-    hyperparams = {k: (torch.tensor(v) if isinstance(v, list) else v) for k, v in model.kwargs.items()}
-    hyperparams['features_used'] = features_to_use
-    writer.add_hparams(hyperparams, {})
+    hyperparams = {k: (', '.join([str(i) for i in v]) if isinstance(v, list) else v) for k, v in model.kwargs.items()}
+    hyperparams['features_used'] = use_features
+    model_name = f"{type(model).__name__}_{'with_features' if use_features or isinstance(model, AttentionNCF) else 'onehot'}"
+
+    # init weights & biases
+    wandb.init(project='DeepRecommendation',
+               entity='michaelbzms',
+               name=model_name + '_' + now.strftime(now.strftime("%d_%m_%Y_%H_%M")),      # run name
+               group=model_name,    # group name --> hyperparameter tuning on group
+               dir='../',
+               config={
+                   "learning_rate": lr,
+                   "batch_size": batch_size,
+                   "weight_decay": weight_decay,
+                   **hyperparams
+               })
+    print(wandb.config)
 
     # train and save result
     monitored_metrics = train_model(model, train_dataset=training_dataset, val_dataset=val_dataset,
                                     lr=lr, weight_decay=weight_decay, batch_size=batch_size, val_batch_size=val_batch_size,
                                     early_stop=early_stop, final_model_path=final_model_path, checkpoint_model_path=checkpoint_model_path,
                                     max_epochs=max_epochs, patience=patience, stop_with_train_loss_instead=stop_with_train_loss_instead,
-                                    use_weighted_mse_for_training=use_weighted_mse_for_training, writer=writer)
+                                    wandb=wandb)
 
     # plot and save losses
     plot_train_val_losses(monitored_metrics['train_loss'], monitored_metrics['val_loss'])

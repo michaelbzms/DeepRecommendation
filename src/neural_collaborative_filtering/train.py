@@ -1,10 +1,8 @@
 import sys
-
 import torch
 from torch import optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from torch.utils.tensorboard import SummaryWriter
 
 from neural_collaborative_filtering.models.base import NCF
 from neural_collaborative_filtering.util import load_model
@@ -18,8 +16,8 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 def train_model(model: NCF, train_dataset, val_dataset,
                 lr, weight_decay, batch_size, val_batch_size, early_stop,
                 final_model_path, checkpoint_model_path='temp.pt', max_epochs=100,
-                patience=5, stop_with_train_loss_instead=False, use_weighted_mse_for_training=False,
-                optimizer=None, save=True, writer: SummaryWriter=None):
+                patience=5, stop_with_train_loss_instead=False,
+                optimizer=None, save=True, wandb=None):
     """
     Main logic for training a model. Hyperparameters (e.g. lr, batch_size, etc) as arguments.
     On each loop (epoch), we forward the model on the training_dataset and backpropagate the loss
@@ -59,12 +57,17 @@ def train_model(model: NCF, train_dataset, val_dataset,
     least_running_loss = None
     previous_running_loss = None
     checkpoint_epoch = -1
+    best_val_loss = None
 
     # keep track of training and validation losses
     monitored_metrics = {
         'train_loss': [],
         'val_loss': [],
     }
+
+    # logs
+    if wandb is not None:
+        wandb.watch(model)  # TODO: what does this do?
 
     for epoch in range(max_epochs):  # epoch
         print(f'\nEpoch {epoch + 1}')
@@ -91,10 +94,10 @@ def train_model(model: NCF, train_dataset, val_dataset,
 
         train_loss = train_sum_loss / len(train_dataset)
         monitored_metrics['train_loss'].append(train_loss)
-        print(f'Training {"weighted" if use_weighted_mse_for_training else ""} loss: {train_loss:.4f}')
+        print(f'Training loss: {train_loss:.4f}')
 
-        if writer is not None:
-            writer.add_scalar('Loss/train', train_loss, epoch)
+        if wandb is not None:
+            wandb.log({"train_loss": train_loss})
 
         ##################
         #   Validation   #
@@ -115,8 +118,8 @@ def train_model(model: NCF, train_dataset, val_dataset,
         monitored_metrics['val_loss'].append(val_loss)
         print(f'Validation loss: {val_loss:.4f}')
 
-        if writer is not None:
-            writer.add_scalar('Loss/val', val_loss, epoch)
+        if wandb is not None:
+            wandb.log({"val_loss": val_loss})
 
         ######################
         #   Early Stopping   #
@@ -140,20 +143,22 @@ def train_model(model: NCF, train_dataset, val_dataset,
                 else:
                     early_stop_times = max(0, early_stop_times - 1)
 
+                # best val loss so far
+                best_val_loss = least_running_loss / len(val_dataset)
+
                 if early_stop_times > patience:
                     print(f'Early stopping at epoch {epoch + 1}.')
-                    print(f'Loading best model from checkpoint from epoch {checkpoint_epoch + 1} with loss: {least_running_loss / val_size:.4f}')
+                    print(f'Loading best model from checkpoint from epoch {checkpoint_epoch + 1} with loss: {best_val_loss:.4f}')
                     state, _ = load_model(checkpoint_model_path)  # ignore kwargs -> we know them
                     model.load_state_dict(state)
                     model.eval()
                     break
-                else:
-                    if epoch == max_epochs - 1:
-                        # special case where we reached max_epochs and our current loss is not the best
-                        print(f'Loss worsened in last epoch(s), loading best model from checkpoint from epoch {checkpoint_epoch}')
-                        state, _ = load_model(checkpoint_model_path)  # ignore kwargs -> we know them
-                        model.load_state_dict(state)
-                        model.eval()
+                elif epoch == max_epochs - 1:
+                    # special case where we reached max_epochs and our current loss is not the best
+                    print(f'Loss worsened in last epoch(s), loading best model from checkpoint from epoch {checkpoint_epoch + 1} with loss: {best_val_loss:.4f}')
+                    state, _ = load_model(checkpoint_model_path)  # ignore kwargs -> we know them
+                    model.load_state_dict(state)
+                    model.eval()
 
             print(f'Patience remaining: {patience - early_stop_times}')
 
@@ -165,9 +170,10 @@ def train_model(model: NCF, train_dataset, val_dataset,
         print('Saving model...')
         model.save_model(final_model_path)
         print('Done!')
-
-    if writer is not None:
-        writer.flush()
-        writer.close()
+        if wandb is not None:
+            # TODO: this doesnt work
+            # wandb.save(final_model_path)    # also save to wandb
+            if best_val_loss is not None:
+                wandb.log({'best_val_loss': best_val_loss})
 
     return monitored_metrics

@@ -15,7 +15,8 @@ class BasicNCF(NCF):
         # save the (hyper) parameters needed to construct this object when saving model
         self.kwargs = {'item_dim': item_dim, 'user_dim': user_dim,
                        'item_emb': item_emb, 'user_emb': user_emb,
-                       'mlp_dense_layers': mlp_dense_layers}
+                       'mlp_dense_layers': mlp_dense_layers,
+                       'dropout_rate': dropout_rate}
         self.item_embeddings = nn.Sequential(
             nn.Linear(item_dim, item_emb),
             nn.ReLU()
