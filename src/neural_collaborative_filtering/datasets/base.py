@@ -25,8 +25,12 @@ class PointwiseDataset(Dataset):
     def get_graph(self, device):   # default
         return None
 
-    def use_collate(self):   # default
+    def use_collate(self):         # default
         return None
+
+    @staticmethod
+    def do_forward(*args, **kwargs):
+        raise NotImplementedError
 
 
 class RankingDataset(Dataset):
@@ -50,8 +54,12 @@ class RankingDataset(Dataset):
     def get_graph(self, device):   # default
         return None
 
-    def use_collate(self):   # default
+    def use_collate(self):         # default
         return None
+
+    @staticmethod
+    def do_forward(*args, **kwargs):
+        raise NotImplementedError
 
 
 def BPR_loss(out_pos, out_neg):

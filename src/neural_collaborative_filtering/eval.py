@@ -5,11 +5,11 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import torch
-from torch import nn
-from torch.utils.data import DataLoader, BatchSampler
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 from sklearn.metrics import ndcg_score
 
+from neural_collaborative_filtering.datasets.base import PointwiseDataset
 from neural_collaborative_filtering.models.base import NCF
 from neural_collaborative_filtering.plots import plot_residuals, plot_stacked_residuals, plot_rated_items_counts, plot_att_stats
 
@@ -54,16 +54,16 @@ def eval_ranking(samples_with_preds: pd.DataFrame, cutoff=10):
     return final_ndcg
 
 
-def eval_model(model: NCF, test_dataset, batch_size):
+def eval_model(model: NCF, test_dataset: PointwiseDataset, batch_size, wandb=None, ranking=False):
     """
     Main logic for evaluating a model for our task. Other than the loss we also calculate TP, FP, FN and TN
     in order to calculate other metrics such as accuracy, recall and precision.
     """
+    assert isinstance(test_dataset, PointwiseDataset), 'Should only be testing on pointwise datasets.'
+    print('Test size:', len(test_dataset))
 
     # move model to GPU if available
     model.to(device)
-
-    print('Test size:', len(test_dataset))
 
     # define data loader (!) Important to use sequential sampler or the NDCG calculated will be wrong (!)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, collate_fn=test_dataset.use_collate())
@@ -71,47 +71,51 @@ def eval_model(model: NCF, test_dataset, batch_size):
     # get graphs if evaluating gnn (else it will be None)
     test_graph = test_dataset.get_graph(device)
 
-    # define loss
-    criterion = nn.MSELoss(reduction='sum')  # don't average the loss as we shall do that ourselves for the whole epoch
-
     # Calculate val_loss and see if we need to stop
     model.eval()  # gradients "off"
     test_sum_loss = 0.0
-    test_size = 0
+    test_loss = 0.0
     fitted_values = []
     ground_truth = []
     extra_test_args = [] if test_graph is None else [test_graph]
-
-    # predictions = np.zeros((test_dataset.))
-
     with torch.no_grad():
         for batch in tqdm(test_loader, desc='Testing', file=sys.stdout):
             # forward model
             out, y_batch = test_dataset.__class__.do_forward(model, batch, device, *extra_test_args)
-            # calculate loss
-            loss = criterion(out, y_batch.view(-1, 1).float().to(device))
-            # accumulate validation loss
-            test_sum_loss += loss.detach().item()
-            test_size += len(y_batch)
+            if not ranking:         # MSE only makes sense for regression task
+                # calculate loss
+                mse_loss = test_dataset.calculate_loss(out, y_batch.to(device))
+                # accumulate test loss
+                test_sum_loss += mse_loss.detach().item()
             # keep track of fitted values and their actual targets
             fitted_values.append(out.cpu().detach().numpy())
             ground_truth.append(y_batch.view(-1, 1).float().cpu().detach().numpy())
 
-    test_mse = test_sum_loss / test_size
-    print(f'Test loss (MSE): {test_mse:.4f} - RMSE: {sqrt(test_mse):.4f}')
+    if not ranking:
+        # MSE only makes sense for regression task
+        test_loss = test_sum_loss / len(test_dataset)
+        print(f'Test loss (MSE): {test_loss:.4f} - RMSE: {sqrt(test_loss):.4f}')
 
-    # gather all predicted values and all ground truths
-    fitted_values = np.concatenate(fitted_values, dtype=np.float64).reshape(-1)
-    ground_truth = np.concatenate(ground_truth, dtype=np.float64).reshape(-1)
+        # gather all predicted values and all ground truths
+        fitted_values = np.concatenate(fitted_values, dtype=np.float64).reshape(-1)
+        ground_truth = np.concatenate(ground_truth, dtype=np.float64).reshape(-1)
 
     # add fitted values to samples and calculate the NDCG
     test_dataset.samples['prediction'] = fitted_values
-    ndcg = eval_ranking(test_dataset.samples)
-    print(f'NDCG = {ndcg}')
+    ndcg5 = eval_ranking(test_dataset.samples, cutoff=5)
+    ndcg10 = eval_ranking(test_dataset.samples, cutoff=10)
+    ndcg20 = eval_ranking(test_dataset.samples, cutoff=20)
+    print(f'Test NDCG@5 = {ndcg5} - Test NDCG@10 = {ndcg10} - Test NDCG@120 = {ndcg20}')
 
-    # plot_fitted_vs_targets(fitted_values, ground_truth)
-    plot_stacked_residuals(fitted_values, ground_truth)
-    plot_residuals(fitted_values, ground_truth)
+    if wandb is not None:
+        wandb.log({'test_ndcg@5': ndcg5, 'test_ndcg@10': ndcg10, 'test_ndcg@20': ndcg20})
+        if not ranking:
+            wandb.log({'test_loss': test_loss})
+
+    if not ranking:
+        # plot_fitted_vs_targets(fitted_values, ground_truth)
+        plot_stacked_residuals(fitted_values, ground_truth)
+        plot_residuals(fitted_values, ground_truth)
 
 
 # def eval_model_with_visualization(model: NCF, test_dataset, batch_size):

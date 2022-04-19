@@ -19,7 +19,9 @@ keep_att_stats = False
 
 
 if __name__ == '__main__':
-    model_file = '../models/checkpoint.pt'
+    # TODO: this setup is horrible
+
+    model_file = '../models/final_model.pt'
 
     if USE_FEATURES:
         # dataset_class = DynamicMovieLensDataset

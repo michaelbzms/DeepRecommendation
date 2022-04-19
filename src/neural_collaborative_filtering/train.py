@@ -146,16 +146,16 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
         # gather all predictions, add them to samples and calculate the NDCG
         y_preds = np.concatenate(y_preds, dtype=np.float64).reshape(-1)
         pointwise_val_dataset.samples['prediction'] = y_preds    # overwriting previous is ok
-        ndcg = eval_ranking(pointwise_val_dataset.samples)
-        print(f'Validation NDCG: {ndcg:.6f}')
+        ndcg10 = eval_ranking(pointwise_val_dataset.samples)
+        print(f'Validation NDCG: {ndcg10:.6f}')
 
         # keep track of max NDCG
-        if ndcg > best_ndcg:
-            best_ndcg = ndcg
+        if ndcg10 > best_ndcg:
+            best_ndcg = ndcg10
 
         # log validation metrics
         if wandb is not None:
-            wandb.log({"val_loss": val_loss, 'val_ndcg': ndcg})
+            wandb.log({"val_loss": val_loss, 'val_ndcg@10': ndcg10})
 
         ######################
         #   Early Stopping   #
@@ -210,6 +210,6 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
             # TODO: this doesnt work
             # wandb.save(final_model_path)    # also save to wandb
             if best_val_loss is not None:
-                wandb.log({'best_val_loss': best_val_loss, 'best_ndcg': best_ndcg})
+                wandb.log({'best_val_loss': best_val_loss, 'best_ndcg@10': best_ndcg})
 
     return monitored_metrics
