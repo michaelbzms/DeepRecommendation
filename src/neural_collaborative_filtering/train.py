@@ -1,9 +1,13 @@
 import sys
+
+import numpy as np
 import torch
 from torch import optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from neural_collaborative_filtering.datasets.base import PointwiseDataset
+from neural_collaborative_filtering.eval import eval_ranking
 from neural_collaborative_filtering.models.base import NCF
 from neural_collaborative_filtering.util import load_model
 
@@ -13,7 +17,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 ###########################################
 #         Basic Training Loop             #
 ###########################################
-def train_model(model: NCF, train_dataset, val_dataset,
+def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
                 lr, weight_decay, batch_size, val_batch_size, early_stop,
                 final_model_path, checkpoint_model_path='temp.pt', max_epochs=100,
                 patience=5, stop_with_train_loss_instead=False,
@@ -40,9 +44,17 @@ def train_model(model: NCF, train_dataset, val_dataset,
 
     print('Training size:', len(train_dataset), ' - Validation size:', len(val_dataset))
 
-    # define data loaders - important to shuffle train set (!)
+    # define data loaders
+    # Note: Important to shuffle train set (!) - do NOT shuffle val set (if we do the NDCG calculation will be wrong)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=train_dataset.use_collate())
     val_loader = DataLoader(val_dataset, batch_size=val_batch_size, collate_fn=val_dataset.use_collate())
+    if isinstance(val_dataset, PointwiseDataset):
+        # if val_dataset already pointwise use that
+        pointwise_val_loader = val_loader
+        pointwise_val_dataset = val_dataset
+    else:
+        pointwise_val_loader = DataLoader(pointwise_val_dataset, batch_size=val_batch_size,
+                                          collate_fn=pointwise_val_dataset.use_collate())
 
     # define optimizer if not given
     if optimizer is None:
@@ -58,6 +70,7 @@ def train_model(model: NCF, train_dataset, val_dataset,
     previous_running_loss = None
     checkpoint_epoch = -1
     best_val_loss = None
+    best_ndcg = -1
 
     # keep track of training and validation losses
     monitored_metrics = {
@@ -91,11 +104,11 @@ def train_model(model: NCF, train_dataset, val_dataset,
             optimizer.step()
             # accumulate train loss
             train_sum_loss += loss.detach().item()
-
         train_loss = train_sum_loss / len(train_dataset)
         monitored_metrics['train_loss'].append(train_loss)
         print(f'Training loss: {train_loss:.4f}')
 
+        # log training metrics
         if wandb is not None:
             wandb.log({"train_loss": train_loss})
 
@@ -105,6 +118,7 @@ def train_model(model: NCF, train_dataset, val_dataset,
         model.eval()  # gradients "off"
         val_sum_loss = 0.0
         extra_val_args = [] if train_graph is None else [val_graph]
+        y_preds = []
         with torch.no_grad():
             for batch in tqdm(val_loader, desc='Validating', file=sys.stdout):
                 # forward model
@@ -113,13 +127,35 @@ def train_model(model: NCF, train_dataset, val_dataset,
                 loss = val_dataset.calculate_loss(out, y_true_or_out2.to(device))
                 # accumulate validation loss
                 val_sum_loss += loss.detach().item()
-
+                # accumulate predictions if pointwise
+                if isinstance(val_dataset, PointwiseDataset):
+                    y_preds.append(out.cpu().detach().numpy())
         val_loss = val_sum_loss / len(val_dataset)
         monitored_metrics['val_loss'].append(val_loss)
-        print(f'Validation loss: {val_loss:.4f}')
+        print(f'Validation loss: {val_loss:.4f}', end='\t')
 
+        # if main val dataset is not pointwise then use the extra pointwise val dataset provided
+        if not isinstance(val_dataset, PointwiseDataset):
+            with torch.no_grad():
+                for batch in tqdm(pointwise_val_loader, desc='Validating (Pointwise)', file=sys.stdout):
+                    # forward model
+                    out, y_true = pointwise_val_dataset.__class__.do_forward(model, batch, device, *extra_val_args)
+                    # accumulate predictions
+                    y_preds.append(out.cpu().detach().numpy())
+
+        # gather all predictions, add them to samples and calculate the NDCG
+        y_preds = np.concatenate(y_preds, dtype=np.float64).reshape(-1)
+        pointwise_val_dataset.samples['prediction'] = y_preds    # overwriting previous is ok
+        ndcg = eval_ranking(pointwise_val_dataset.samples)
+        print(f'Validation NDCG: {ndcg:.6f}')
+
+        # keep track of max NDCG
+        if ndcg > best_ndcg:
+            best_ndcg = ndcg
+
+        # log validation metrics
         if wandb is not None:
-            wandb.log({"val_loss": val_loss})
+            wandb.log({"val_loss": val_loss, 'val_ndcg': ndcg})
 
         ######################
         #   Early Stopping   #
@@ -174,6 +210,6 @@ def train_model(model: NCF, train_dataset, val_dataset,
             # TODO: this doesnt work
             # wandb.save(final_model_path)    # also save to wandb
             if best_val_loss is not None:
-                wandb.log({'best_val_loss': best_val_loss})
+                wandb.log({'best_val_loss': best_val_loss, 'best_ndcg': best_ndcg})
 
     return monitored_metrics

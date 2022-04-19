@@ -42,5 +42,5 @@ mask_target_edges_when_training = False
 message_passing_vs_supervised_edges_ratio = 0.7
 
 
-USE_FEATURES = True
+USE_FEATURES = False
 use_genre_nodes = False

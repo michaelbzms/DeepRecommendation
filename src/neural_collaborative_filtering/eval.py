@@ -1,15 +1,15 @@
 import sys
 from math import sqrt
+
+import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, BatchSampler
 from tqdm import tqdm
 from sklearn.metrics import ndcg_score
 
-from neural_collaborative_filtering.content_providers import ContentProvider
-from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF
 from neural_collaborative_filtering.models.base import NCF
 from neural_collaborative_filtering.plots import plot_residuals, plot_stacked_residuals, plot_rated_items_counts, plot_att_stats
 
@@ -21,47 +21,35 @@ visualize = False
 keep_att_stats = False
 
 
-def eval_ranking(model: NCF, samples: pd.DataFrame, cp: ContentProvider, cutoff=10):
-    # load samples to evaluate ndcg on
-    # samples: pd.DataFrame = pd.read_csv(file + '.csv')
+def eval_ranking(samples_with_preds: pd.DataFrame, cutoff=10):
+    """
+    Parameter `samples_with_preds` should be the (userId, movieId, rating) DataFrame we are using elsewhere
+    but with a new column `prediction` added with the model's prediction of the rating.
 
-    model.eval()
-    model.to(device)
+    This is not implementation agnostic but it was the only convenient way I found to implement the NDCG metric.
+    TODO: make more generic, perhaps a wrapper class that should be extended.
+    """
     ndcgs = []
-    with torch.no_grad():
-        for userId, row in tqdm(samples.groupby('userId').agg(list).iterrows(), total=len(samples['userId'].unique()), file=sys.stdout):
-            if len(row['movieId']) <= 0:
-                print("Warning: Found user with no interactions")
-                continue
+    for userId, row in tqdm(samples_with_preds.groupby('userId').agg(list).iterrows(), total=len(samples_with_preds['userId'].unique()),
+                            desc='Calculating NDCG', file=sys.stdout):
+        if len(row['movieId']) <= 0:
+            print("Warning: Found user with no interactions")
+            continue
 
-            # create user input from content provider - one user replicated once for each item he interacted with
-            user_vec = cp.get_user_profile(userId).values
-            user_vecs = np.tile(user_vec, (len(row['movieId']), 1))  # repeat vector on axis=0
+        # get y_pred from model in appropriate format
+        y_pred = np.array(row['prediction'], dtype=np.float64)
 
-            # create item input fron content provider
-            item_vecs = cp.get_item_profile(row['movieId']).values
+        # get y_true from known test labels
+        y_true = np.array(row['rating'], dtype=np.float64)
 
-            # forward the model
-            user_vecs = torch.FloatTensor(user_vecs).to(device)
-            item_vecs = torch.FloatTensor(item_vecs).to(device)
-            out = model(user_vecs, item_vecs)
+        # calculate ndcg for this user
+        ndcg = ndcg_score([y_true], [y_pred], k=cutoff)
 
-            # get y_pred from model in appropriate format
-            y_pred = np.array([x[0] for x in out.cpu().numpy()], dtype=np.float64)
-
-            # get y_true from known test labels
-            y_true = np.array(row['rating'], dtype=np.float64)
-
-            # calculate ndcg for this user
-            ndcg = ndcg_score([y_true], [y_pred], k=cutoff)
-
-            # append to ndcgs for all users
-            ndcgs.append(ndcg)
+        # append to ndcgs for all users
+        ndcgs.append(ndcg)
 
     # average ndcgs for all users to get a general estimate
     final_ndcg = np.mean(ndcgs)
-
-    np.histogram(ndcg)
 
     return final_ndcg
 
@@ -77,7 +65,7 @@ def eval_model(model: NCF, test_dataset, batch_size):
 
     print('Test size:', len(test_dataset))
 
-    # define data loader
+    # define data loader (!) Important to use sequential sampler or the NDCG calculated will be wrong (!)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, collate_fn=test_dataset.use_collate())
 
     # get graphs if evaluating gnn (else it will be None)
@@ -112,10 +100,14 @@ def eval_model(model: NCF, test_dataset, batch_size):
     test_mse = test_sum_loss / test_size
     print(f'Test loss (MSE): {test_mse:.4f} - RMSE: {sqrt(test_mse):.4f}')
 
-    print(f'Ranking eval: NDCG = {eval_ranking(model, test_dataset.samples, test_dataset.content_provider)}')
-
+    # gather all predicted values and all ground truths
     fitted_values = np.concatenate(fitted_values, dtype=np.float64).reshape(-1)
     ground_truth = np.concatenate(ground_truth, dtype=np.float64).reshape(-1)
+
+    # add fitted values to samples and calculate the NDCG
+    test_dataset.samples['prediction'] = fitted_values
+    ndcg = eval_ranking(test_dataset.samples)
+    print(f'NDCG = {ndcg}')
 
     # plot_fitted_vs_targets(fitted_values, ground_truth)
     plot_stacked_residuals(fitted_values, ground_truth)

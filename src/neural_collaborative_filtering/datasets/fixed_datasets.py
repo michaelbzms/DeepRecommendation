@@ -24,7 +24,7 @@ class FixedPointwiseDataset(PointwiseDataset):
         return lambda batch: custom_collate(batch, self.content_provider)
 
     @staticmethod
-    def do_forward(model: NCF, batch, device, *args):
+    def do_forward(model: NCF, batch, device):
         # get the input matrices and the target
         user_vec, item_vec, y_batch = batch
         # forward model
@@ -44,15 +44,15 @@ class FixedRankingDataset(RankingDataset):
             # turn per-row to per-column
             batch_data = list(zip(*batch))
             # get profiles in batches instead of one-by-one
-            user_vecs = cp.get_user_profile(userID=batch_data[0]).values
-            item1_vecs = cp.get_item_profile(itemID=batch_data[1]).values
-            item2_vecs = cp.get_item_profile(itemID=batch_data[2]).values
+            user_vecs = cp.get_user_profile(userID=batch_data[0])
+            item1_vecs = cp.get_item_profile(itemID=batch_data[1])
+            item2_vecs = cp.get_item_profile(itemID=batch_data[2])
             return torch.FloatTensor(user_vecs), torch.FloatTensor(item1_vecs), torch.FloatTensor(item2_vecs)
 
         return lambda batch: custom_collate(batch, self.content_provider)
 
     @staticmethod
-    def do_forward(model: NCF, batch, device, *args):
+    def do_forward(model: NCF, batch, device):
         # get the input matrices and the target
         user_vec, item1_vec, item2_vec = batch
         # forward model

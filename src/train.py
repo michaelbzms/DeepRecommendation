@@ -42,14 +42,15 @@ def prepare_fixedinput_ncf(ranking=False, use_features=False):
                          mlp_dense_layers=[256, 128],
                          dropout_rate=dropout_rate)
     # datasets
+    pointwise_val_dataset = FixedPointwiseDataset(val_set_file, content_provider=cp)
     if ranking:
         training_dataset = FixedRankingDataset(ranking_train_set_file, content_provider=cp)
         val_dataset = FixedRankingDataset(ranking_val_set_file, content_provider=cp)
     else:
         training_dataset = FixedPointwiseDataset(train_set_file, content_provider=cp)
-        val_dataset = FixedPointwiseDataset(val_set_file, content_provider=cp)
+        val_dataset = pointwise_val_dataset
 
-    return model, training_dataset, val_dataset
+    return model, training_dataset, val_dataset, pointwise_val_dataset
 
 
 def prepare_attention_ncf(ranking=False):
@@ -66,14 +67,15 @@ def prepare_attention_ncf(ranking=False):
                          mlp_dense_layers=[256])
 
     # datasets
+    pointwise_val_dataset = DynamicPointwiseDataset(val_set_file, dynamic_provider=dpp)
     if ranking:
         training_dataset = DynamicRankingDataset(ranking_train_set_file, dynamic_provider=dpp)
         val_dataset = DynamicRankingDataset(ranking_val_set_file, dynamic_provider=dpp)
     else:
         training_dataset = DynamicPointwiseDataset(train_set_file, dynamic_provider=dpp)
-        val_dataset = DynamicPointwiseDataset(val_set_file, dynamic_provider=dpp)
+        val_dataset = pointwise_val_dataset
 
-    return model, training_dataset, val_dataset
+    return model, training_dataset, val_dataset, pointwise_val_dataset
 
 
 def prepare_graph_ncf(ranking=False, use_features=False):
@@ -102,29 +104,32 @@ def prepare_graph_ncf(ranking=False, use_features=False):
                      mlp_dense_layers=[256, 128],
                      dropout_rate=dropout_rate)
     # datasets
+    pointwise_val_dataset = GraphPointwiseDataset(val_set_file, graph_content_provider=gcp)
     if ranking:
         training_dataset = GraphRankingDataset(ranking_train_set_file, graph_content_provider=gcp)
         val_dataset = GraphRankingDataset(ranking_val_set_file, graph_content_provider=gcp)
     else:
         training_dataset = GraphPointwiseDataset(train_set_file, graph_content_provider=gcp)
-        val_dataset = GraphPointwiseDataset(val_set_file, graph_content_provider=gcp)
+        val_dataset = pointwise_val_dataset
 
-    return model, training_dataset, val_dataset
+    return model, training_dataset, val_dataset, pointwise_val_dataset
 
 
 if __name__ == '__main__':
     use_features = False
+    ranking = False
 
-    # prepare model, train and val datasets
-    model, training_dataset, val_dataset = prepare_fixedinput_ncf(ranking=False, use_features=use_features)
-    # model, training_dataset, val_dataset = prepare_attention_ncf(ranking=False)
-    # model, training_dataset, val_dataset = prepare_graph_ncf(ranking=False, use_features=use_features)
+    # prepare model, train and val datasets (Pointwise val dataset always needed for NDCG eval)
+    model, training_dataset, val_dataset, pointwise_val_dataset = prepare_fixedinput_ncf(ranking=ranking, use_features=use_features)
+    # model, training_dataset, val_dataset = prepare_attention_ncf(ranking=ranking)
+    # model, training_dataset, val_dataset = prepare_graph_ncf(ranking=ranking, use_features=use_features)
 
     print(model)
 
     # log
     now = datetime.now()
     hyperparams = {k: (', '.join([str(i) for i in v]) if isinstance(v, list) else v) for k, v in model.kwargs.items()}
+    hyperparams['ranking'] = ranking
     hyperparams['features_used'] = use_features
     model_name = f"{type(model).__name__}_{'with_features' if use_features or isinstance(model, AttentionNCF) else 'onehot'}"
 
@@ -143,7 +148,7 @@ if __name__ == '__main__':
     print(wandb.config)
 
     # train and save result
-    monitored_metrics = train_model(model, train_dataset=training_dataset, val_dataset=val_dataset,
+    monitored_metrics = train_model(model, train_dataset=training_dataset, val_dataset=val_dataset, pointwise_val_dataset=pointwise_val_dataset,
                                     lr=lr, weight_decay=weight_decay, batch_size=batch_size, val_batch_size=val_batch_size,
                                     early_stop=early_stop, final_model_path=final_model_path, checkpoint_model_path=checkpoint_model_path,
                                     max_epochs=max_epochs, patience=patience, stop_with_train_loss_instead=stop_with_train_loss_instead,

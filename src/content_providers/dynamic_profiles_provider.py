@@ -14,7 +14,7 @@ class DynamicProfilesProvider(DynamicContentProvider):
         self.user_ratings: pd.DataFrame = pd.read_hdf(user_ratings_file + '.h5')
 
     def get_item_profile(self, itemID):  # ID or IDs
-        return self.metadata.loc[itemID, :]
+        return self.metadata.loc[itemID, :].values
 
     def get_num_items(self):                     # TODO: what if we store more than are in our samples?
         return self.metadata.shape[0]
@@ -26,17 +26,24 @@ class DynamicProfilesProvider(DynamicContentProvider):
         return self.metadata.shape[1]
 
     def collate_interacted_items(self, batch, for_ranking: bool, ignore_ratings=False):
-        """ It is more efficient to do all these batch-wise so one would have to repeat the same process
-            for other contents as well
+        """
+        Combine __getitem__() with this custom collate_fn to return for each batch in a data loader:
+          > candidate_items_batch: (B, F)  B items with their features
+          > rated_items_features: (I, F) I rated items with their features
+          > user_matrix: (B, I) a subarray (not exactly) of the utility matrix with the (normalized) ratings of B users on I items.
+        The order must match rated_items_feature's order on I axis.
+
+        It is more efficient to do all these batch-wise. One would have to repeat the same process
+        for other contents as well.
         """
 
         # turn per-row to per-column
         batch_data = list(zip(*batch))
 
         # get item profiles and stack them
-        candidate_items = torch.FloatTensor(self.get_item_profile(itemID=batch_data[1]).values)
+        candidate_items = torch.FloatTensor(self.get_item_profile(itemID=batch_data[1]))
         if for_ranking:
-            targets_or_items2 = torch.FloatTensor(self.get_item_profile(itemID=batch_data[2]).values)
+            targets_or_items2 = torch.FloatTensor(self.get_item_profile(itemID=batch_data[2]))
         else:
             targets_or_items2 = torch.FloatTensor(batch_data[2])
 
@@ -57,6 +64,6 @@ class DynamicProfilesProvider(DynamicContentProvider):
         user_matrix = torch.FloatTensor(user_matrix)  # convert to tensor
 
         # get features for all rated items in batch
-        rated_items = torch.FloatTensor(self.get_item_profile(rated_items_ids).values)
+        rated_items = torch.FloatTensor(self.get_item_profile(rated_items_ids))
 
         return candidate_items, rated_items, user_matrix, targets_or_items2
