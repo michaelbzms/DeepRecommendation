@@ -108,10 +108,6 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
         monitored_metrics['train_loss'].append(train_loss)
         print(f'Training loss: {train_loss:.4f}')
 
-        # log training metrics
-        if wandb is not None:
-            wandb.log({"train_loss": train_loss})
-
         ##################
         #   Validation   #
         ##################
@@ -153,9 +149,9 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
         if ndcg10 > best_ndcg:
             best_ndcg = ndcg10
 
-        # log validation metrics
+        # log training and validation metrics
         if wandb is not None:
-            wandb.log({"val_loss": val_loss, 'val_ndcg@10': ndcg10})
+            wandb.log({"train_loss": train_loss, "val_loss": val_loss, 'val_ndcg@10': ndcg10, 'epoch': epoch + 1})
 
         ######################
         #   Early Stopping   #
