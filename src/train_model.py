@@ -142,17 +142,18 @@ def run_experiment(model, *, hparams, training_dataset, val_dataset, pointwise_v
     model_name = f"{type(model).__name__}_{'with_features' if use_features or isinstance(model, AttentionNCF) else 'onehot'}"
 
     # init weights & biases
-    wandb.init(project='DeepRecommendation',
-               entity='michaelbzms',
-               name=model_name + '_' + now.strftime(now.strftime("%d_%m_%Y_%H_%M")),  # run name
-               group=model_name,  # group name --> hyperparameter tuning on group
-               dir='../',
-               config={
-                   "learning_rate": hparams['lr'],
-                   "batch_size": hparams['batch_size'],
-                   "weight_decay": hparams['weight_decay'],
-                   **model_hyperparams
-               })
+    run = wandb.init(project='DeepRecommendation',
+                     entity='michaelbzms',
+                     reinit=True,
+                     name=model_name + '_' + now.strftime(now.strftime("%d_%m_%Y_%H_%M")),  # run name
+                     group=model_name,  # group name --> hyperparameter tuning on group
+                     dir='../',
+                     config={
+                         "learning_rate": hparams['lr'],
+                         "batch_size": hparams['batch_size'],
+                         "weight_decay": hparams['weight_decay'],
+                         **model_hyperparams
+                     })
     print(wandb.config)
 
     # train and save result at `final_model_save_path`
@@ -165,6 +166,8 @@ def run_experiment(model, *, hparams, training_dataset, val_dataset, pointwise_v
                                     checkpoint_model_path=checkpoint_model_path,
                                     max_epochs=max_epochs, patience=patience,
                                     wandb=wandb)
+
+    run.finish()
 
     return monitored_metrics
 
