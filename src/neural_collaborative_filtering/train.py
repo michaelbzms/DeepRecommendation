@@ -19,9 +19,9 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 ###########################################
 def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
                 lr, weight_decay, batch_size, val_batch_size, early_stop,
-                final_model_path, checkpoint_model_path='temp.pt', max_epochs=100,
+                final_model_path=None, checkpoint_model_path='temp.pt', max_epochs=100,
                 patience=5, stop_with_train_loss_instead=False,
-                optimizer=None, save=True, wandb=None):
+                optimizer=None, wandb=None):
     """
     Main logic for training a model. Hyperparameters (e.g. lr, batch_size, etc) as arguments.
     On each loop (epoch), we forward the model on the training_dataset and backpropagate the loss
@@ -132,7 +132,6 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
                     y_preds.append(out.cpu().detach().numpy())
         val_loss = val_sum_loss / len(val_dataset)
         monitored_metrics['val_loss'].append(val_loss)
-        print(f'Validation loss: {val_loss:.4f}', end='\t')
 
         # if main val dataset is not pointwise then use the extra pointwise val dataset provided
         if not isinstance(val_dataset, PointwiseDataset):
@@ -147,6 +146,7 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
         y_preds = np.concatenate(y_preds, dtype=np.float64).reshape(-1)
         pointwise_val_dataset.samples['prediction'] = y_preds    # overwriting previous is ok
         ndcg10 = eval_ranking(pointwise_val_dataset.samples)
+        print(f'Validation loss: {val_loss:.4f}', end='\t')
         print(f'Validation NDCG: {ndcg10:.6f}')
 
         # keep track of max NDCG
@@ -202,14 +202,15 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
             previous_running_loss = val_sum_loss if not stop_with_train_loss_instead else train_sum_loss
 
     # save model (its weights)
-    if save:
+    if final_model_path is not None:
         print('Saving model...')
         model.save_model(final_model_path)
         print('Done!')
-        if wandb is not None:
-            # TODO: this doesnt work
-            # wandb.save(final_model_path)    # also save to wandb
-            if best_val_loss is not None:
-                wandb.log({'best_val_loss': best_val_loss, 'best_ndcg@10': best_ndcg})
+
+    if wandb is not None:
+        # TODO: this doesnt work
+        # wandb.save(final_model_path)    # also save to wandb
+        if best_val_loss is not None:
+            wandb.log({'best_val_loss': best_val_loss, 'best_ndcg@10': best_ndcg})
 
     return monitored_metrics
