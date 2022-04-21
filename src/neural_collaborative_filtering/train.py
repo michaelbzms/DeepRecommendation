@@ -20,7 +20,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
                 lr, weight_decay, batch_size, val_batch_size, early_stop,
                 final_model_path=None, checkpoint_model_path='temp.pt', max_epochs=100,
-                patience=5, stop_with_train_loss_instead=False,
+                patience=3, max_patience=5, stop_with_train_loss_instead=False,
                 optimizer=None, wandb=None):
     """
     Main logic for training a model. Hyperparameters (e.g. lr, batch_size, etc) as arguments.
@@ -71,6 +71,7 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
     checkpoint_epoch = -1
     best_val_loss = None
     best_ndcg = -1
+    starting_max_patience = max_patience
 
     # keep track of training and validation losses
     monitored_metrics = {
@@ -166,6 +167,8 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
                 least_running_loss = val_sum_loss if not stop_with_train_loss_instead else train_sum_loss
                 # reset counter for patience
                 early_stop_times = 0
+                # reset max patience
+                max_patience = starting_max_patience
             else:
                 # increase early stop times only if loss increased from previous time (not the least one overall)
                 if previous_running_loss is not None and (not stop_with_train_loss_instead and val_sum_loss > previous_running_loss) \
@@ -175,10 +178,13 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
                 else:
                     early_stop_times = max(0, early_stop_times - 1)
 
+                # decrease max_patience anyway if loss was worse than the best loss achieved overall
+                max_patience -= 1
+
                 # best val loss so far
                 best_val_loss = least_running_loss / len(val_dataset)
 
-                if early_stop_times > patience:
+                if early_stop_times > patience or max_patience <= 0:
                     print(f'Early stopping at epoch {epoch + 1}.')
                     print(f'Loading best model from checkpoint from epoch {checkpoint_epoch + 1} with loss: {best_val_loss:.4f}')
                     state, _ = load_model(checkpoint_model_path)  # ignore kwargs -> we know them
