@@ -28,7 +28,7 @@ class GraphPointwiseDataset(PointwiseDataset):
         # get the input matrices and the target
         userIds, itemIds, y_batch = batch
         # forward model
-        out = model(graph.to(device), userIds.float().to(device), itemIds.float().to(device), *args)
+        out = model(graph.to(device), userIds.float().to(device), itemIds.float().to(device), device, *args)
         return out, y_batch
 
 
@@ -58,6 +58,6 @@ class GraphRankingDataset(RankingDataset):
         # get the input matrices and the target
         userIds, item1Ids, item2Ids = batch
         # forward model
-        out1 = model(graph.to(device), userIds.float().to(device), item1Ids.float().to(device), *args)
-        out2 = model(graph.to(device), userIds.float().to(device), item2Ids.float().to(device), *args)
+        out1 = model(graph.to(device), userIds.float().to(device), item1Ids.float().to(device), device, *args)
+        out2 = model(graph.to(device), userIds.float().to(device), item2Ids.float().to(device), device, *args)
         return out1, out2

@@ -39,6 +39,7 @@ class NGCFConv(MessagePassing):
             mask = F.dropout(torch.ones(edge_index.shape[1]), self.message_dropout, self.training) > 0
             edge_index_to_use = edge_index[:, mask]
             edge_attr_to_use = edge_attr[mask] if edge_attr is not None else None
+            del mask
         else:
             edge_index_to_use = edge_index
             edge_attr_to_use = edge_attr
@@ -49,14 +50,18 @@ class NGCFConv(MessagePassing):
         deg_inv_sqrt = deg.pow(-0.5)
         deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
         norm = deg_inv_sqrt[from_] * deg_inv_sqrt[to_]
+        del from_, to_, deg_inv_sqrt, deg
 
         # Start propagating messages
         out = self.propagate(edge_index_to_use, x=(x, x), norm=norm, weight=edge_attr_to_use)
+        if self.message_dropout is not None and self.training:
+            del edge_index_to_use, edge_attr_to_use
+        del norm
 
         # add self-message
         out += self.W1(x)
 
-        return F.leaky_relu(out)
+        return out
 
     def message(self, x_j, x_i, norm, weight):
         """
@@ -124,7 +129,7 @@ class NGCF(GNN_NCF):
     def is_dataset_compatible(self, dataset_class):
         return issubclass(dataset_class, GraphPointwiseDataset) or issubclass(dataset_class, GraphRankingDataset)
 
-    def forward(self, graph, userIds, itemIds):
+    def forward(self, graph, userIds, itemIds, device):
         if self.extra_emb_layers:
             # embed item and user input features
             item_emb = self.item_embeddings(graph.item_features)
@@ -135,8 +140,12 @@ class NGCF(GNN_NCF):
             item_emb = graph.item_features
             user_emb = graph.user_features
 
+        # stack nodes with items first
+        graph_emb = torch.vstack([item_emb, user_emb])
+        # remove any unnecessary memory
+        if self.extra_emb_layers:
+            del item_emb, user_emb
         # encode all graph nodes with GNN
-        graph_emb = torch.vstack([item_emb, user_emb])          # stack nodes with items first!
         hs = []
         for gnn_conv in self.gnn_convs:
             graph_emb = gnn_conv(graph_emb, graph.edge_index, graph.edge_attr)
