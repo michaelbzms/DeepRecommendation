@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 from neural_collaborative_filtering.datasets.base import PointwiseDataset
 from neural_collaborative_filtering.eval import eval_ranking
+from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF
 from neural_collaborative_filtering.models.base import NCF
 from neural_collaborative_filtering.util import load_model
 

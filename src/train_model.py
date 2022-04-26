@@ -130,7 +130,8 @@ def prepare_graph_ncf(ranking=False, use_features=False, model_kwargs=None):
 
 
 def run_experiment(model, *, hparams, training_dataset, val_dataset, pointwise_val_dataset,
-                   use_features=False, ranking=False, final_model_save_path=None, **kwargs):
+                   use_features=False, ranking=False, final_model_save_path=None,
+                   project_name='DeepRecommendation', **kwargs):
     print('___________________ Running experiment ___________________')
     print(model)
 
@@ -141,8 +142,11 @@ def run_experiment(model, *, hparams, training_dataset, val_dataset, pointwise_v
     model_hyperparams['features_used'] = use_features
     model_name = f"{type(model).__name__}_{'with_features' if use_features or isinstance(model, AttentionNCF) else 'onehot'}"
 
+    if isinstance(model, AttentionNCF):
+        pass
+
     # init weights & biases
-    run = wandb.init(project='DeepRecommendation',
+    run = wandb.init(project=project_name,
                      entity='michaelbzms',
                      reinit=True,
                      name=model_name + '_' + now.strftime(now.strftime("%d_%m_%Y_%H_%M")),  # run name
@@ -177,23 +181,36 @@ if __name__ == '__main__':
     ranking = False
 
     # prepare model, train and val datasets (Pointwise val dataset always needed for NDCG eval)
-    model, training_dataset, val_dataset, pointwise_val_dataset = prepare_fixedinput_ncf(ranking=ranking, use_features=use_features)
-    # model, training_dataset, val_dataset = prepare_attention_ncf(ranking=ranking)
-    # model, training_dataset, val_dataset = prepare_graph_ncf(ranking=ranking, use_features=use_features)
+    # model, training_dataset, val_dataset, pointwise_val_dataset = prepare_fixedinput_ncf(ranking=ranking, use_features=use_features)
+    model, training_dataset, val_dataset, pointwise_val_dataset = prepare_attention_ncf(ranking=ranking)
+    # model, training_dataset, val_dataset, pointwise_val_dataset = prepare_graph_ncf(ranking=ranking, use_features=use_features)
+
+    print(model)
 
     # train and save result
-    monitored_metrics = run_experiment(model,
-                                       hparams={
-                                           'lr': lr,
-                                           'batch_size': batch_size,
-                                           'weight_decay': weight_decay
-                                       },
-                                       training_dataset=training_dataset,
-                                       val_dataset=val_dataset,
-                                       pointwise_val_dataset=pointwise_val_dataset,
-                                       final_model_save_path=final_model_path,
-                                       use_features=use_features,
-                                       ranking=ranking)
+    # monitored_metrics = run_experiment(model,
+    #                                    hparams={
+    #                                        'lr': lr,
+    #                                        'batch_size': batch_size,
+    #                                        'weight_decay': weight_decay
+    #                                    },
+    #                                    training_dataset=training_dataset,
+    #                                    val_dataset=val_dataset,
+    #                                    pointwise_val_dataset=pointwise_val_dataset,
+    #                                    final_model_save_path=final_model_path,
+    #                                    use_features=use_features,
+    #                                    ranking=ranking)
+
+    # train and save result at `final_model_save_path`
+    monitored_metrics = train_model(model, train_dataset=training_dataset, val_dataset=val_dataset,
+                                    pointwise_val_dataset=pointwise_val_dataset,
+                                    lr=1e-3, weight_decay=1e-5,
+                                    batch_size=128,
+                                    val_batch_size=val_batch_size,  # not important
+                                    early_stop=True, final_model_path=None,
+                                    checkpoint_model_path=checkpoint_model_path,
+                                    max_epochs=max_epochs, patience=patience,
+                                    wandb=None)
 
     # plot and save losses
     plot_train_val_losses(monitored_metrics['train_loss'], monitored_metrics['val_loss'])
