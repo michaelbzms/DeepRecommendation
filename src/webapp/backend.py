@@ -38,6 +38,7 @@ def get_test():
 
 @app.route('/recommend', methods=['POST'])
 def recommend():
+    print('I ran')
     if model is None or item_features is None: return
 
     # get input json args
@@ -47,18 +48,18 @@ def recommend():
 
     # decode JSON input into user ratings
     """ Expects
-        user_ratings: str -> { imdbId: str -> rating: number },
+        user_ratings: str -> [{ imdbId: str,  rating: number }],
         k: number
     """
     user_ratings = {}
     for rating in input_json['user_ratings']:
-        user_ratings[rating['imdbId']] = rating['rating']
+        user_ratings[rating['imdbID']] = rating['rating']
     user_ratings = pd.Series(index=user_ratings.keys(), data=user_ratings.values(), dtype=float)
     k = input_json['k'] if 'k' in input_json else 10  # default
 
     if app.config["DEBUG"]:
         print('k =', k)
-        print('user_ratings =', user_ratings)
+        print('user_ratings:\n', user_ratings)
 
     # make recommendations for user
     predictions = recommend_for_user(model, item_features, user_ratings,  k, ignore_seen)
@@ -66,7 +67,7 @@ def recommend():
     if app.config["DEBUG"]:
         print('Recommendations:\n', predictions)
 
-    response = json.loads(predictions.to_json(orient='index'))
+    response = jsonify(json.loads(predictions.to_json(orient='index')))
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response
 
@@ -83,12 +84,12 @@ def recommend_for_user(model: BasicNCF, item_features: pd.DataFrame, user_rating
     item_input = torch.FloatTensor(items_to_use.values).to(device)
 
     # build user profile from user ratings (repeat it once for each item)
-    user_features = create_user_profile(items_to_use, user_ratings)
-    user_input = torch.FloatTensor(user_features.repeat(items_to_use.shape[0], axis=0)).to(device)
+    user_features = create_user_profile(item_features, user_ratings)
+    user_input = torch.FloatTensor(user_features.reshape(1, -1).repeat(items_to_use.shape[0], axis=0)).to(device)
 
     # forward the model
-    y_pred = model(user_input, item_input)
-    print(y_pred)
+    with torch.no_grad():
+        y_pred = model(user_input, item_input).cpu().view(-1).numpy()
 
     # sort the output with their imdb id
     predictions = pd.Series(index=items_to_use.index, data=y_pred).sort_values(ascending=False).iloc[:k]
@@ -110,12 +111,13 @@ if __name__ == '__main__':
     print('Done.')
 
     # # load model
-    # print('Loading model...')
-    # model_file = '../../models/final_model.pt'
-    # model = load_model(model_file, BasicNCF)
-    # model.to(device)
-    # print(model)
-    # print('Done.')
+    print('Loading model...')
+    model_file = '../../models/ncf_with_features.pt'
+    model = load_model(model_file, BasicNCF)
+    model.eval()
+    model.to(device)
+    print(model)
+    print('Done.')
 
     # run app
     app.run()

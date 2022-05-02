@@ -35,7 +35,7 @@ def prepare_fixedinput_ncf(ranking=False, use_features=False, model_kwargs=None)
             model = BasicNCF(item_dim=cp.get_item_feature_dim(),
                              user_dim=cp.get_item_feature_dim(),
                              item_emb=128, user_emb=128,
-                             mlp_dense_layers=[256, 128],
+                             mlp_dense_layers=[256, 256],
                              dropout_rate=dropout_rate)
     else:
         # content provider
@@ -177,12 +177,12 @@ def run_experiment(model, *, hparams, training_dataset, val_dataset, pointwise_v
 
 
 if __name__ == '__main__':
-    use_features = False
+    use_features = True
     ranking = False
 
     # prepare model, train and val datasets (Pointwise val dataset always needed for NDCG eval)
-    # model, training_dataset, val_dataset, pointwise_val_dataset = prepare_fixedinput_ncf(ranking=ranking, use_features=use_features)
-    model, training_dataset, val_dataset, pointwise_val_dataset = prepare_attention_ncf(ranking=ranking)
+    model, training_dataset, val_dataset, pointwise_val_dataset = prepare_fixedinput_ncf(ranking=ranking, use_features=use_features)
+    # model, training_dataset, val_dataset, pointwise_val_dataset = prepare_attention_ncf(ranking=ranking)
     # model, training_dataset, val_dataset, pointwise_val_dataset = prepare_graph_ncf(ranking=ranking, use_features=use_features)
 
     print(model)
@@ -207,7 +207,7 @@ if __name__ == '__main__':
                                     lr=1e-3, weight_decay=1e-5,
                                     batch_size=128,
                                     val_batch_size=val_batch_size,  # not important
-                                    early_stop=True, final_model_path=None,
+                                    early_stop=True, final_model_path='../models/ncf_with_features.pt',
                                     checkpoint_model_path=checkpoint_model_path,
                                     max_epochs=max_epochs, patience=patience,
                                     wandb=None)
