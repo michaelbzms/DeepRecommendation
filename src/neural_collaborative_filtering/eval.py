@@ -32,8 +32,8 @@ def eval_ranking(samples_with_preds: pd.DataFrame, cutoff=10):
     ndcgs = []
     for userId, row in tqdm(samples_with_preds.groupby('userId').agg(list).iterrows(), total=len(samples_with_preds['userId'].unique()),
                             desc='Calculating NDCG', file=sys.stdout):
-        if len(row['movieId']) <= 0:
-            print("Warning: Found user with no interactions")
+        if len(row['movieId']) <= 1:
+            print("Warning: Found user with no interactions or only one ")
             continue
 
         # get y_pred from model in appropriate format

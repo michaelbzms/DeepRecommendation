@@ -27,7 +27,7 @@ features_to_use = 'metadata'
 """ NN hyperparameters """
 checkpoint_model_path = '../models/checkpoint.pt'
 final_model_path = '../models/final_model.pt'
-max_epochs = 32
+max_epochs = 40
 batch_size = 256
 val_batch_size = 512
 lr = 3e-4  # 5e-4
