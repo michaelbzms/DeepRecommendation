@@ -17,7 +17,7 @@ export class AppComponent {
       this.movies = [];
       for (const [imdbID, data] of Object.entries(dict)) {
         // @ts-ignore
-        this.movies.push(new Movie(imdbID, data['primaryTitle'], data['startYear']));
+        this.movies.push(new Movie(imdbID, data['primaryTitle'], data['startYear'], data['genres']));
       }
       console.log(this.movies);
     })

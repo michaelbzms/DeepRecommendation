@@ -5,3 +5,21 @@ button:focus, .pi-star-fill:focus, .pi-ban {
   outline: none !important;
   box-shadow: none !important;;
 }
+
+body {
+  background-color: #3b3b3b !important;
+}
+
+h1, h2, h3 {
+  color: whitesmoke;
+}
+
+.movie_title {
+  text-decoration: none;
+  font-weight: 500;
+  color: goldenrod;
+}
+
+.movie_title:hover {
+  color: gold;
+}
