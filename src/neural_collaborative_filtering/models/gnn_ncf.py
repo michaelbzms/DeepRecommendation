@@ -80,7 +80,7 @@ class NGCFConv(MessagePassing):
 class NGCF(GNN_NCF):
     def __init__(self, item_dim, user_dim, gnn_hidden_layers=None,
                  node_emb=64, mlp_dense_layers=None, extra_emb_layers=True,
-                 dropout_rate=0.2, gnn_dropout_rate=0.1):
+                 dropout_rate=0.2, message_dropout=0.1):
         super(NGCF, self).__init__()
         if mlp_dense_layers is None: mlp_dense_layers = [256, 128]  # default
         if gnn_hidden_layers is None: gnn_hidden_layers = [64, 64]  # default
@@ -91,7 +91,7 @@ class NGCF(GNN_NCF):
                        'mlp_dense_layers': mlp_dense_layers,
                        'extra_emb_layers': extra_emb_layers,
                        'dropout_rate': dropout_rate,
-                       'gnn_dropout_rate': gnn_dropout_rate}
+                       'message_dropout': message_dropout}
 
         # optionally embed the user and item (fixed) input vectors before passing through GNNs
         self.extra_emb_layers = extra_emb_layers
@@ -113,7 +113,8 @@ class NGCF(GNN_NCF):
         self.gnn_convs = nn.ModuleList(
             [NGCFConv(in_channels=gnn_input_dim if i == 0 else gnn_hidden_layers[i - 1],
                       out_channels=gnn_hidden_layers[i],
-                      dropout=gnn_dropout_rate)
+                      dropout=dropout_rate,
+                      message_dropout=message_dropout)
              for i in range(len(gnn_hidden_layers))]
         )
 

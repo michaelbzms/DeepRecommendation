@@ -116,7 +116,7 @@ def prepare_graph_ncf(ranking=False, use_features=False, model_kwargs=None):
                      node_emb=64,
                      mlp_dense_layers=[256, 128],
                      dropout_rate=dropout_rate,
-                     gnn_dropout_rate=0.1)
+                     message_dropout=0.1)
     # datasets
     pointwise_val_dataset = GraphPointwiseDataset(val_set_file, graph_content_provider=gcp)
     if ranking:
