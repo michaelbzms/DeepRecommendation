@@ -1,43 +1,62 @@
-<h1>Movie Recommender</h1>
+<div style="height: 100vh">
+  <div class="text-center">
+    <h1 class="p-2">Movie Recommender</h1>
+  </div>
 
+  <div>
+    <p-table [value]="movies" [paginator]="true" [rows]="10"
+             styleClass="p-datatable-sm">
+      <ng-template pTemplate="caption">
+        <div class="flex align-items-center justify-content-between">
+          Movies <span style="font-weight: 400 !important;">({{movies ? movies.length : 0 }} in total)</span>
+        </div>
+      </ng-template>
+      <ng-template pTemplate="header">
+        <tr>
+          <th class="col-8">Title</th>
+          <th class="col-2" pSortableColumn="year">Year <p-sortIcon field="year"></p-sortIcon></th>
+          <th class="col-2" pSortableColumn="rating">Rating <p-sortIcon field="rating"></p-sortIcon></th>
+        </tr>
+        <tr>
+          <th><p-columnFilter type="text" field="title"></p-columnFilter></th>
+          <th><p-columnFilter style="max-width:100px !important;" type="text" field="year"></p-columnFilter></th>
+          <th></th>
+      </ng-template>
+      <ng-template pTemplate="body" let-movie>
+        <tr>
+          <td><a href="https://www.imdb.com/title/{{movie.imdbID}}" target="_blank">{{movie.title}}</a></td>
+          <td>{{movie.year}}</td>
+          <td><p-rating [(ngModel)]="movie.rating" [cancel]="true" [stars]="5"></p-rating></td>
+        </tr>
+      </ng-template>
+<!--      <ng-template pTemplate="paginatorleft">-->
+<!--        <p-button type="button" icon="pi pi-plus" styleClass="p-button-text"></p-button>-->
+<!--      </ng-template>-->
+<!--      <ng-template pTemplate="paginatorright">-->
+<!--        <p-button type="button" icon="pi pi-cloud" styleClass="p-button-text"></p-button>-->
+<!--      </ng-template>-->
 
-<div class="card">
-  <p-table [value]="movies" [paginator]="true" [rows]="10" [showCurrentPageReport]="true">
-    <ng-template pTemplate="caption">
-      <div class="flex align-items-center justify-content-between">
-        Movies
-        <p-button icon="pi pi-refresh"></p-button>
-      </div>
-    </ng-template>
-    <ng-template pTemplate="header">
-      <tr>
-        <th>Title</th>
-  <!--      <th>Image</th>-->
-        <th>Year</th>
-  <!--      <th>Reviews</th>-->
-      </tr>
-    </ng-template>
-    <ng-template pTemplate="body" let-movie>
-      <tr>
-        <td>{{movie.title}}</td>
-  <!--      <td><img [src]="'assets/showcase/images/demo/product/' + movie.image" [alt]="movie.name" width="100" class="shadow-4" /></td>-->
-        <td>{{movie.year}}</td>
-  <!--      <td>{{movie.category}}</td>-->
-  <!--      <td><p-rating [ngModel]="movie.rating" [readonly]="true" [cancel]="false"></p-rating></td>-->
-  <!--      <td><span [class]="'product-badge status-' + movie.inventoryStatus.toLowerCase()">{{movie.inventoryStatus}}</span></td>-->
-      </tr>
-    </ng-template>
-    <ng-template pTemplate="paginatorleft">
-      <p-button type="button" icon="pi pi-plus" styleClass="p-button-text"></p-button>
-    </ng-template>
-    <ng-template pTemplate="paginatorright">
-      <p-button type="button" icon="pi pi-cloud" styleClass="p-button-text"></p-button>
-    </ng-template>
-    <ng-template pTemplate="summary">
-      <div class="flex align-items-center justify-content-between">
-        In total there are {{movies ? movies.length : 0 }} movies.
-      </div>
-    </ng-template>
-  </p-table>
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="5">No movies found.</td>
+        </tr>
+      </ng-template>
+
+<!--      <ng-template pTemplate="summary">-->
+<!--        <div class="flex align-items-center justify-content-between">-->
+<!--          In total there are {{movies ? movies.length : 0 }} movies.-->
+<!--        </div>-->
+<!--      </ng-template>-->
+    </p-table>
+  </div>
+
+  <div class="d-block text-center mt-3">
+    <p-button>Make me recommendations</p-button>
+  </div>
 </div>
+
+<!--<div>-->
+<!--Recommendations here-->
+<!--</div>-->
+
 <!--<router-outlet></router-outlet>-->

@@ -1,1 +1,7 @@
 /* You can add global styles to this file, and also import other style files */
+
+/* Remove shadows for focused elements */
+button:focus, .pi-star-fill:focus, .pi-ban {
+  outline: none !important;
+  box-shadow: none !important;;
+}
