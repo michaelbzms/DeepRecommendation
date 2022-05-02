@@ -9,6 +9,7 @@ from neural_collaborative_filtering.models.basic_ncf import BasicNCF
 from neural_collaborative_filtering.util import load_model
 
 app = flask.Flask('movie_recommender_backend')
+
 app.config["DEBUG"] = True
 
 
@@ -25,7 +26,9 @@ ignore_seen = True    # Should we not recommend movies that the user has already
 @app.route('/movies', methods=['GET'])
 def get_movies():
     if movie_info is None: return
-    return json.loads(movie_info.to_json(orient='index'))
+    response = jsonify(json.loads(movie_info.to_json(orient='index')))
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    return response
 
 
 @app.route('/test', methods=['GET'])
@@ -63,7 +66,9 @@ def recommend():
     if app.config["DEBUG"]:
         print('Recommendations:\n', predictions)
 
-    return json.loads(predictions.to_json(orient='index'))
+    response = json.loads(predictions.to_json(orient='index'))
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    return response
 
 
 def create_user_profile(item_features: pd.DataFrame, user_ratings: pd.Series):
@@ -104,13 +109,13 @@ if __name__ == '__main__':
     item_features = metadata.loc[movie_info.index]
     print('Done.')
 
-    # load model
-    print('Loading model...')
-    model_file = '../../models/final_model.pt'
-    model = load_model(model_file, BasicNCF)
-    model.to(device)
-    print(model)
-    print('Done.')
+    # # load model
+    # print('Loading model...')
+    # model_file = '../../models/final_model.pt'
+    # model = load_model(model_file, BasicNCF)
+    # model.to(device)
+    # print(model)
+    # print('Done.')
 
     # run app
     app.run()
