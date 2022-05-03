@@ -58,8 +58,14 @@
   </div>
 </div>
 
-<!--<div>-->
-<!--Recommendations here-->
-<!--</div>-->
+<div class="container" style="max-width: 95vw !important;">
+    <p-card *ngFor="let movie of recommendations"
+            class="d-inline-block m-2"
+            [style]="{'width': '320px', 'height': '400px'}">
+      <h2>{{movie.title}}</h2>
+      {{movie.genres}} {{movie.year}} <br>
+      Predicted score: {{movie.score}}
+    </p-card>
+</div>
 
 <!--<router-outlet></router-outlet>-->

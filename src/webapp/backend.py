@@ -67,7 +67,7 @@ def recommend():
     if app.config["DEBUG"]:
         print('Recommendations:\n', predictions)
 
-    response = jsonify(json.loads(predictions.to_json(orient='index')))
+    response = jsonify(json.loads(predictions.to_json(orient='records')))
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response
 
@@ -92,7 +92,10 @@ def recommend_for_user(model: BasicNCF, item_features: pd.DataFrame, user_rating
         y_pred = model(user_input, item_input).cpu().view(-1).numpy()
 
     # sort the output with their imdb id
-    predictions = pd.Series(index=items_to_use.index, data=y_pred).sort_values(ascending=False).iloc[:k]
+    predictions = pd.DataFrame(data={
+        'imdbID': items_to_use.index,
+        'score': y_pred
+    }).sort_values(by='score', ascending=False).iloc[:k]
 
     # return sorted imdb_id - predicted score pairs
     return predictions

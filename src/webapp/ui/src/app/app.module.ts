@@ -8,20 +8,22 @@ import {TableModule} from "primeng/table";
 import {ButtonModule} from "primeng/button";
 import {RatingModule} from "primeng/rating";
 import { FormsModule } from '@angular/forms';
+import {CardModule} from "primeng/card";
 
 @NgModule({
   declarations: [
     AppComponent
   ],
-  imports: [
-    BrowserModule,
-    AppRoutingModule,
-    HttpClientModule,
-    TableModule,
-    ButtonModule,
-    RatingModule,
-    FormsModule
-  ],
+    imports: [
+        BrowserModule,
+        AppRoutingModule,
+        HttpClientModule,
+        TableModule,
+        ButtonModule,
+        RatingModule,
+        FormsModule,
+        CardModule
+    ],
   providers: [],
   bootstrap: [AppComponent]
 })

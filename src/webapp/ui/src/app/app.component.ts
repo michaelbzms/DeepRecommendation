@@ -12,13 +12,17 @@ export class AppComponent {
   k = 10;
   movies$ = this.backendService.getMovies();
   movies: Movie[] = []
+  movies_dict: { [id: string] : Movie; } = {}
+  recommendations: Movie[] = [];
 
   constructor(private backendService: BackendService) {
     this.movies$.subscribe(dict => {
       this.movies = [];
       for (const [imdbID, data] of Object.entries(dict)) {
         // @ts-ignore
-        this.movies.push(new Movie(imdbID, data['primaryTitle'], data['startYear'], data['genres']));
+        let m = new Movie(imdbID, data['primaryTitle'], data['startYear'], data['genres']);
+        this.movies.push(m);
+        this.movies_dict[imdbID] = m;
       }
       console.log(this.movies);
     })
@@ -38,8 +42,14 @@ export class AppComponent {
     console.log(user_ratings);
 
     let recommendations$ = this.backendService.getRecommendations(user_ratings, this.k)
-    recommendations$.subscribe(recommendation_dict => {
-      console.log(recommendation_dict);
+    recommendations$.subscribe(recommendations => {
+      console.log(recommendations);
+      this.recommendations = [];
+      for (let r of recommendations) {
+        let m = this.movies_dict[r.imdbID];
+        m.score = r.score;        // TODO: this changes score of original movies object but that should be ok?
+        this.recommendations.push(m);
+      }
     })
   }
 
