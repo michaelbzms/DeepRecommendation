@@ -14,9 +14,10 @@ export class BackendService {
   }
 
   getRecommendations(user_ratings: object[], k: number) {
-    return this.http.post<any>('http://127.0.0.1:5000/recommend', {
+    return this.http.post<any>('http://127.0.0.1:5000/recommend',
+      JSON.stringify({
       'user_ratings': user_ratings,
       'k': k
-    });
+    }));
   }
 }
