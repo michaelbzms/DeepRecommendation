@@ -9,10 +9,10 @@ from globals import full_matrix_file
 class OneHotProvider(ContentProvider):
     def __init__(self):
         # load util matrix with all users and all items
-        self.util_matrix: pd.DataFrame = pd.read_csv(full_matrix_file + '.csv')
+        util_matrix: pd.DataFrame = pd.read_csv(full_matrix_file + '.csv')
         # extract all IDs
-        self.all_item_ids = np.array(sorted(self.util_matrix['movieId'].unique()))
-        self.all_user_ids = np.array(sorted(self.util_matrix['userId'].unique()))
+        self.all_item_ids = np.array(sorted(util_matrix['movieId'].unique()))
+        self.all_user_ids = np.array(sorted(util_matrix['userId'].unique()))
 
     def get_item_profile(self, itemID):
         return one_hot_encode(itemID, self.all_item_ids)

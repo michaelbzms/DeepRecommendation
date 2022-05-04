@@ -6,17 +6,18 @@ if __name__ == '__main__':
     # define experiments to run #
     #############################
     fixed_experiments = [
-        # {'use_features': False,
-        #  'use_ranking': False,
-        #  'model_kwargs': {
-        #      'item_emb': 128, 'user_emb': 128,
-        #      'mlp_dense_layers': [256],
-        #      'dropout_rate': 0.2
-        #  },
-        #  'lr': 1e-3,
-        #  'batch_size': 64,
-        #  'weight_decay': 1e-5,
-        #  },
+        {'use_features': True,
+         'use_ranking': False,
+         'onehot_users': True,
+         'model_kwargs': {
+             'item_emb': 128, 'user_emb': 128,
+             'mlp_dense_layers': [256],
+             'dropout_rate': 0.2
+         },
+         'lr': 1e-3,
+         'batch_size': 64,
+         'weight_decay': 1e-5,
+         },
         # {'use_features': False,
         #  'use_ranking': False,
         #  'model_kwargs': {
@@ -156,32 +157,32 @@ if __name__ == '__main__':
         #  'batch_size': 128,
         #  'weight_decay': 1e-5
         #  },
-        {'use_features': True,
-         'use_ranking': False,
-         'model_kwargs': {
-             'node_emb': 64,
-             'gnn_hidden_layers': [64, 64],
-             'mlp_dense_layers': [256],
-             'dropout_rate': 0.2,
-             'message_dropout': None
-         },
-         'lr': 2e-3,
-         'batch_size': 256,
-         'weight_decay': 1e-5
-         },
-        {'use_features': False,
-         'use_ranking': False,
-         'model_kwargs': {
-             'node_emb': 64,
-             'gnn_hidden_layers': [64, 64],
-             'mlp_dense_layers': [256],
-             'dropout_rate': 0.2,
-             'message_dropout': 0.1
-         },
-         'lr': 2e-3,
-         'batch_size': 256,
-         'weight_decay': 1e-5
-         },
+        # {'use_features': True,
+        #  'use_ranking': False,
+        #  'model_kwargs': {
+        #      'node_emb': 64,
+        #      'gnn_hidden_layers': [64, 64],
+        #      'mlp_dense_layers': [256],
+        #      'dropout_rate': 0.2,
+        #      'message_dropout': None
+        #  },
+        #  'lr': 2e-3,
+        #  'batch_size': 256,
+        #  'weight_decay': 1e-5
+        #  },
+        # {'use_features': False,
+        #  'use_ranking': False,
+        #  'model_kwargs': {
+        #      'node_emb': 64,
+        #      'gnn_hidden_layers': [64, 64],
+        #      'mlp_dense_layers': [256],
+        #      'dropout_rate': 0.2,
+        #      'message_dropout': 0.1
+        #  },
+        #  'lr': 2e-3,
+        #  'batch_size': 256,
+        #  'weight_decay': 1e-5
+        #  },
         # {'use_features': False,
         #  'use_ranking': False,
         #  'model_kwargs': {
@@ -216,6 +217,7 @@ if __name__ == '__main__':
         # prepare experiment (model and datasets)
         model, training_dataset, val_dataset, pointwise_val_dataset = prepare_fixedinput_ncf(
             use_features=exp['use_features'],
+            onehot_users=exp['onehot_users'] if 'onehot_users' in exp else False,
             ranking=exp['use_ranking'],
             model_kwargs=exp['model_kwargs']
         )
@@ -230,6 +232,7 @@ if __name__ == '__main__':
                        training_dataset=training_dataset,
                        val_dataset=val_dataset,
                        pointwise_val_dataset=pointwise_val_dataset,
+                       onehot_users=exp['onehot_users'] if 'onehot_users' in exp else False,
                        final_model_save_path=None,
                        use_features=exp['use_features'],
                        ranking=exp['use_ranking'],

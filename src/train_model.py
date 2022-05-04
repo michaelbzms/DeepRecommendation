@@ -2,7 +2,7 @@ from datetime import datetime
 import wandb
 
 from content_providers.dynamic_profiles_provider import DynamicProfilesProvider
-from content_providers.fixed_profiles_provider import FixedProfilesProvider
+from content_providers.fixed_profiles_provider import FixedProfilesProvider, FixedItemProfilesOnlyProvider
 from content_providers.graph_providers import OneHotGraphProvider, ProfilesGraphProvider
 from content_providers.one_hot_provider import OneHotProvider
 from neural_collaborative_filtering.datasets.dynamic_datasets import DynamicPointwiseDataset, DynamicRankingDataset
@@ -19,21 +19,21 @@ from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, 
     ranking_val_set_file
 
 
-def prepare_fixedinput_ncf(ranking=False, use_features=False, model_kwargs=None):
+def prepare_fixedinput_ncf(ranking=False, use_features=False, onehot_users=False, model_kwargs=None):
     """
     Set up the model and datasets to train an NCF model on fixed input.
     """
     if use_features:
         # content provider
-        cp = FixedProfilesProvider()
+        cp = FixedItemProfilesOnlyProvider() if onehot_users else FixedProfilesProvider()
         # model
         if model_kwargs is not None:
             model = BasicNCF(item_dim=cp.get_item_feature_dim(),
-                             user_dim=cp.get_item_feature_dim(),
+                             user_dim=cp.get_num_users() if onehot_users else cp.get_item_feature_dim(),
                              **model_kwargs)
         else:
             model = BasicNCF(item_dim=cp.get_item_feature_dim(),
-                             user_dim=cp.get_item_feature_dim(),
+                             user_dim=cp.get_num_users() if onehot_users else cp.get_item_feature_dim(),
                              item_emb=128, user_emb=128,
                              mlp_dense_layers=[256, 256],
                              dropout_rate=dropout_rate)
@@ -130,7 +130,7 @@ def prepare_graph_ncf(ranking=False, use_features=False, model_kwargs=None):
 
 
 def run_experiment(model, *, hparams, training_dataset, val_dataset, pointwise_val_dataset,
-                   use_features=False, ranking=False, final_model_save_path=None,
+                   use_features=False, ranking=False, onehot_users=False, final_model_save_path=None,
                    project_name='DeepRecommendation', **kwargs):
     print('___________________ Running experiment ___________________')
     print(model)
@@ -140,7 +140,7 @@ def run_experiment(model, *, hparams, training_dataset, val_dataset, pointwise_v
     model_hyperparams = {k: (', '.join([str(i) for i in v]) if isinstance(v, list) else v) for k, v in model.kwargs.items()}
     model_hyperparams['ranking'] = ranking
     model_hyperparams['features_used'] = use_features
-    model_name = f"{type(model).__name__}_{'with_features' if use_features or isinstance(model, AttentionNCF) else 'onehot'}"
+    model_name = f"{type(model).__name__}_{('item_features_but_users_onehot' if onehot_users else 'with_features') if use_features or isinstance(model, AttentionNCF) else 'onehot'}"
 
     if isinstance(model, AttentionNCF):
         pass
@@ -179,9 +179,10 @@ def run_experiment(model, *, hparams, training_dataset, val_dataset, pointwise_v
 if __name__ == '__main__':
     use_features = True
     ranking = False
+    onehot_users = True
 
     # prepare model, train and val datasets (Pointwise val dataset always needed for NDCG eval)
-    model, training_dataset, val_dataset, pointwise_val_dataset = prepare_fixedinput_ncf(ranking=ranking, use_features=use_features)
+    model, training_dataset, val_dataset, pointwise_val_dataset = prepare_fixedinput_ncf(ranking=ranking, use_features=use_features, onehot_users=onehot_users)
     # model, training_dataset, val_dataset, pointwise_val_dataset = prepare_attention_ncf(ranking=ranking)
     # model, training_dataset, val_dataset, pointwise_val_dataset = prepare_graph_ncf(ranking=ranking, use_features=use_features)
 
