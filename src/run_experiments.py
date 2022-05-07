@@ -6,9 +6,21 @@ if __name__ == '__main__':
     # define experiments to run #
     #############################
     fixed_experiments = [
+        # {'use_features': False,
+        #  'use_ranking': False,
+        #  'onehot_users': False,
+        #  'model_kwargs': {
+        #      'item_emb': 128, 'user_emb': 128,
+        #      'mlp_dense_layers': [256],
+        #      'dropout_rate': 0.2
+        #  },
+        #  'lr': 1e-3,
+        #  'batch_size': 64,
+        #  'weight_decay': 1e-5,
+        #  },
         {'use_features': True,
          'use_ranking': False,
-         'onehot_users': True,
+         'onehot_users': False,
          'model_kwargs': {
              'item_emb': 128, 'user_emb': 128,
              'mlp_dense_layers': [256],

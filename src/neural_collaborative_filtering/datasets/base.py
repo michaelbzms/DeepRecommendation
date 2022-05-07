@@ -5,16 +5,21 @@ import pandas as pd
 
 
 class PointwiseDataset(Dataset):
-    def __init__(self, file):
+    def __init__(self, file, use_bce_loss=False):
         # expects to read (user, item, rating) triplets
         self.samples: pd.DataFrame = pd.read_csv(file + '.csv')
-        # use MSE loss
-        self.loss_fn = nn.MSELoss(reduction='sum')
+        self.use_bce_loss = use_bce_loss
+        if use_bce_loss:
+            # use BCE loss with logits (soft targets)
+            self.loss_fn = nn.BCEWithLogitsLoss(reduction='sum')
+        else:
+            # use MSE loss
+            self.loss_fn = nn.MSELoss(reduction='sum')
 
     def __getitem__(self, item):
         # return (user ID, item ID, rating) triplets
         data = self.samples.iloc[item]
-        return data['userId'], data['movieId'], data['rating']
+        return data['userId'], data['movieId'], data['rating'] / 5.0 if self.use_bce_loss else data['rating']
 
     def __len__(self):
         return len(self.samples)
