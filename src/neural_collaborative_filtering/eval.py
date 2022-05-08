@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from sklearn.metrics import ndcg_score
+from sklearn.metrics import ndcg_score, dcg_score
 
 from neural_collaborative_filtering.datasets.base import PointwiseDataset
 from neural_collaborative_filtering.models.base import NCF
@@ -30,10 +30,13 @@ def eval_ranking(samples_with_preds: pd.DataFrame, cutoff=10):
     TODO: make more generic, perhaps a wrapper class that should be extended.
     """
     ndcgs = []
+    adj_ndcgs = []
+    ignored = 0
     for userId, row in tqdm(samples_with_preds.groupby('userId').agg(list).iterrows(), total=len(samples_with_preds['userId'].unique()),
                             desc='Calculating NDCG', file=sys.stdout):
         if len(row['movieId']) <= 1:
             print("Warning: Found user with no interactions or only one ")
+            ignored += 1
             continue
 
         # get y_pred from model in appropriate format
@@ -45,16 +48,32 @@ def eval_ranking(samples_with_preds: pd.DataFrame, cutoff=10):
         # calculate ndcg for this user
         ndcg = ndcg_score([y_true], [y_pred], k=cutoff)
 
+        # calculate custom NDCG for this user
+        dcg = dcg_score([y_true], [y_pred], k=cutoff)
+        ideal_dcg = dcg_score([y_true], [y_true], k=cutoff)
+        worst_dcg = dcg_score([y_true], [5.0 - y_true], k=cutoff)
+
+        if ideal_dcg == worst_dcg:
+            ignored += 1
+            continue     # nothing to do if all of them are ties...
+
+        adj_ndcg = (dcg - worst_dcg) / (ideal_dcg - worst_dcg)    # min-max scaling formula
+
         # append to ndcgs for all users
         ndcgs.append(ndcg)
+        adj_ndcgs.append(adj_ndcg)
 
     # average ndcgs for all users to get a general estimate
     final_ndcg = np.mean(ndcgs)
+    final_adj_ndcg = np.mean(adj_ndcgs)
 
-    return final_ndcg
+    if ignored > 0:
+        print('Ignored', ignored, 'samples because all their interactions were ties.')
+
+    return final_ndcg, final_adj_ndcg
 
 
-def eval_model(model: NCF, test_dataset: PointwiseDataset, batch_size, wandb=None, ranking=False):
+def eval_model(model: NCF, test_dataset: PointwiseDataset, batch_size, wandb=None, ranking=False, doplots=True):
     """
     Main logic for evaluating a model for our task. Other than the loss we also calculate TP, FP, FN and TN
     in order to calculate other metrics such as accuracy, recall and precision.
@@ -102,17 +121,20 @@ def eval_model(model: NCF, test_dataset: PointwiseDataset, batch_size, wandb=Non
 
     # add fitted values to samples and calculate the NDCG
     test_dataset.samples['prediction'] = fitted_values
-    ndcg5 = eval_ranking(test_dataset.samples, cutoff=5)
-    ndcg10 = eval_ranking(test_dataset.samples, cutoff=10)
-    ndcg20 = eval_ranking(test_dataset.samples, cutoff=20)
+    ndcg5, adj_ndcg5 = eval_ranking(test_dataset.samples, cutoff=5)
+    ndcg10, adj_ndcg10 = eval_ranking(test_dataset.samples, cutoff=10)
+    ndcg20, adj_ndcg20 = eval_ranking(test_dataset.samples, cutoff=20)
     print(f'Test NDCG@5 = {ndcg5} - Test NDCG@10 = {ndcg10} - Test NDCG@120 = {ndcg20}')
+    print(f'Test adj-NDCG@5 = {adj_ndcg5} - Test adj-NDCG@10 = {adj_ndcg10} - Test adj-NDCG@120 = {adj_ndcg20}')
 
     if wandb is not None:
-        wandb.log({'test_ndcg@5': ndcg5, 'test_ndcg@10': ndcg10, 'test_ndcg@20': ndcg20})
+        logs = {'test_ndcg@5': ndcg5, 'test_ndcg@10': ndcg10, 'test_ndcg@20': ndcg20,
+                'test_adj_ndcg@5': adj_ndcg5, 'test_adj_ndcg@10': adj_ndcg10, 'test_adj_ndcg@20': adj_ndcg20}
         if not ranking:
-            wandb.log({'test_loss': test_loss})
+            logs['test_loss'] = test_loss
+        wandb.log(logs)
 
-    if not ranking:
+    if not ranking and doplots:
         # plot_fitted_vs_targets(fitted_values, ground_truth)
         plot_stacked_residuals(fitted_values, ground_truth)
         plot_residuals(fitted_values, ground_truth)

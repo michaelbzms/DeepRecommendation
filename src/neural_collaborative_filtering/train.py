@@ -112,14 +112,14 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
                 y_preds.append(out.cpu().detach().numpy())
         train_loss = train_sum_loss / len(train_dataset)
         monitored_metrics['train_loss'].append(train_loss)
-        train_ndcg = None
+        train_ndcg, train_adj_ndcg = None, None
         if isinstance(val_dataset, PointwiseDataset):
             y_preds = np.concatenate(y_preds, dtype=np.float64).reshape(-1)
             train_dataset.samples['prediction'] = y_preds  # overwriting previous is ok
-            train_ndcg = eval_ranking(train_dataset.samples, cutoff=ndcg_cutoff)
+            train_ndcg, train_adj_ndcg = eval_ranking(train_dataset.samples, cutoff=ndcg_cutoff)
         print(f'Training loss: {train_loss:.4f}', end=' - ' if isinstance(val_dataset, PointwiseDataset) else '\n')
-        if train_ndcg is not None:
-            print(f'Training NDCG@{ndcg_cutoff}: {train_ndcg:.4f}')
+        if train_ndcg is not None and train_adj_ndcg is not None:
+            print(f'Training NDCG@{ndcg_cutoff}: {train_ndcg:.4f}, adj-NDCG@{ndcg_cutoff}: {train_adj_ndcg:.4f}')
 
         ##################
         #   Validation   #
@@ -154,10 +154,10 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
         # gather all predictions, add them to samples and calculate the NDCG
         y_preds = np.concatenate(y_preds, dtype=np.float64).reshape(-1)
         pointwise_val_dataset.samples['prediction'] = y_preds    # overwriting previous is ok
-        val_ndcg = eval_ranking(pointwise_val_dataset.samples, cutoff=ndcg_cutoff)
+        val_ndcg, val_adj_ndcg = eval_ranking(pointwise_val_dataset.samples, cutoff=ndcg_cutoff)
         monitored_metrics['val_ndcg'].append(val_ndcg)
         print(f'Validation loss: {val_loss:.4f}', end=' - ')
-        print(f'Validation NDCG@{ndcg_cutoff}: {val_ndcg:.4f}')
+        print(f'Validation NDCG@{ndcg_cutoff}: {val_ndcg:.4f}, adj-NDCG@{ndcg_cutoff}: {val_adj_ndcg:.4f}')
 
         # keep track of max NDCG
         if val_ndcg > best_ndcg:
@@ -165,10 +165,12 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
 
         # log training and validation metrics
         if wandb is not None:
-            logs = {"train_loss": train_loss, "val_loss": val_loss, f'val_ndcg@{ndcg_cutoff}': val_ndcg,
+            logs = {"train_loss": train_loss, "val_loss": val_loss,
+                    f'val_ndcg@{ndcg_cutoff}': val_ndcg, f'val_adj_ndcg@{ndcg_cutoff}': val_adj_ndcg,
                     'epoch': epoch + 1}
             if train_ndcg is not None:
                 logs[f'train_ndcg@{ndcg_cutoff}'] = train_ndcg
+                logs[f'train_adj_ndcg@{ndcg_cutoff}'] = train_adj_ndcg
             wandb.log(logs)
 
         ######################
@@ -230,8 +232,8 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
         model.save_model(final_model_path)
         print('Done!')
 
-        if wandb is not None:
-            # TODO: this doesnt work
-            wandb.save(final_model_path)
+        # if wandb is not None:
+            # TODO: this doesnt work, something todo with dir
+            # wandb.save(final_model_path, )
 
     return monitored_metrics
