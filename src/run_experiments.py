@@ -1,6 +1,11 @@
 from train_model import prepare_attention_ncf, prepare_graph_ncf, prepare_fixedinput_ncf, run_experiment
 
 
+project_name = 'Test'
+group_name = 'runs'
+save_models = True
+
+
 if __name__ == '__main__':
     #############################
     # define experiments to run #
@@ -223,8 +228,6 @@ if __name__ == '__main__':
         #  },
     ]
 
-    project_name = 'DeepRecommendations1kItems5kUsers'
-
     for exp in fixed_experiments:
         # prepare experiment (model and datasets)
         model, training_dataset, val_dataset, pointwise_val_dataset = prepare_fixedinput_ncf(
@@ -245,9 +248,10 @@ if __name__ == '__main__':
                        val_dataset=val_dataset,
                        pointwise_val_dataset=pointwise_val_dataset,
                        onehot_users=exp['onehot_users'] if 'onehot_users' in exp else False,
-                       final_model_save_path=None,
+                       save_model=save_models,
                        use_features=exp['use_features'],
                        ranking=exp['use_ranking'],
+                       group_name=group_name,
                        project_name=project_name)
 
     for exp in attention_experiments:
@@ -267,9 +271,10 @@ if __name__ == '__main__':
                        training_dataset=training_dataset,
                        val_dataset=val_dataset,
                        pointwise_val_dataset=pointwise_val_dataset,
-                       final_model_save_path=None,
+                       save_model=save_models,
                        use_features=True,           # only works with features
                        ranking=exp['use_ranking'],
+                       group_name=group_name,
                        project_name=project_name)
 
     for exp in graph_experiments:
@@ -290,7 +295,8 @@ if __name__ == '__main__':
                        training_dataset=training_dataset,
                        val_dataset=val_dataset,
                        pointwise_val_dataset=pointwise_val_dataset,
-                       final_model_save_path=None,
+                       save_model=save_models,
                        use_features=exp['use_features'],
                        ranking=exp['use_ranking'],
+                       group_name=group_name,
                        project_name=project_name)

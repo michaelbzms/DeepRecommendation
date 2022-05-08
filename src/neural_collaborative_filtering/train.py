@@ -8,7 +8,6 @@ from tqdm import tqdm
 
 from neural_collaborative_filtering.datasets.base import PointwiseDataset
 from neural_collaborative_filtering.eval import eval_ranking
-from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF
 from neural_collaborative_filtering.models.base import NCF
 from neural_collaborative_filtering.util import load_model
 
@@ -20,9 +19,9 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 ###########################################
 def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
                 lr, weight_decay, batch_size, val_batch_size, early_stop,
-                final_model_path=None, checkpoint_model_path='temp.pt', max_epochs=100,
+                final_model_path='final_model.pt', checkpoint_model_path='temp.pt', max_epochs=100,
                 patience=3, max_patience=5, stop_with_train_loss_instead=False,
-                optimizer=None, wandb=None):
+                optimizer=None, ndcg_cutoff=10, wandb=None):
     """
     Main logic for training a model. Hyperparameters (e.g. lr, batch_size, etc) as arguments.
     On each loop (epoch), we forward the model on the training_dataset and backpropagate the loss
@@ -78,6 +77,7 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
     monitored_metrics = {
         'train_loss': [],
         'val_loss': [],
+        'val_ndcg': []
     }
 
     # logs
@@ -93,6 +93,7 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
         train_sum_loss = 0.0
         model.train()  # gradients "on"
         extra_train_args = [] if train_graph is None else [train_graph]
+        y_preds = []
         for batch in tqdm(train_loader, desc='Training', file=sys.stdout):
             # reset the gradients
             optimizer.zero_grad()
@@ -106,9 +107,19 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
             optimizer.step()
             # accumulate train loss
             train_sum_loss += loss.detach().item()
+            # accumulate predictions if pointwise
+            if isinstance(val_dataset, PointwiseDataset):
+                y_preds.append(out.cpu().detach().numpy())
         train_loss = train_sum_loss / len(train_dataset)
         monitored_metrics['train_loss'].append(train_loss)
-        print(f'Training loss: {train_loss:.4f}')
+        train_ndcg = None
+        if isinstance(val_dataset, PointwiseDataset):
+            y_preds = np.concatenate(y_preds, dtype=np.float64).reshape(-1)
+            train_dataset.samples['prediction'] = y_preds  # overwriting previous is ok
+            train_ndcg = eval_ranking(train_dataset.samples, cutoff=ndcg_cutoff)
+        print(f'Training loss: {train_loss:.4f}', end=' - ' if isinstance(val_dataset, PointwiseDataset) else '\n')
+        if train_ndcg is not None:
+            print(f'Training NDCG@{ndcg_cutoff}: {train_ndcg:.4f}')
 
         ##################
         #   Validation   #
@@ -143,17 +154,22 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
         # gather all predictions, add them to samples and calculate the NDCG
         y_preds = np.concatenate(y_preds, dtype=np.float64).reshape(-1)
         pointwise_val_dataset.samples['prediction'] = y_preds    # overwriting previous is ok
-        ndcg10 = eval_ranking(pointwise_val_dataset.samples)
-        print(f'Validation loss: {val_loss:.4f}', end='\t')
-        print(f'Validation NDCG: {ndcg10:.6f}')
+        val_ndcg = eval_ranking(pointwise_val_dataset.samples, cutoff=ndcg_cutoff)
+        monitored_metrics['val_ndcg'].append(val_ndcg)
+        print(f'Validation loss: {val_loss:.4f}', end=' - ')
+        print(f'Validation NDCG@{ndcg_cutoff}: {val_ndcg:.4f}')
 
         # keep track of max NDCG
-        if ndcg10 > best_ndcg:
-            best_ndcg = ndcg10
+        if val_ndcg > best_ndcg:
+            best_ndcg = val_ndcg
 
         # log training and validation metrics
         if wandb is not None:
-            wandb.log({"train_loss": train_loss, "val_loss": val_loss, 'val_ndcg@10': ndcg10, 'epoch': epoch + 1})
+            logs = {"train_loss": train_loss, "val_loss": val_loss, f'val_ndcg@{ndcg_cutoff}': val_ndcg,
+                    'epoch': epoch + 1}
+            if train_ndcg is not None:
+                logs[f'train_ndcg@{ndcg_cutoff}'] = train_ndcg
+            wandb.log(logs)
 
         ######################
         #   Early Stopping   #
@@ -204,16 +220,18 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
             # update previous running loss
             previous_running_loss = val_sum_loss if not stop_with_train_loss_instead else train_sum_loss
 
+    if wandb is not None:
+        if best_val_loss is not None:
+            wandb.log({'best_val_loss': best_val_loss, 'best_ndcg@10': best_ndcg})
+
     # save model (its weights)
     if final_model_path is not None:
         print('Saving model...')
         model.save_model(final_model_path)
         print('Done!')
 
-    if wandb is not None:
-        # TODO: this doesnt work
-        # wandb.save(final_model_path)    # also save to wandb
-        if best_val_loss is not None:
-            wandb.log({'best_val_loss': best_val_loss, 'best_ndcg@10': best_ndcg})
+        if wandb is not None:
+            # TODO: this doesnt work
+            wandb.save(final_model_path)
 
     return monitored_metrics

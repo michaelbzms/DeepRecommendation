@@ -130,17 +130,27 @@ def prepare_graph_ncf(ranking=False, use_features=False, model_kwargs=None):
 
 
 def run_experiment(model, *, hparams, training_dataset, val_dataset, pointwise_val_dataset,
-                   use_features=False, ranking=False, onehot_users=False, final_model_save_path=None,
-                   project_name='DeepRecommendation', **kwargs):
+                   use_features=False, ranking=False, onehot_users=False, save_model=True,
+                   final_model_save_path=None, group_name='runs', project_name='DeepRecommendation', **kwargs):
     print('___________________ Running experiment ___________________')
     print(model)
 
     # log
     now = datetime.now()
+    timestamp = now.strftime(now.strftime("%d_%m_%Y_%H_%M"))
     model_hyperparams = {k: (', '.join([str(i) for i in v]) if isinstance(v, list) else v) for k, v in model.kwargs.items()}
     model_hyperparams['ranking'] = ranking
     model_hyperparams['features_used'] = use_features
     model_name = f"{type(model).__name__}_{('item_features_but_users_onehot' if onehot_users else 'with_features') if use_features or isinstance(model, AttentionNCF) else 'onehot'}"
+
+    # if and where to save the trained model
+    if save_model:
+        if final_model_save_path is None:
+            model_save_path = f'../models/{group_name}/{model_name}.pt'
+        else:
+            model_save_path = final_model_save_path
+    else:
+        model_save_path = None
 
     if isinstance(model, AttentionNCF):
         pass
@@ -149,7 +159,7 @@ def run_experiment(model, *, hparams, training_dataset, val_dataset, pointwise_v
     run = wandb.init(project=project_name,
                      entity='michaelbzms',
                      reinit=True,
-                     name=model_name + '_' + now.strftime(now.strftime("%d_%m_%Y_%H_%M")),  # run name
+                     name=model_name + '_' + timestamp,  # run name
                      group=model_name,  # group name --> hyperparameter tuning on group
                      dir='../',
                      config={
@@ -166,7 +176,7 @@ def run_experiment(model, *, hparams, training_dataset, val_dataset, pointwise_v
                                     lr=hparams['lr'], weight_decay=hparams['weight_decay'],
                                     batch_size=hparams['batch_size'],
                                     val_batch_size=val_batch_size,      # not important
-                                    early_stop=True, final_model_path=final_model_save_path,
+                                    early_stop=True, final_model_path=model_save_path,
                                     checkpoint_model_path=checkpoint_model_path,
                                     max_epochs=max_epochs, patience=patience,
                                     wandb=wandb)
@@ -208,7 +218,7 @@ if __name__ == '__main__':
                                     lr=1e-3, weight_decay=1e-5,
                                     batch_size=128,
                                     val_batch_size=val_batch_size,  # not important
-                                    early_stop=True, final_model_path='../models/ncf_with_features.pt',
+                                    early_stop=True, final_model_path=final_model_path,
                                     checkpoint_model_path=checkpoint_model_path,
                                     max_epochs=max_epochs, patience=patience,
                                     wandb=None)
