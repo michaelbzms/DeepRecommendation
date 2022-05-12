@@ -125,7 +125,7 @@ def eval_model(model: NCF, test_dataset: PointwiseDataset, batch_size, wandb=Non
     ndcg10, adj_ndcg10 = eval_ranking(test_dataset.samples, cutoff=10)
     ndcg20, adj_ndcg20 = eval_ranking(test_dataset.samples, cutoff=20)
     print(f'Test NDCG@5 = {ndcg5} - Test NDCG@10 = {ndcg10} - Test NDCG@120 = {ndcg20}')
-    print(f'Test adj-NDCG@5 = {adj_ndcg5} - Test adj-NDCG@10 = {adj_ndcg10} - Test adj-NDCG@120 = {adj_ndcg20}')
+    print(f'Test adj-NDCG@5 = {adj_ndcg5} - Test adj-NDCG@10 = {adj_ndcg10} - Test adj-NDCG@20 = {adj_ndcg20}')
 
     if wandb is not None:
         logs = {'test_ndcg@5': ndcg5, 'test_ndcg@10': ndcg10, 'test_ndcg@20': ndcg20,

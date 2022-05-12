@@ -29,5 +29,6 @@ if __name__ == '__main__':
         # add to pd
         eval_set.loc[eval_set['userId'] == userId, 'prediction'] = sim
 
-    ndcg = eval_ranking(eval_set)
-    print('NDCG =', ndcg)
+    cutoff = 10
+    ndcg, adj_ndcg = eval_ranking(eval_set, cutoff=cutoff)
+    print(f'NDCG@{cutoff}:', ndcg, f'adj-NDCG@{cutoff}:', adj_ndcg)
