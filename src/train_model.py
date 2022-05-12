@@ -37,7 +37,7 @@ def prepare_fixedinput_ncf(ranking=False, use_features=False, onehot_users=False
             model = BasicNCF(item_dim=cp.get_item_feature_dim(),
                              user_dim=cp.get_num_users() if onehot_users else cp.get_item_feature_dim(),
                              item_emb=128, user_emb=128,
-                             mlp_dense_layers=[256, 256],
+                             mlp_dense_layers=[256],
                              dropout_rate=dropout_rate)
     else:
         # content provider
@@ -51,19 +51,17 @@ def prepare_fixedinput_ncf(ranking=False, use_features=False, onehot_users=False
             model = BasicNCF(item_dim=cp.get_num_items(),
                              user_dim=cp.get_num_users(),
                              item_emb=128, user_emb=128,
-                             mlp_dense_layers=[256, 128],
+                             mlp_dense_layers=[256],
                              dropout_rate=dropout_rate)
     # datasets
-    pointwise_val_dataset = FixedPointwiseDataset(val_set_file, content_provider=cp)
+    val_dataset = FixedPointwiseDataset(val_set_file, content_provider=cp)
     test_dataset = FixedPointwiseDataset(test_set_file, content_provider=cp)
     if ranking:
         training_dataset = FixedRankingDataset(ranking_train_set_file, content_provider=cp)
-        val_dataset = FixedRankingDataset(ranking_val_set_file, content_provider=cp)
     else:
         training_dataset = FixedPointwiseDataset(train_set_file, content_provider=cp)
-        val_dataset = pointwise_val_dataset
 
-    return model, training_dataset, val_dataset, pointwise_val_dataset, test_dataset
+    return model, training_dataset, val_dataset, test_dataset
 
 
 def prepare_attention_ncf(ranking=False, model_kwargs=None):
@@ -84,16 +82,14 @@ def prepare_attention_ncf(ranking=False, model_kwargs=None):
                              dropout_rate=dropout_rate)
 
     # datasets
-    pointwise_val_dataset = DynamicPointwiseDataset(val_set_file, dynamic_provider=dpp)
+    val_dataset = DynamicPointwiseDataset(val_set_file, dynamic_provider=dpp)
     test_dataset = DynamicPointwiseDataset(test_set_file, dynamic_provider=dpp)
     if ranking:
         training_dataset = DynamicRankingDataset(ranking_train_set_file, dynamic_provider=dpp)
-        val_dataset = DynamicRankingDataset(ranking_val_set_file, dynamic_provider=dpp)
     else:
         training_dataset = DynamicPointwiseDataset(train_set_file, dynamic_provider=dpp)
-        val_dataset = pointwise_val_dataset
 
-    return model, training_dataset, val_dataset, pointwise_val_dataset, test_dataset
+    return model, training_dataset, val_dataset, test_dataset
 
 
 def prepare_graph_ncf(ranking=False, use_features=False, model_kwargs=None):
@@ -118,23 +114,21 @@ def prepare_graph_ncf(ranking=False, use_features=False, model_kwargs=None):
                      user_dim=gcp.get_user_dim(),
                      gnn_hidden_layers=[64, 64],
                      node_emb=64,
-                     mlp_dense_layers=[256, 128],
+                     mlp_dense_layers=[256],
                      dropout_rate=dropout_rate,
                      message_dropout=0.1)
     # datasets
-    pointwise_val_dataset = GraphPointwiseDataset(val_set_file, graph_content_provider=gcp)
+    val_dataset = GraphPointwiseDataset(val_set_file, graph_content_provider=gcp)
     test_dataset = GraphPointwiseDataset(test_set_file, graph_content_provider=gcp)    # TODO: add val edges to gcp for this?
     if ranking:
         training_dataset = GraphRankingDataset(ranking_train_set_file, graph_content_provider=gcp)
-        val_dataset = GraphRankingDataset(ranking_val_set_file, graph_content_provider=gcp)
     else:
         training_dataset = GraphPointwiseDataset(train_set_file, graph_content_provider=gcp)
-        val_dataset = pointwise_val_dataset
 
-    return model, training_dataset, val_dataset, pointwise_val_dataset, test_dataset
+    return model, training_dataset, val_dataset, test_dataset
 
 
-def run_experiment(model, *, hparams, training_dataset, val_dataset, pointwise_val_dataset, test_dataset=None,
+def run_experiment(model, *, hparams, training_dataset, val_dataset, test_dataset=None,
                    use_features=False, ranking=False, onehot_users=False, save_model=True,
                    final_model_save_path=None, group_name='runs', project_name='DeepRecommendation', **kwargs):
     print('___________________ Running experiment ___________________')
@@ -146,7 +140,8 @@ def run_experiment(model, *, hparams, training_dataset, val_dataset, pointwise_v
     model_hyperparams = {k: (', '.join([str(i) for i in v]) if isinstance(v, list) else v) for k, v in model.kwargs.items()}
     model_hyperparams['ranking'] = ranking
     model_hyperparams['features_used'] = use_features
-    model_name = f"{type(model).__name__}_{('item_features_but_users_onehot' if onehot_users else 'with_features') if use_features or isinstance(model, AttentionNCF) else 'onehot'}"
+    model_name = f"{type(model).__name__}_{('item_features_but_users_onehot' if onehot_users else 'with_features') if use_features or isinstance(model, AttentionNCF) else 'onehot'}" \
+                 + ('_ranking' if ranking else '')
 
     # if and where to save the trained model
     if save_model:
@@ -178,7 +173,6 @@ def run_experiment(model, *, hparams, training_dataset, val_dataset, pointwise_v
 
     # train and save result at `final_model_save_path`
     monitored_metrics = train_model(model, train_dataset=training_dataset, val_dataset=val_dataset,
-                                    pointwise_val_dataset=pointwise_val_dataset,
                                     lr=hparams['lr'], weight_decay=hparams['weight_decay'],
                                     batch_size=hparams['batch_size'],
                                     val_batch_size=val_batch_size,      # not important
@@ -188,7 +182,7 @@ def run_experiment(model, *, hparams, training_dataset, val_dataset, pointwise_v
                                     wandb=wandb)
 
     if test_dataset is not None:
-        eval_model(model, test_dataset, val_batch_size, wandb=wandb, doplots=False)
+        eval_model(model, test_dataset, val_batch_size, wandb=wandb, ranking=ranking, doplots=False)
 
     run.finish()
 
@@ -197,13 +191,13 @@ def run_experiment(model, *, hparams, training_dataset, val_dataset, pointwise_v
 
 if __name__ == '__main__':
     use_features = True
-    ranking = False
-    onehot_users = True
+    ranking = True
+    onehot_users = False
 
     # prepare model, train and val datasets (Pointwise val dataset always needed for NDCG eval)
-    model, training_dataset, val_dataset, pointwise_val_dataset, test_dataset = prepare_fixedinput_ncf(ranking=ranking, use_features=use_features, onehot_users=onehot_users)
-    # model, training_dataset, val_dataset, pointwise_val_dataset, test_dataset = prepare_attention_ncf(ranking=ranking)
-    # model, training_dataset, val_dataset, pointwise_val_dataset, test_dataset = prepare_graph_ncf(ranking=ranking, use_features=use_features)
+    model, training_dataset, val_dataset, test_dataset = prepare_fixedinput_ncf(ranking=ranking, use_features=use_features, onehot_users=onehot_users)
+    # model, training_dataset, val_dataset, test_dataset = prepare_attention_ncf(ranking=ranking)
+    # model, training_dataset, val_dataset, test_dataset = prepare_graph_ncf(ranking=ranking, use_features=use_features)
 
     print(model)
 
@@ -223,9 +217,8 @@ if __name__ == '__main__':
 
     # train and save result at `final_model_save_path`
     monitored_metrics = train_model(model, train_dataset=training_dataset, val_dataset=val_dataset,
-                                    pointwise_val_dataset=pointwise_val_dataset,
-                                    lr=1e-3, weight_decay=1e-5,
-                                    batch_size=128,
+                                    lr=3e-4, weight_decay=1e-5,
+                                    batch_size=1024,
                                     val_batch_size=val_batch_size,  # not important
                                     early_stop=True, final_model_path=final_model_path,
                                     checkpoint_model_path=checkpoint_model_path,
@@ -233,4 +226,4 @@ if __name__ == '__main__':
                                     wandb=None)
 
     # plot and save losses
-    plot_train_val_losses(monitored_metrics['train_loss'], monitored_metrics['val_loss'])
+    plot_train_val_losses(monitored_metrics['train_loss'], monitored_metrics['val_ndcg'] if ranking else monitored_metrics['val_loss'])

@@ -2,6 +2,7 @@ import torch
 from torch.utils.data import Dataset
 from torch import nn
 import pandas as pd
+import numpy as np
 
 
 class PointwiseDataset(Dataset):
@@ -41,14 +42,18 @@ class PointwiseDataset(Dataset):
 class RankingDataset(Dataset):
     def __init__(self, ranking_file):
         # expects to read (user, item1, item2) triplets where item1 > item2 for user
-        self.samples: pd.DataFrame = pd.read_csv(ranking_file + '.csv')
+        self.samples: pd.DataFrame = pd.read_hdf(ranking_file + '.h5')
         # use BPR loss for ranking
         self.loss_fn = BPR_loss
 
     def __getitem__(self, item):
         # return (user ID, item1 ID, item2 ID) triplets
         data = self.samples.iloc[item]
-        return data['userId'], data['movieId1'], data['movieId2']
+        # sample negative from options
+        probs = np.array(data['negative_ratings']) / sum(data['negative_ratings'])  # give more chances to hard negatives
+        negative = np.random.choice(data['negative_movieIds'], p=probs)
+        # negative = .sample(n=1)[0]
+        return data['userId'], data['positive_movieId'], negative
 
     def __len__(self):
         return len(self.samples)

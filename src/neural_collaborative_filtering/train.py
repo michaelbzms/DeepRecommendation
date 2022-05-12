@@ -6,7 +6,7 @@ from torch import optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from neural_collaborative_filtering.datasets.base import PointwiseDataset
+from neural_collaborative_filtering.datasets.base import PointwiseDataset, RankingDataset
 from neural_collaborative_filtering.eval import eval_ranking
 from neural_collaborative_filtering.models.base import NCF
 from neural_collaborative_filtering.util import load_model
@@ -17,7 +17,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 ###########################################
 #         Basic Training Loop             #
 ###########################################
-def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
+def train_model(model: NCF, train_dataset, val_dataset: PointwiseDataset,
                 lr, weight_decay, batch_size, val_batch_size, early_stop,
                 final_model_path='final_model.pt', checkpoint_model_path='temp.pt', max_epochs=100,
                 patience=3, max_patience=5, stop_with_train_loss_instead=False,
@@ -48,13 +48,6 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
     # Note: Important to shuffle train set (!) - do NOT shuffle val set (if we do the NDCG calculation will be wrong)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=train_dataset.use_collate())
     val_loader = DataLoader(val_dataset, batch_size=val_batch_size, collate_fn=val_dataset.use_collate())
-    if isinstance(val_dataset, PointwiseDataset):
-        # if val_dataset already pointwise use that
-        pointwise_val_loader = val_loader
-        pointwise_val_dataset = val_dataset
-    else:
-        pointwise_val_loader = DataLoader(pointwise_val_dataset, batch_size=val_batch_size,
-                                          collate_fn=pointwise_val_dataset.use_collate())
 
     # define optimizer if not given
     if optimizer is None:
@@ -66,8 +59,8 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
 
     # early stopping variables
     early_stop_times = 0
-    least_running_loss = None
-    previous_running_loss = None
+    best_running_val_loss_or_ndcg = None
+    previous_running_loss_or_ndcg = None
     checkpoint_epoch = -1
     best_val_loss = None
     best_ndcg = -1
@@ -108,16 +101,16 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
             # accumulate train loss
             train_sum_loss += loss.detach().item()
             # accumulate predictions if pointwise
-            if isinstance(val_dataset, PointwiseDataset):
+            if isinstance(train_dataset, PointwiseDataset):
                 y_preds.append(out.cpu().detach().numpy())
         train_loss = train_sum_loss / len(train_dataset)
         monitored_metrics['train_loss'].append(train_loss)
         train_ndcg, train_adj_ndcg = None, None
-        if isinstance(val_dataset, PointwiseDataset):
+        if isinstance(train_dataset, PointwiseDataset):
             y_preds = np.concatenate(y_preds, dtype=np.float64).reshape(-1)
             train_dataset.samples['prediction'] = y_preds  # overwriting previous is ok
             train_ndcg, train_adj_ndcg = eval_ranking(train_dataset.samples, cutoff=ndcg_cutoff)
-        print(f'Training loss: {train_loss:.4f}', end=' - ' if isinstance(val_dataset, PointwiseDataset) else '\n')
+        print(f'Training loss: {train_loss:.4f}')
         if train_ndcg is not None and train_adj_ndcg is not None:
             print(f'Training NDCG@{ndcg_cutoff}: {train_ndcg:.4f}, adj-NDCG@{ndcg_cutoff}: {train_adj_ndcg:.4f}')
 
@@ -125,38 +118,31 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
         #   Validation   #
         ##################
         model.eval()  # gradients "off"
-        val_sum_loss = 0.0
+        val_loss = val_sum_loss = 0.0
         extra_val_args = [] if train_graph is None else [val_graph]
         y_preds = []
         with torch.no_grad():
             for batch in tqdm(val_loader, desc='Validating', file=sys.stdout):
                 # forward model
                 out, y_true_or_out2 = val_dataset.__class__.do_forward(model, batch, device, *extra_val_args)
-                # calculate loss
-                loss = val_dataset.calculate_loss(out, y_true_or_out2.to(device))
-                # accumulate validation loss
-                val_sum_loss += loss.detach().item()
-                # accumulate predictions if pointwise
-                if isinstance(val_dataset, PointwiseDataset):
-                    y_preds.append(out.cpu().detach().numpy())
-        val_loss = val_sum_loss / len(val_dataset)
-        monitored_metrics['val_loss'].append(val_loss)
-
-        # if main val dataset is not pointwise then use the extra pointwise val dataset provided
-        if not isinstance(val_dataset, PointwiseDataset):
-            with torch.no_grad():
-                for batch in tqdm(pointwise_val_loader, desc='Validating (Pointwise)', file=sys.stdout):
-                    # forward model
-                    out, y_true = pointwise_val_dataset.__class__.do_forward(model, batch, device, *extra_val_args)
-                    # accumulate predictions
-                    y_preds.append(out.cpu().detach().numpy())
+                if isinstance(train_dataset, PointwiseDataset):  # if doing point-wise learning
+                    # calculate loss
+                    loss = val_dataset.calculate_loss(out, y_true_or_out2.to(device))
+                    # accumulate validation loss
+                    val_sum_loss += loss.detach().item()
+                # accumulate predictions
+                y_preds.append(out.cpu().detach().numpy())
+        if isinstance(train_dataset, PointwiseDataset):
+            val_loss = val_sum_loss / len(val_dataset)
+            monitored_metrics['val_loss'].append(val_loss)
 
         # gather all predictions, add them to samples and calculate the NDCG
         y_preds = np.concatenate(y_preds, dtype=np.float64).reshape(-1)
-        pointwise_val_dataset.samples['prediction'] = y_preds    # overwriting previous is ok
-        val_ndcg, val_adj_ndcg = eval_ranking(pointwise_val_dataset.samples, cutoff=ndcg_cutoff)
+        val_dataset.samples['prediction'] = y_preds    # overwriting previous is ok
+        val_ndcg, val_adj_ndcg = eval_ranking(val_dataset.samples, cutoff=ndcg_cutoff)
         monitored_metrics['val_ndcg'].append(val_ndcg)
-        print(f'Validation loss: {val_loss:.4f}', end=' - ')
+        if isinstance(train_dataset, PointwiseDataset):
+            print(f'Validation loss: {val_loss:.4f}', end=' - ')
         print(f'Validation NDCG@{ndcg_cutoff}: {val_ndcg:.4f}, adj-NDCG@{ndcg_cutoff}: {val_adj_ndcg:.4f}')
 
         # keep track of max NDCG
@@ -165,10 +151,13 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
 
         # log training and validation metrics
         if wandb is not None:
-            logs = {"train_loss": train_loss, "val_loss": val_loss,
-                    f'val_ndcg@{ndcg_cutoff}': val_ndcg, f'val_adj_ndcg@{ndcg_cutoff}': val_adj_ndcg,
+            logs = {'train_loss': train_loss,
+                    f'val_ndcg@{ndcg_cutoff}': val_ndcg,
+                    f'val_adj_ndcg@{ndcg_cutoff}': val_adj_ndcg,
                     'epoch': epoch + 1}
-            if train_ndcg is not None:
+            if isinstance(train_dataset, PointwiseDataset):      # only for point-wise learning
+                logs['val_loss'] = val_loss
+            if train_ndcg is not None and train_adj_ndcg is not None:
                 logs[f'train_ndcg@{ndcg_cutoff}'] = train_ndcg
                 logs[f'train_adj_ndcg@{ndcg_cutoff}'] = train_adj_ndcg
             wandb.log(logs)
@@ -177,21 +166,26 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
         #   Early Stopping   #
         ######################
         if early_stop:
-            if least_running_loss is None or (not stop_with_train_loss_instead and val_sum_loss < least_running_loss) \
-                    or (stop_with_train_loss_instead and train_sum_loss < least_running_loss):
+            if best_running_val_loss_or_ndcg is None or \
+                    (isinstance(train_dataset, PointwiseDataset) and val_loss < best_running_val_loss_or_ndcg) or \
+                    (isinstance(train_dataset, RankingDataset) and val_ndcg > best_running_val_loss_or_ndcg):
                 # always store the model with the least running loss achieved (saves kwargs as well)
                 model.save_model(checkpoint_model_path)
                 # write down latest checkpoint and best loss so far
                 checkpoint_epoch = epoch
-                least_running_loss = val_sum_loss if not stop_with_train_loss_instead else train_sum_loss
+                if isinstance(train_dataset, RankingDataset):  # if doing pair-wise learning
+                    best_running_val_loss_or_ndcg = val_ndcg              # early stop using val_ndcg
+                else:
+                    best_running_val_loss_or_ndcg = val_loss              # else use normal val loss
                 # reset counter for patience
                 early_stop_times = 0
                 # reset max patience
                 max_patience = starting_max_patience
             else:
                 # increase early stop times only if loss increased from previous time (not the least one overall)
-                if previous_running_loss is not None and (not stop_with_train_loss_instead and val_sum_loss > previous_running_loss) \
-                        or (stop_with_train_loss_instead and train_sum_loss > previous_running_loss):
+                if previous_running_loss_or_ndcg is not None and \
+                        (isinstance(train_dataset, PointwiseDataset) and val_loss > previous_running_loss_or_ndcg) or \
+                        (isinstance(train_dataset, RankingDataset) and val_ndcg < previous_running_loss_or_ndcg):
                     early_stop_times += 1
                     if float(early_stop_times).is_integer(): early_stop_times = int(early_stop_times)  # aesthetics
                 else:
@@ -200,27 +194,24 @@ def train_model(model: NCF, train_dataset, val_dataset, pointwise_val_dataset,
                 # decrease max_patience anyway if loss was worse than the best loss achieved overall
                 max_patience -= 1
 
-                # best val loss so far
-                best_val_loss = least_running_loss / len(val_dataset)
-
                 if early_stop_times > patience or max_patience <= 0:
                     print(f'Early stopping at epoch {epoch + 1}.')
-                    print(f'Loading best model from checkpoint from epoch {checkpoint_epoch + 1} with loss: {best_val_loss:.4f}')
+                    print(f'Loading best model from checkpoint from epoch {checkpoint_epoch + 1} with val {"loss" if isinstance(train_dataset, PointwiseDataset) else "ndcg"}: {best_running_val_loss_or_ndcg:.4f}')
                     state, _ = load_model(checkpoint_model_path)  # ignore kwargs -> we know them
                     model.load_state_dict(state)
                     model.eval()
                     break
                 elif epoch == max_epochs - 1:
                     # special case where we reached max_epochs and our current loss is not the best
-                    print(f'Loss worsened in last epoch(s), loading best model from checkpoint from epoch {checkpoint_epoch + 1} with loss: {best_val_loss:.4f}')
+                    print(f'Val loss/ndcg worsened in last epoch(s), loading best model from checkpoint from epoch {checkpoint_epoch + 1}.')
                     state, _ = load_model(checkpoint_model_path)  # ignore kwargs -> we know them
                     model.load_state_dict(state)
                     model.eval()
 
             print(f'Patience remaining: {patience - early_stop_times}')
 
-            # update previous running loss
-            previous_running_loss = val_sum_loss if not stop_with_train_loss_instead else train_sum_loss
+            # update previous running loss / ndcg
+            previous_running_loss_or_ndcg = val_loss if isinstance(train_dataset, PointwiseDataset) else val_ndcg
 
     if wandb is not None:
         if best_val_loss is not None:

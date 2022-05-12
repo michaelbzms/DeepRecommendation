@@ -57,4 +57,4 @@ if __name__ == '__main__':
     print(model)
 
     # evaluate model on test set
-    eval_model(model, test_dataset, val_batch_size)
+    eval_model(model, test_dataset, val_batch_size, ranking=False)

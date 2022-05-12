@@ -73,7 +73,7 @@ def eval_ranking(samples_with_preds: pd.DataFrame, cutoff=10):
     return final_ndcg, final_adj_ndcg
 
 
-def eval_model(model: NCF, test_dataset: PointwiseDataset, batch_size, wandb=None, ranking=False, doplots=True):
+def eval_model(model: NCF, test_dataset: PointwiseDataset, batch_size, ranking, wandb=None, doplots=True):
     """
     Main logic for evaluating a model for our task. Other than the loss we also calculate TP, FP, FN and TN
     in order to calculate other metrics such as accuracy, recall and precision.
@@ -124,8 +124,8 @@ def eval_model(model: NCF, test_dataset: PointwiseDataset, batch_size, wandb=Non
     ndcg5, adj_ndcg5 = eval_ranking(test_dataset.samples, cutoff=5)
     ndcg10, adj_ndcg10 = eval_ranking(test_dataset.samples, cutoff=10)
     ndcg20, adj_ndcg20 = eval_ranking(test_dataset.samples, cutoff=20)
-    print(f'Test NDCG@5 = {ndcg5} - Test NDCG@10 = {ndcg10} - Test NDCG@120 = {ndcg20}')
     print(f'Test adj-NDCG@5 = {adj_ndcg5} - Test adj-NDCG@10 = {adj_ndcg10} - Test adj-NDCG@20 = {adj_ndcg20}')
+    print(f'Test NDCG@5 = {ndcg5} - Test NDCG@10 = {ndcg10} - Test NDCG@20 = {ndcg20}')
 
     if wandb is not None:
         logs = {'test_ndcg@5': ndcg5, 'test_ndcg@10': ndcg10, 'test_ndcg@20': ndcg20,
