@@ -32,7 +32,7 @@ if __name__ == '__main__':
              'mlp_dense_layers': [256],
              'dropout_rate': 0.2
          },
-         'lr': 1e-3,
+         'lr': 5e-4,
          'batch_size': 512,
          'weight_decay': 1e-5,
          },

@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import Dataset
-from torch import nn
+from torch import nn, softmax
 import pandas as pd
 import numpy as np
 
@@ -46,11 +46,32 @@ class RankingDataset(Dataset):
         # use BPR loss for ranking
         self.loss_fn = BPR_loss
 
+    def _negative_sampling_probs(self, negative_ratings: np.ndarray, type='sum_squared'):
+        # TODO: maybe start with sum -> sum_balances -> sum_squared during epochs... use a setter for type?
+        if type == 'sum':
+            # simple way to boost hard negatives i.e. negatives with bigger ratings
+            probs = negative_ratings / sum(negative_ratings)  # give more chances to hard negatives
+        elif type == 'sum_squared':
+            # same as before but boosting hard negatives more heavily
+            negative_ratings_squared = negative_ratings**2
+            probs = negative_ratings_squared / sum(negative_ratings_squared)  # give more chances to hard negatives
+        elif type == 'sum_balanced':
+            # between sum and sum_squared
+            negative_ratings_pow = negative_ratings**1.5
+            probs = negative_ratings_pow / sum(negative_ratings_pow)
+        elif type == 'softmax':
+            # balanced but too expensive (would not recommend)
+            probs = softmax(torch.FloatTensor(negative_ratings), dim=0).numpy()
+        else:
+            probs = None    # uniform
+        return probs
+
     def __getitem__(self, item):
         # return (user ID, item1 ID, item2 ID) triplets
         data = self.samples.iloc[item]
         # sample negative from options
-        probs = np.array(data['negative_ratings']) / sum(data['negative_ratings'])  # give more chances to hard negatives
+        # TODO: This selects just one out of potentially a lot of choices. e.g 50 - 300
+        probs = self._negative_sampling_probs(np.array(data['negative_ratings']))
         negative = np.random.choice(data['negative_movieIds'], p=probs)
         # negative = .sample(n=1)[0]
         return data['userId'], data['positive_movieId'], negative
