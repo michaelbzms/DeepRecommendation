@@ -115,9 +115,9 @@ def eval_model(model: NCF, test_dataset: PointwiseDataset, batch_size, ranking, 
         test_loss = test_sum_loss / len(test_dataset)
         print(f'Test loss (MSE): {test_loss:.4f} - RMSE: {sqrt(test_loss):.4f}')
 
-        # gather all predicted values and all ground truths
-        fitted_values = np.concatenate(fitted_values, dtype=np.float64).reshape(-1)
-        ground_truth = np.concatenate(ground_truth, dtype=np.float64).reshape(-1)
+    # gather all predicted values and all ground truths
+    fitted_values = np.concatenate(fitted_values, dtype=np.float64).reshape(-1)
+    ground_truth = np.concatenate(ground_truth, dtype=np.float64).reshape(-1)
 
     # add fitted values to samples and calculate the NDCG
     test_dataset.samples['prediction'] = fitted_values

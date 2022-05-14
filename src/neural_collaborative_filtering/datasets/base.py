@@ -46,7 +46,7 @@ class RankingDataset(Dataset):
         # use BPR loss for ranking
         self.loss_fn = BPR_loss
 
-    def _negative_sampling_probs(self, negative_ratings: np.ndarray, type='sum_squared'):
+    def _negative_sampling_probs(self, negative_ratings: np.ndarray, type='sum'):
         # TODO: maybe start with sum -> sum_balances -> sum_squared during epochs... use a setter for type?
         if type == 'sum':
             # simple way to boost hard negatives i.e. negatives with bigger ratings
