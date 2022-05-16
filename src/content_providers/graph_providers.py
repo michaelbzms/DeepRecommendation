@@ -7,7 +7,7 @@ from globals import full_matrix_file, item_metadata_file, user_embeddings_file
 from neural_collaborative_filtering.content_providers import GraphContentProvider
 
 
-def create_graph(interactions: pd.DataFrame, item_features, user_features, item_to_node_ID, user_to_node_ID):
+def create_graph(interactions: pd.DataFrame, item_features, user_features, item_to_node_ID, user_to_node_ID, binary=True):
     """ Assume node features where item nodes go first and then users (we might want to add more users) """
     # calculate mean ratings per user and per item as an edge attribute
     user_mean_ratings = interactions.groupby('userId')['rating'].mean()
@@ -18,26 +18,32 @@ def create_graph(interactions: pd.DataFrame, item_features, user_features, item_
     for _, (userId, itemId, rating) in tqdm(interactions.iterrows(),
                                             desc='Loading graph edges...',
                                             total=len(interactions)):
-        # add edge user ----> item with weight: rating - avg_user_rating
-        edge_index[0].append(user_to_node_ID[userId])
-        edge_index[1].append(item_to_node_ID[itemId])
         # TODO: which should we use?
-        # TODO: message dropout does not account for the avg used in the edge_attr so we are kind of cheating there... maybe use only the rating as an edge attr?
-        edge_attr.append(rating - user_mean_ratings.loc[userId])
-        # edge_attr.append(rating)
+        # TODO: message dropout does not account for the avg used in the edge_attr so we are kind of cheating there...
+        # add edge user ----> item with weight: rating - avg_user_rating
+        user_avg = (user_mean_ratings.loc[userId] + 2.5) / 2
+        if not binary or rating >= user_avg:
+            edge_index[0].append(user_to_node_ID[userId])
+            edge_index[1].append(item_to_node_ID[itemId])
+            if not binary:
+                edge_attr.append(rating - user_avg)
 
         # add edge item ----> user with weight: rating - avg_item_rating
-        edge_index[0].append(item_to_node_ID[itemId])
-        edge_index[1].append(user_to_node_ID[userId])
-        # TODO: which should we use?
-        edge_attr.append(rating - item_mean_ratings.loc[itemId])
-        # edge_attr.append(rating)
+        item_avg = (item_mean_ratings.loc[itemId] + 2.5) / 2
+        if not binary or rating >= item_avg:
+            edge_index[0].append(item_to_node_ID[itemId])
+            edge_index[1].append(user_to_node_ID[userId])
+            if not binary:
+                edge_attr.append(rating - item_avg)
+
+    print(f'Used {len(edge_index[0])} (directed) edges ({len(edge_index[0]) / (2 * len(interactions)) * 100.0:.2f}% of all possible) for graph.')
+
     # return Data object representing the graph
     return Data(
         item_features=item_features,
         user_features=user_features,
         edge_index=torch.tensor(edge_index, dtype=torch.long),
-        edge_attr=torch.tensor(edge_attr, dtype=torch.float),
+        edge_attr=torch.tensor(edge_attr, dtype=torch.float) if not binary else None,
     )
 
 
