@@ -214,8 +214,10 @@ def train_model(model: NCF, train_dataset, val_dataset: PointwiseDataset,
             previous_running_loss_or_ndcg = val_loss if isinstance(train_dataset, PointwiseDataset) else val_ndcg
 
     if wandb is not None:
+        best_logs = {'best_ndcg@10': best_ndcg}
         if best_val_loss is not None:
-            wandb.log({'best_val_loss': best_val_loss, 'best_ndcg@10': best_ndcg})
+            best_logs['best_val_loss'] = best_val_loss
+        wandb.log(best_logs)
 
     # save model (its weights)
     if final_model_path is not None:

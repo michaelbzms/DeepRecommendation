@@ -23,15 +23,15 @@ def create_graph(interactions: pd.DataFrame, item_features, user_features, item_
         edge_index[1].append(item_to_node_ID[itemId])
         # TODO: which should we use?
         # TODO: message dropout does not account for the avg used in the edge_attr so we are kind of cheating there... maybe use only the rating as an edge attr?
-        # edge_attr.append(rating - user_mean_ratings.loc[userId])
-        edge_attr.append(rating)
+        edge_attr.append(rating - user_mean_ratings.loc[userId])
+        # edge_attr.append(rating)
 
         # add edge item ----> user with weight: rating - avg_item_rating
         edge_index[0].append(item_to_node_ID[itemId])
         edge_index[1].append(user_to_node_ID[userId])
         # TODO: which should we use?
-        # edge_attr.append(rating - item_mean_ratings.loc[itemId])
-        edge_attr.append(rating)
+        edge_attr.append(rating - item_mean_ratings.loc[itemId])
+        # edge_attr.append(rating)
     # return Data object representing the graph
     return Data(
         item_features=item_features,

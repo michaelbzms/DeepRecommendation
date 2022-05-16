@@ -59,7 +59,8 @@ class DynamicProfilesProvider(DynamicContentProvider):
         user_matrix = multi_hot_encode(user_ratings['movieId'], rated_items_ids).astype(np.float64)
         if not ignore_ratings:
             # TODO: This will work but ONLY IF ratings are ORDERED by movieId when we create the dataset. Else the ratings will be misplaced! Be careful!
-            user_matrix[user_matrix == 1] = np.concatenate((user_ratings['rating'] - user_ratings['meanRating']).values)
+            # TODO: nudge avg rating towards neutral 2.5
+            user_matrix[user_matrix == 1] = np.concatenate((user_ratings['rating'] - ((user_ratings['meanRating'] + 2.5) / 2)).values)
             # check: e.g. user_matrix[0, rated_movies == 'tt0114709']
         user_matrix = torch.FloatTensor(user_matrix)  # convert to tensor
 

@@ -61,7 +61,7 @@ class NGCFConv(MessagePassing):
         # add self-message
         out += self.W1(x)
 
-        return out
+        return F.leaky_relu(out)
 
     def message(self, x_j, x_i, norm, weight):
         """
@@ -75,6 +75,137 @@ class NGCFConv(MessagePassing):
         else:
             messages = norm.view(-1, 1) * (self.W1(x_j) + self.W2(x_j * x_i))
         return messages
+
+
+class LightGCNConv(MessagePassing):
+    """
+    LightGCN Conv layer implementation taken and modified from:
+    https://medium.com/stanford-cs224w/recommender-systems-with-gnns-in-pyg-d8301178e377
+    """
+    def __init__(self, message_dropout=0.1, **kwargs):
+        super(LightGCNConv, self).__init__(aggr='add', **kwargs)
+        self.message_dropout = message_dropout
+        # no extra parameters
+
+    def forward(self, x, edge_index, edge_attr=None):
+        if self.message_dropout is not None and self.training:
+            # message dropout -> randomly ignore p % of edges in the graph
+            mask = F.dropout(torch.ones(edge_index.shape[1]), self.message_dropout, self.training) > 0
+            edge_index_to_use = edge_index[:, mask]
+            edge_attr_to_use = edge_attr[mask] if edge_attr is not None else None
+            del mask
+        else:
+            edge_index_to_use = edge_index
+            edge_attr_to_use = edge_attr
+
+        # Compute normalization 1/sqrt{|Ni|*|Nj|} where i = from_ and j = to_
+        from_, to_ = edge_index_to_use
+        deg = degree(to_, x.size(0), dtype=x.dtype)
+        deg_inv_sqrt = deg.pow(-0.5)
+        deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+        norm = deg_inv_sqrt[from_] * deg_inv_sqrt[to_]
+        del from_, to_, deg_inv_sqrt, deg
+
+        # Start propagating messages
+        out = self.propagate(edge_index_to_use, x=x, norm=norm, weight=edge_attr_to_use)
+        if self.message_dropout is not None and self.training:
+            del edge_index_to_use, edge_attr_to_use
+        del norm
+
+        return out
+
+    def message(self, x_j, norm, weight):
+        """
+        Implements message from node j to node i. To use extra args they must be passed in propagate().
+        Using '_i' and '_j' variable names somehow associates that arg with the node.
+        Both norm and the rest are a vector of 1d length [num_edges].
+        """
+        # calculate all messages
+        if weight is not None:
+            messages = weight.view(-1, 1) * norm.view(-1, 1) * x_j
+        else:
+            messages = norm.view(-1, 1) * x_j
+        return messages
+
+
+class LightGCN(GNN_NCF):
+    def __init__(self, item_dim, user_dim, num_gnn_layers: int, node_emb=64, mlp_dense_layers=None,
+                 dropout_rate=0.2, use_dot_product=False, message_dropout=0.1):
+        super(LightGCN, self).__init__()
+        if mlp_dense_layers is None: mlp_dense_layers = [256, 128]  # default
+        self.kwargs = {'item_dim': item_dim,
+                       'user_dim': user_dim,
+                       'node_emb': node_emb,
+                       'num_gnn_layers': num_gnn_layers,
+                       'mlp_dense_layers': mlp_dense_layers,
+                       'use_dot_product': use_dot_product,     # overrides mlp_dense_layers
+                       'dropout_rate': dropout_rate,
+                       'message_dropout': message_dropout}
+
+        # Item embeddings layer
+        self.item_embeddings = nn.Sequential(
+            nn.Linear(item_dim, node_emb),
+            nn.ReLU()
+        )
+
+        # User embeddings layer
+        self.user_embeddings = nn.Sequential(
+            nn.Linear(user_dim, node_emb),
+            nn.ReLU()
+        )
+
+        # Light GCN convolutions to fine-tune previous embeddings using the graph
+        self.gnn_convs = nn.ModuleList(
+            [LightGCNConv(message_dropout=message_dropout) for _ in range(num_gnn_layers)]
+        )
+
+        # MLP layers or simply use dot product
+        if use_dot_product:
+            self.MLP = None
+        else:
+            self.MLP = build_MLP_layers(node_emb * 2,
+                                        mlp_dense_layers,
+                                        dropout_rate=dropout_rate)
+
+    def get_model_parameters(self) -> dict[str]:
+        return self.kwargs
+
+    def is_dataset_compatible(self, dataset_class):
+        return issubclass(dataset_class, GraphPointwiseDataset) or issubclass(dataset_class, GraphRankingDataset)
+
+    def forward(self, graph, userIds, itemIds, device):
+        # embed item and user input features
+        item_emb = self.item_embeddings(graph.item_features)
+        user_emb = self.user_embeddings(graph.user_features)
+
+        # stack nodes with items first
+        graph_emb = torch.vstack([item_emb, user_emb])
+        del item_emb, user_emb   # remove any unnecessary memory
+
+        # encode all graph nodes with GNN
+        hs = [graph_emb]
+        for gnn_conv in self.gnn_convs:
+            graph_emb = gnn_conv(graph_emb, graph.edge_index, graph.edge_attr)
+            hs.append(graph_emb)
+
+        # aggregate all embeddings (including original one) into one node embedding
+        combined_graph_emb = torch.mean(torch.stack(hs, dim=0), dim=0)
+
+        # find embeddings of items in batch
+        item_emb = combined_graph_emb[itemIds.long()]
+
+        # find embeddings of users in batch
+        user_emb = combined_graph_emb[userIds.long()]
+
+        if self.MLP is not None:
+            # use these to forward the NCF model
+            combined = torch.cat((item_emb, user_emb), dim=1)
+            out = self.MLP(combined)
+        else:
+            # simple dot product
+            out = torch.bmm(user_emb.unsqueeze(1), item_emb.unsqueeze(2)).view(-1, 1)
+
+        return out
 
 
 class NGCF(GNN_NCF):
@@ -150,7 +281,6 @@ class NGCF(GNN_NCF):
         hs = []
         for gnn_conv in self.gnn_convs:
             graph_emb = gnn_conv(graph_emb, graph.edge_index, graph.edge_attr)
-            graph_emb = F.leaky_relu(graph_emb)
             hs.append(graph_emb)
 
         # concat all intermediate representations
