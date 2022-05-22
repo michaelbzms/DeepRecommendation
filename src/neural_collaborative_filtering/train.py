@@ -177,6 +177,7 @@ def train_model(model: NCF, train_dataset, val_dataset: PointwiseDataset,
                     best_running_val_loss_or_ndcg = val_ndcg              # early stop using val_ndcg
                 else:
                     best_running_val_loss_or_ndcg = val_loss              # else use normal val loss
+                    best_val_loss = val_loss
                 # reset counter for patience
                 early_stop_times = 0
                 # reset max patience

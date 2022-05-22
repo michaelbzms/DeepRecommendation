@@ -17,12 +17,10 @@ class AdvancedNCF(NCF):
         self.kwargs = {'item_dim': item_dim, 'item_emb': item_emb, 'user_emb': user_emb,
                        'mlp_dense_layers': mlp_dense_layers, 'dropout_rate': dropout_rate}
         self.item_embeddings = nn.Sequential(
-            nn.Linear(item_dim, item_emb),
-            nn.ReLU()
+            nn.Linear(item_dim, item_emb)
         )
         self.user_embeddings = nn.Sequential(
-            nn.Linear(item_emb, user_emb),         # TODO: this inputs item_emb
-            nn.ReLU()
+            nn.Linear(item_emb, user_emb)         # TODO: this inputs item_emb
         )
         self.MLP = build_MLP_layers(item_emb + user_emb, mlp_dense_layers, dropout_rate=dropout_rate)
 
@@ -60,12 +58,10 @@ class AttentionNCF(NCF):
                        'mlp_dense_layers': mlp_dense_layers, 'dropout_rate': dropout_rate}
         # embedding layers
         self.ItemEmbeddings = nn.Sequential(
-            nn.Linear(item_dim, item_emb),
-            nn.ReLU()
+            nn.Linear(item_dim, item_emb)
         )
         self.UserEmbeddings = nn.Sequential(
-            nn.Linear(item_dim, user_emb),
-            nn.ReLU()
+            nn.Linear(item_dim, user_emb)
         )
         # build attention network
         if att_dense is not None:

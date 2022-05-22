@@ -18,12 +18,10 @@ class BasicNCF(NCF):
                        'mlp_dense_layers': mlp_dense_layers,
                        'dropout_rate': dropout_rate}
         self.item_embeddings = nn.Sequential(
-            nn.Linear(item_dim, item_emb),
-            nn.ReLU()
+            nn.Linear(item_dim, item_emb)
         )
         self.user_embeddings = nn.Sequential(
-            nn.Linear(user_dim, user_emb),
-            nn.ReLU()
+            nn.Linear(user_dim, user_emb)
         )
         # Build MLP according to params
         self.MLP = build_MLP_layers(item_emb + user_emb, mlp_dense_layers, dropout_rate=dropout_rate)
