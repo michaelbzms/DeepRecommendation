@@ -144,14 +144,12 @@ class LightGCN(GNN_NCF):
 
         # Item embeddings layer
         self.item_embeddings = nn.Sequential(
-            nn.Linear(item_dim, node_emb),
-            nn.ReLU()
+            nn.Linear(item_dim, node_emb)
         )
 
         # User embeddings layer
         self.user_embeddings = nn.Sequential(
-            nn.Linear(user_dim, node_emb),
-            nn.ReLU()
+            nn.Linear(user_dim, node_emb)
         )
 
         # Light GCN convolutions to fine-tune previous embeddings using the graph
@@ -228,12 +226,10 @@ class NGCF(GNN_NCF):
         self.extra_emb_layers = extra_emb_layers
         if extra_emb_layers:
             self.item_embeddings = nn.Sequential(
-                nn.Linear(item_dim, node_emb),
-                nn.ReLU()
+                nn.Linear(item_dim, node_emb)
             )
             self.user_embeddings = nn.Sequential(
-                nn.Linear(user_dim, node_emb),
-                nn.ReLU()
+                nn.Linear(user_dim, node_emb)
             )
             gnn_input_dim = node_emb
         else:

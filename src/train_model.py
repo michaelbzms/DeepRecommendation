@@ -197,8 +197,8 @@ if __name__ == '__main__':
 
     # prepare model, train and val datasets (Pointwise val dataset always needed for NDCG eval)
     # model, training_dataset, val_dataset, test_dataset = prepare_fixedinput_ncf(ranking=ranking, use_features=use_features, onehot_users=onehot_users)
-    # model, training_dataset, val_dataset, test_dataset = prepare_attention_ncf(ranking=ranking)
-    model, training_dataset, val_dataset, test_dataset = prepare_graph_ncf(ranking=ranking, use_features=use_features)
+    model, training_dataset, val_dataset, test_dataset = prepare_attention_ncf(ranking=ranking)
+    # model, training_dataset, val_dataset, test_dataset = prepare_graph_ncf(ranking=ranking, use_features=use_features)
 
     print(model)
 

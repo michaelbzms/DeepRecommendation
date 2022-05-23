@@ -12,16 +12,28 @@ if __name__ == '__main__':
     # define experiments to run #
     #############################
     fixed_experiments = [
-        # {'use_features': True,
-        #  'use_ranking': False,
+        # {'use_features': False,
+        #  'use_ranking': True,
         #  'onehot_users': False,
         #  'model_kwargs': {
         #      'item_emb': 128, 'user_emb': 128,
         #      'mlp_dense_layers': [256],
         #      'dropout_rate': 0.2
         #  },
-        #  'lr': 1e-3,
-        #  'batch_size': 128,
+        #  'lr': 7e-4,
+        #  'batch_size': 512,
+        #  'weight_decay': 1e-5,
+        #  },
+        # {'use_features': True,
+        #  'use_ranking': True,
+        #  'onehot_users': False,
+        #  'model_kwargs': {
+        #      'item_emb': 128, 'user_emb': 128,
+        #      'mlp_dense_layers': [256],
+        #      'dropout_rate': 0.2
+        #  },
+        #  'lr': 7e-4,
+        #  'batch_size': 512,
         #  'weight_decay': 1e-5,
         #  },
         # {'use_features': True,
@@ -36,17 +48,17 @@ if __name__ == '__main__':
         #  'batch_size': 512,
         #  'weight_decay': 1e-5,
         #  },
-        # {'use_features': False,
-        #  'use_ranking': False,
-        #  'model_kwargs': {
-        #      'item_emb': 256, 'user_emb': 256,
-        #      'mlp_dense_layers': [512],
-        #      'dropout_rate': 0.2
-        #  },
-        #  'lr': 1e-3,
-        #  'batch_size': 64,
-        #  'weight_decay': 1e-5
-        #  },
+        {'use_features': True,
+         'use_ranking': False,
+         'model_kwargs': {
+             'item_emb': 128, 'user_emb': 128,
+             'mlp_dense_layers': [256],
+             'dropout_rate': 0.2
+         },
+         'lr': 1e-3,
+         'batch_size': 128,
+         'weight_decay': 1e-5
+         },
         # {'use_features': False,
         #  'use_ranking': False,
         #  'model_kwargs': {
@@ -94,18 +106,18 @@ if __name__ == '__main__':
     ]
 
     attention_experiments = [
-        {'use_features': True,
-         'use_ranking': True,
-         'model_kwargs': {
-             'item_emb': 128, 'user_emb': 128,
-             'att_dense': None,
-             'mlp_dense_layers': [256],
-             'dropout_rate': 0.2
-         },
-         'lr': 7e-4,
-         'batch_size': 512,
-         'weight_decay': 1e-5
-         },
+        # {'use_features': True,
+        #  'use_ranking': True,
+        #  'model_kwargs': {
+        #      'item_emb': 128, 'user_emb': 128,
+        #      'att_dense': None,
+        #      'mlp_dense_layers': [256],
+        #      'dropout_rate': 0.2
+        #  },
+        #  'lr': 7e-4,
+        #  'batch_size': 512,
+        #  'weight_decay': 1e-5
+        #  },
         # {'use_features': True,
         #  'use_ranking': False,
         #  'model_kwargs': {
@@ -133,100 +145,19 @@ if __name__ == '__main__':
     ]
 
     graph_experiments = [
-        # max memory
-        # {'use_features': True,
-        #  'use_ranking': False,
-        #  'model_kwargs': {
-        #      'node_emb': 128,
-        #      'gnn_hidden_layers': [128, 128],
-        #      'mlp_dense_layers': [128],
-        #      'dropout_rate': 0.2,
-        #      'message_dropout': 0.1
-        #  },
-        #  'lr': 1e-3,
-        #  'batch_size': 128,
-        #  'weight_decay': 1e-5
-        #  },
-        # {'use_features': False,
-        #  'use_ranking': False,
-        #  'model_kwargs': {
-        #      'node_emb': 64,
-        #      'gnn_hidden_layers': [64],
-        #      'mlp_dense_layers': [128],
-        #      'dropout_rate': 0.2,
-        #      'message_dropout': 0.1
-        #  },
-        #  'lr': 1e-3,
-        #  'batch_size': 128,
-        #  'weight_decay': 1e-5
-        #  },
-
-
-        # {'use_features': True,
-        #  'use_ranking': False,
-        #  'model_kwargs': {
-        #      'node_emb': 64,
-        #      'gnn_hidden_layers': [64, 64],
-        #      'mlp_dense_layers': [128],
-        #      'dropout_rate': 0.2,
-        #      'message_dropout': 0.1
-        #  },
-        #  'lr': 3e-4,
-        #  'batch_size': 256,
-        #  'weight_decay': 1e-5
-        #  },
-        # {'use_features': True,
-        #  'use_ranking': False,
-        #  'model_kwargs': {
-        #      'node_emb': 64,
-        #      'gnn_hidden_layers': [64, 64],
-        #      'mlp_dense_layers': [256],
-        #      'dropout_rate': 0.2,
-        #      'message_dropout': None
-        #  },
-        #  'lr': 2e-3,
-        #  'batch_size': 256,
-        #  'weight_decay': 1e-5
-        #  },
-        # {'use_features': False,
-        #  'use_ranking': False,
-        #  'model_kwargs': {
-        #      'node_emb': 64,
-        #      'gnn_hidden_layers': [64, 64],
-        #      'mlp_dense_layers': [256],
-        #      'dropout_rate': 0.2,
-        #      'message_dropout': 0.1
-        #  },
-        #  'lr': 2e-3,
-        #  'batch_size': 256,
-        #  'weight_decay': 1e-5
-        #  },
-        # {'use_features': False,
-        #  'use_ranking': False,
-        #  'model_kwargs': {
-        #      'node_emb': 64,
-        #      'gnn_hidden_layers': [64, 64, 64],
-        #      'mlp_dense_layers': [256],
-        #      'dropout_rate': 0.2,
-        #      'message_dropout': 0.1
-        #  },
-        #  'lr': 3e-3,
-        #  'batch_size': 256,
-        #  'weight_decay': 1e-5
-        #  },
-        # {'use_features': False,
-        #  'use_ranking': False,
-        #  'model_kwargs': {
-        #      'node_emb': 64,
-        #      'gnn_hidden_layers': [64, 64, 32, 32],
-        #      'mlp_dense_layers': [128],
-        #      'dropout_rate': 0.2,
-        #      'message_dropout': 0.1
-        #  },
-        #  'lr': 1e-3,
-        #  'batch_size': 128,
-        #  'weight_decay': 1e-5
-        #  },
+        {'use_features': True,
+         'use_ranking': False,
+         'model_kwargs': {
+             'node_emb': 128,
+             'gnn_hidden_layers': [64, 64],
+             'mlp_dense_layers': [256],
+             'dropout_rate': 0.2,
+             'message_dropout': 0.0
+         },
+         'lr': 1e-3,
+         'batch_size': 1024,
+         'weight_decay': 1e-5
+         },
     ]
 
     for exp in fixed_experiments:
