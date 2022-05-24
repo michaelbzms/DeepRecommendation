@@ -1,3 +1,5 @@
+import sys
+
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -94,35 +96,38 @@ class AttentionNCF(NCF):
         # Note:  Use detach or not?  -> using it gives slightly worse results
         rated_emb = self.ItemEmbeddings(rated_items)
 
-        # attention on rated items
-        """ Note: the one that interleaves matters! I think this works correctly into (B, I) shape 
-        because the first I elements contain all different rated items and they become the first row of length I """
+        """ Attention on rated items
+        Note: the one that interleaves matters! I think this works correctly into (B, I) shape 
+        because the first I elements contain all different rated items and they become the first row of length I 
+        
+        Optimization: forward it only on valid item pairs by pre-filtering based on unrated items
+        """
+        # create attention input
         candidate_interleaved = candidate_item_embeddings.repeat_interleave(I, dim=0)
         rated_interleaved = rated_emb.repeat(B, 1)
         attNetInput = torch.cat((candidate_interleaved, rated_interleaved), dim=1)
-        attention_scores = self.AttentionNet(attNetInput).view(B, I)
 
         # mask unrated items per user (!) - otherwise there may be high weights on 0 entries
-        attention_scores[user_matrix == 0.0] = -float('inf')    # so that softmax gives this a 0 attention weight
+        attNetInput = attNetInput.view(B, I, -1)[user_matrix != 0]
+
+        # forward AttentionNet only to valid candidate - rated item combos (optimization)
+        attOut = self.AttentionNet(attNetInput).view(-1)
+
+        # create attention scores matrix
+        attention_scores = -float('inf') * torch.ones((B, I), dtype=torch.float32, device=attOut.device)
+        attention_scores[user_matrix != 0.0] = attOut
 
         # mask item we are trying to rate for each user if we are training so that the network does not learn to overfit
         if self.training:
-            # TODO: atol is risky so do this just to be safe for now
-            not_ok = True
-            _mask = None
-            atol = 1e-5
-            while not_ok and atol <= 1e-2:
-                try:
-                    # TODO: this is probably expensive...
-                    _mask = torch.isclose(candidate_interleaved, rated_interleaved, atol=atol).all(dim=1).view(B, I)
-                    not_ok = _mask.shape[0] != B
-                except:
-                    not_ok = True
-                if not_ok:
-                    print("Warning: Not ok!")
-                atol *= 10
-            # perform mask
-            attention_scores[_mask] = -float('inf')
+            try:
+                # TODO: atol is risky because we might accidentally get others or miss valid ones in which case view will throw an error..
+                _mask = torch.isclose(candidate_interleaved, rated_interleaved, atol=1e-5).all(dim=1).view(B, I)
+                if _mask.shape[0] != B:    # should not happen for a reasonable atol value
+                    print("Warning: Something went wrong!", file=sys.stderr)
+                # perform mask
+                attention_scores[_mask] = -float('inf')
+            except:
+                print("Warning: Could not calculate training mask. Ignoring masking this time.", file=sys.stderr)  # should not happen
 
         # pass through softmax
         attention_scores = F.softmax(attention_scores, dim=1)   # (B, I)
