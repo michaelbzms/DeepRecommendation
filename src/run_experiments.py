@@ -107,58 +107,24 @@ if __name__ == '__main__':
 
     attention_experiments = [
         # {'use_features': True,
-        #  'use_ranking': True,
-        #  'model_kwargs': {
-        #      'item_emb': 128, 'user_emb': 128,
-        #      'att_dense': None,
-        #      'mlp_dense_layers': [256],
-        #      'dropout_rate': 0.2
-        #  },
-        #  'lr': 7e-4,
-        #  'batch_size': 512,
-        #  'weight_decay': 1e-5
-        #  },
-        # {'use_features': True,
         #  'use_ranking': False,
         #  'model_kwargs': {
-        #      'item_emb': 256, 'user_emb': 256,
-        #      'att_dense': None,
+        #      'item_emb': 128, 'user_emb': 128,
+        #      'att_dense': 128,
+        #      'use_cos_sim_instead': False,
         #      'mlp_dense_layers': [256],
         #      'dropout_rate': 0.2
         #  },
         #  'lr': 1e-3,
-        #  'batch_size': 64,
+        #  'batch_size': 128,
         #  'weight_decay': 1e-5
         #  },
         {'use_features': True,
          'use_ranking': False,
          'model_kwargs': {
-             'item_emb': 128, 'user_emb': 128,
-             'att_dense': 4,
-             'mlp_dense_layers': [256],
-             'dropout_rate': 0.2
-         },
-         'lr': 1e-3,
-         'batch_size': 128,
-         'weight_decay': 1e-5
-         },
-        {'use_features': True,
-         'use_ranking': False,
-         'model_kwargs': {
-             'item_emb': 128, 'user_emb': 128,
-             'att_dense': 16,
-             'mlp_dense_layers': [256],
-             'dropout_rate': 0.2
-         },
-         'lr': 1e-3,
-         'batch_size': 128,
-         'weight_decay': 1e-5
-         },
-        {'use_features': True,
-         'use_ranking': False,
-         'model_kwargs': {
-             'item_emb': 128, 'user_emb': 128,
-             'att_dense': 32,
+             'item_emb': 256, 'user_emb': 128,
+             'att_dense': None,
+             'use_cos_sim_instead': True,
              'mlp_dense_layers': [256],
              'dropout_rate': 0.2
          },
@@ -169,19 +135,19 @@ if __name__ == '__main__':
     ]
 
     graph_experiments = [
-        {'use_features': True,
-         'use_ranking': False,
-         'model_kwargs': {
-             'node_emb': 128,
-             'gnn_hidden_layers': [64, 64],
-             'mlp_dense_layers': [256],
-             'dropout_rate': 0.2,
-             'message_dropout': 0.0
-         },
-         'lr': 1e-3,
-         'batch_size': 1024,
-         'weight_decay': 1e-5
-         },
+        # {'use_features': True,
+        #  'use_ranking': False,
+        #  'model_kwargs': {
+        #      'node_emb': 128,
+        #      'gnn_hidden_layers': [64, 64],
+        #      'mlp_dense_layers': [256],
+        #      'dropout_rate': 0.2,
+        #      'message_dropout': 0.0
+        #  },
+        #  'lr': 1e-3,
+        #  'batch_size': 1024,
+        #  'weight_decay': 1e-5
+        #  },
     ]
 
     for exp in fixed_experiments:

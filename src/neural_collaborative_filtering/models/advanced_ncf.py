@@ -51,32 +51,46 @@ class AdvancedNCF(NCF):
 
 class AttentionNCF(NCF):
     def __init__(self, item_dim, item_emb=128, user_emb=128, att_dense=None,
-                 mlp_dense_layers=None, dropout_rate=0.2):
+                 mlp_dense_layers=None, use_cos_sim_instead=True, dropout_rate=0.2):
         super(AttentionNCF, self).__init__()
         if mlp_dense_layers is None:
             mlp_dense_layers = [256, 128]           # default
         # save the (hyper) parameters needed to construct this object when saving model
-        self.kwargs = {'item_dim': item_dim, 'item_emb': item_emb, 'user_emb': user_emb, 'att_dense': att_dense,
-                       'mlp_dense_layers': mlp_dense_layers, 'dropout_rate': dropout_rate}
+        self.kwargs = {
+            'item_dim': item_dim,
+            'item_emb': item_emb,
+            'user_emb': user_emb,
+            'att_dense': att_dense,
+            'mlp_dense_layers': mlp_dense_layers,
+            'dropout_rate': dropout_rate,
+            'use_cos_sim_instead': use_cos_sim_instead
+        }
+
+        self.use_cos_sim_instead = use_cos_sim_instead
+
         # embedding layers
         self.ItemEmbeddings = nn.Sequential(
             nn.Linear(item_dim, item_emb)
         )
+
         self.UserEmbeddings = nn.Sequential(
             nn.Linear(item_dim, user_emb)
         )
-        # build attention network
-        if att_dense is not None:
-            self.AttentionNet = nn.Sequential(
-                nn.Linear(2 * item_emb, att_dense),
-                nn.ReLU(),
-                nn.Dropout(dropout_rate),
-                nn.Linear(att_dense, 1)
-            )
-        else:
-            self.AttentionNet = nn.Sequential(
-                nn.Linear(2 * item_emb, 1)
-            )
+
+        # build attention network if not using cosine similarity
+        if not self.use_cos_sim_instead:
+            if att_dense is not None:
+                self.AttentionNet = nn.Sequential(
+                    nn.Linear(2 * item_emb, att_dense),
+                    nn.ReLU(),
+                    nn.Dropout(dropout_rate),
+                    nn.Linear(att_dense, 1)
+                )
+            else:
+                self.AttentionNet = nn.Sequential(
+                    nn.Linear(2 * item_emb, 1)
+                )
+
         # Build MLP according to params
         self.MLP = build_MLP_layers(item_emb + user_emb, mlp_dense_layers, dropout_rate=dropout_rate)
 
@@ -99,23 +113,40 @@ class AttentionNCF(NCF):
         """ Attention on rated items
         Note: the one that interleaves matters! I think this works correctly into (B, I) shape 
         because the first I elements contain all different rated items and they become the first row of length I 
-        
-        Optimization: forward it only on valid item pairs by pre-filtering based on unrated items
         """
-        # create attention input
+
+        # create attention input pairs (needed for masking also)
         candidate_interleaved = candidate_item_embeddings.repeat_interleave(I, dim=0)
         rated_interleaved = rated_emb.repeat(B, 1)
-        attNetInput = torch.cat((candidate_interleaved, rated_interleaved), dim=1)
+        if self.use_cos_sim_instead:
+            def cos_sim(a: torch.Tensor, b: torch.Tensor):
+                """
+                Computes the cosine similarity cos_sim(a[i], b[j]) for all i and j.
+                :return: Matrix with res[i][j]  = cos_sim(a[i], b[j])
+                """
+                if len(a.shape) == 1: a = a.unsqueeze(0)
+                if len(b.shape) == 1: b = b.unsqueeze(0)
+                a_norm = torch.nn.functional.normalize(a, p=2, dim=1)
+                b_norm = torch.nn.functional.normalize(b, p=2, dim=1)
+                return torch.mm(a_norm, b_norm.transpose(0, 1))
+            # calculate all similarities
+            attention_scores = cos_sim(candidate_item_embeddings, rated_emb)
+            # mask unrated
+            attention_scores[user_matrix == 0.0] = -float('inf')
+        else:
+            # create attention input
+            attNetInput = torch.cat((candidate_interleaved, rated_interleaved), dim=1)
 
-        # mask unrated items per user (!) - otherwise there may be high weights on 0 entries
-        attNetInput = attNetInput.view(B, I, -1)[user_matrix != 0]
+            # Optimization: forward AttentionNet only on valid item pairs by pre-filtering based on unrated items
+            # mask unrated items per user (!) - otherwise there may be high weights on 0 entries
+            attNetInput = attNetInput.view(B, I, -1)[user_matrix != 0]
 
-        # forward AttentionNet only to valid candidate - rated item combos (optimization)
-        attOut = self.AttentionNet(attNetInput).view(-1)
+            # forward AttentionNet only to valid candidate - rated item combos (optimization)
+            attOut = self.AttentionNet(attNetInput).view(-1)
 
-        # create attention scores matrix
-        attention_scores = -float('inf') * torch.ones((B, I), dtype=torch.float32, device=attOut.device)
-        attention_scores[user_matrix != 0.0] = attOut
+            # create attention scores matrix
+            attention_scores = -float('inf') * torch.ones((B, I), dtype=torch.float32, device=attOut.device)
+            attention_scores[user_matrix != 0.0] = attOut
 
         # mask item we are trying to rate for each user if we are training so that the network does not learn to overfit
         if self.training:

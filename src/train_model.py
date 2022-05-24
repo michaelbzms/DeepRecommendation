@@ -219,7 +219,7 @@ if __name__ == '__main__':
     # train and save result at `final_model_save_path`
     monitored_metrics = train_model(model, train_dataset=training_dataset, val_dataset=val_dataset,
                                     lr=1e-3, weight_decay=1e-5,
-                                    batch_size=512,
+                                    batch_size=128,
                                     val_batch_size=val_batch_size,  # not important
                                     early_stop=True, final_model_path=final_model_path,
                                     checkpoint_model_path=checkpoint_model_path,
