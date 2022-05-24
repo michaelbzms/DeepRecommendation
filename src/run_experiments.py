@@ -122,7 +122,7 @@ if __name__ == '__main__':
         {'use_features': True,
          'use_ranking': False,
          'model_kwargs': {
-             'item_emb': 256, 'user_emb': 128,
+             'item_emb': 128, 'user_emb': 128,
              'att_dense': None,
              'use_cos_sim_instead': True,
              'mlp_dense_layers': [256],

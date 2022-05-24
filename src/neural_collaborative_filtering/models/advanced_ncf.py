@@ -116,43 +116,43 @@ class AttentionNCF(NCF):
         """
 
         # create attention input pairs (needed for masking also)
-        candidate_interleaved = candidate_item_embeddings.repeat_interleave(I, dim=0)
-        rated_interleaved = rated_emb.repeat(B, 1)
+        candidate_interleaved_full = candidate_item_embeddings.repeat_interleave(I, dim=0)
+        rated_interleaved_full = rated_emb.repeat(B, 1)
+
+        # Optimization: forward AttentionNet / do cos similarity only on valid item pairs by pre-filtering
+        # based on unrated items. We need to mask unrated items per user as
+        # otherwise there will be attention given on 0 entries of the user matrix.
+        candidate_interleaved = candidate_interleaved_full.view(B, I, -1)[user_matrix != 0]
+        rated_interleaved = rated_interleaved_full.view(B, I, -1)[user_matrix != 0]
+
         if self.use_cos_sim_instead:
-            def cos_sim(a: torch.Tensor, b: torch.Tensor):
-                """
-                Computes the cosine similarity cos_sim(a[i], b[j]) for all i and j.
-                :return: Matrix with res[i][j]  = cos_sim(a[i], b[j])
-                """
+            def cos_sim(a: torch.Tensor, b: torch.Tensor, only_dot_product=False):
                 if len(a.shape) == 1: a = a.unsqueeze(0)
                 if len(b.shape) == 1: b = b.unsqueeze(0)
-                a_norm = torch.nn.functional.normalize(a, p=2, dim=1)
-                b_norm = torch.nn.functional.normalize(b, p=2, dim=1)
-                return torch.mm(a_norm, b_norm.transpose(0, 1))
-            # calculate all similarities
-            attention_scores = cos_sim(candidate_item_embeddings, rated_emb)
-            # mask unrated
-            attention_scores[user_matrix == 0.0] = -float('inf')
-        else:
-            # create attention input
-            attNetInput = torch.cat((candidate_interleaved, rated_interleaved), dim=1)
+                if not only_dot_product:  # only dot product is not good, too restrictive maybe
+                    a = torch.nn.functional.normalize(a, p=2, dim=1)
+                    b = torch.nn.functional.normalize(b, p=2, dim=1)
+                # dot product of (optionally normalized) batched vectors
+                return torch.bmm(a.unsqueeze(1), b.unsqueeze(2)).view(-1)
 
-            # Optimization: forward AttentionNet only on valid item pairs by pre-filtering based on unrated items
-            # mask unrated items per user (!) - otherwise there may be high weights on 0 entries
-            attNetInput = attNetInput.view(B, I, -1)[user_matrix != 0]
+            # calculate all similarities
+            attOut = cos_sim(candidate_interleaved, rated_interleaved)
+        else:
+            # concatenate two input embeddings
+            attNetInput = torch.cat((candidate_interleaved, rated_interleaved), dim=1)
 
             # forward AttentionNet only to valid candidate - rated item combos (optimization)
             attOut = self.AttentionNet(attNetInput).view(-1)
 
-            # create attention scores matrix
-            attention_scores = -float('inf') * torch.ones((B, I), dtype=torch.float32, device=attOut.device)
-            attention_scores[user_matrix != 0.0] = attOut
+        # create attention scores matrix
+        attention_scores = -float('inf') * torch.ones((B, I), dtype=torch.float32, device=attOut.device)
+        attention_scores[user_matrix != 0.0] = attOut
 
         # mask item we are trying to rate for each user if we are training so that the network does not learn to overfit
         if self.training:
             try:
                 # TODO: atol is risky because we might accidentally get others or miss valid ones in which case view will throw an error..
-                _mask = torch.isclose(candidate_interleaved, rated_interleaved, atol=1e-5).all(dim=1).view(B, I)
+                _mask = torch.isclose(candidate_interleaved_full, rated_interleaved_full, atol=1e-5).all(dim=1).view(B, I)
                 if _mask.shape[0] != B:    # should not happen for a reasonable atol value
                     print("Warning: Something went wrong!", file=sys.stderr)
                 # perform mask
@@ -178,7 +178,7 @@ class AttentionNCF(NCF):
                 att_stats['sum'].loc[candidate_names[i]] += att_scores_np[i, :]
                 att_stats['count'].loc[candidate_names[i]] += counts[i, :]
 
-        # aggregate item features based on ratings and attention weights
+        # aggregate item features based on ratings and attention weights to build user profiles
         attended_user_matrix = torch.mul(attention_scores, user_matrix)
         user_estimated_features = torch.matmul(attended_user_matrix, rated_items)   # TODO: or aggregate item embeddings? -> makes user part cheaper
 
