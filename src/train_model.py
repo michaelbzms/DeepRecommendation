@@ -77,7 +77,7 @@ def prepare_attention_ncf(ranking=False, model_kwargs=None):
     else:
         model = AttentionNCF(dpp.get_item_feature_dim(),
                              item_emb=128, user_emb=128,
-                             att_dense=None,
+                             att_dense=4,
                              mlp_dense_layers=[256],
                              dropout_rate=dropout_rate)
 

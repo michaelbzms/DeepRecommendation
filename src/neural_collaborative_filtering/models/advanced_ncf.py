@@ -97,10 +97,33 @@ class AttentionNCF(NCF):
         # attention on rated items
         """ Note: the one that interleaves matters! I think this works correctly into (B, I) shape 
         because the first I elements contain all different rated items and they become the first row of length I """
-        attNetInput = torch.cat((candidate_item_embeddings.repeat_interleave(I, dim=0), rated_emb.repeat(B, 1)), dim=1)
+        candidate_interleaved = candidate_item_embeddings.repeat_interleave(I, dim=0)
+        rated_interleaved = rated_emb.repeat(B, 1)
+        attNetInput = torch.cat((candidate_interleaved, rated_interleaved), dim=1)
         attention_scores = self.AttentionNet(attNetInput).view(B, I)
+
         # mask unrated items per user (!) - otherwise there may be high weights on 0 entries
         attention_scores[user_matrix == 0.0] = -float('inf')    # so that softmax gives this a 0 attention weight
+
+        # mask item we are trying to rate for each user if we are training so that the network does not learn to overfit
+        if self.training:
+            # TODO: atol is risky so do this just to be safe for now
+            not_ok = True
+            _mask = None
+            atol = 1e-5
+            while not_ok and atol <= 1e-2:
+                try:
+                    # TODO: this is probably expensive...
+                    _mask = torch.isclose(candidate_interleaved, rated_interleaved, atol=atol).all(dim=1).view(B, I)
+                    not_ok = _mask.shape[0] != B
+                except:
+                    not_ok = True
+                if not_ok:
+                    print("Warning: Not ok!")
+                atol *= 10
+            # perform mask
+            attention_scores[_mask] = -float('inf')
+
         # pass through softmax
         attention_scores = F.softmax(attention_scores, dim=1)   # (B, I)
         attention_scores = attention_scores.nan_to_num(nan=0.0, posinf=0.0, neginf=0.0)  # will get NaNs if a user has 0 ratings. Replace those with 0
