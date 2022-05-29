@@ -119,35 +119,35 @@ if __name__ == '__main__':
         #  'batch_size': 128,
         #  'weight_decay': 1e-5
         #  },
-        {'use_features': True,
-         'use_ranking': False,
-         'model_kwargs': {
-             'item_emb': 128, 'user_emb': 128,
-             'att_dense': None,
-             'use_cos_sim_instead': True,
-             'mlp_dense_layers': [256],
-             'dropout_rate': 0.2
-         },
-         'lr': 1e-3,
-         'batch_size': 128,
-         'weight_decay': 1e-5
-         }
-    ]
-
-    graph_experiments = [
         # {'use_features': True,
         #  'use_ranking': False,
         #  'model_kwargs': {
-        #      'node_emb': 128,
-        #      'gnn_hidden_layers': [64, 64],
+        #      'item_emb': 128, 'user_emb': 128,
+        #      'att_dense': None,
+        #      'use_cos_sim_instead': True,
         #      'mlp_dense_layers': [256],
-        #      'dropout_rate': 0.2,
-        #      'message_dropout': 0.0
+        #      'dropout_rate': 0.2
         #  },
         #  'lr': 1e-3,
-        #  'batch_size': 1024,
+        #  'batch_size': 128,
         #  'weight_decay': 1e-5
-        #  },
+        #  }
+    ]
+
+    graph_experiments = [
+        {'use_features': True,
+         'use_ranking': False,
+         'model_kwargs': {
+             'node_emb': 64,
+             'num_gnn_layers': 3,
+             'mlp_dense_layers': [256],
+             'dropout_rate': 0.2,
+             'message_dropout': 0.0
+         },
+         'lr': 1e-3,
+         'batch_size': 512,
+         'weight_decay': 1e-5
+         },
     ]
 
     for exp in fixed_experiments:

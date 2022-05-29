@@ -113,9 +113,9 @@ def prepare_graph_ncf(ranking=False, use_features=False, model_kwargs=None):
     else:
         model = LightGCN(item_dim=gcp.get_item_dim(),
                          user_dim=gcp.get_user_dim(),
-                         node_emb=128,
+                         node_emb=64,
                          mlp_dense_layers=[256],
-                         num_gnn_layers=2,
+                         num_gnn_layers=3,
                          dropout_rate=dropout_rate,
                          message_dropout=None,
                          use_dot_product=False)
@@ -198,8 +198,8 @@ if __name__ == '__main__':
 
     # prepare model, train and val datasets (Pointwise val dataset always needed for NDCG eval)
     # model, training_dataset, val_dataset, test_dataset = prepare_fixedinput_ncf(ranking=ranking, use_features=use_features, onehot_users=onehot_users)
-    model, training_dataset, val_dataset, test_dataset = prepare_attention_ncf(ranking=ranking)
-    # model, training_dataset, val_dataset, test_dataset = prepare_graph_ncf(ranking=ranking, use_features=use_features)
+    # model, training_dataset, val_dataset, test_dataset = prepare_attention_ncf(ranking=ranking)
+    model, training_dataset, val_dataset, test_dataset = prepare_graph_ncf(ranking=ranking, use_features=use_features)
 
     print(model)
 
@@ -220,7 +220,7 @@ if __name__ == '__main__':
     # train and save result at `final_model_save_path`
     monitored_metrics = train_model(model, train_dataset=training_dataset, val_dataset=val_dataset,
                                     lr=1e-3, weight_decay=1e-5,
-                                    batch_size=128,
+                                    batch_size=512,
                                     val_batch_size=val_batch_size,  # not important
                                     early_stop=True, final_model_path=final_model_path,
                                     checkpoint_model_path=checkpoint_model_path,

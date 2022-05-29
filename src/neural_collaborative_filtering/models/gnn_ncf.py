@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-from torch_geometric.nn import MessagePassing
+from torch_geometric.nn import MessagePassing, LGConv
 from torch_geometric.utils import degree
 
 from neural_collaborative_filtering.datasets.gnn_datasets import GraphPointwiseDataset, GraphRankingDataset
@@ -82,10 +82,15 @@ class LightGCNConv(MessagePassing):
     LightGCN Conv layer implementation taken and modified from:
     https://medium.com/stanford-cs224w/recommender-systems-with-gnns-in-pyg-d8301178e377
     """
-    def __init__(self, message_dropout=0.1, **kwargs):
+    def __init__(self, in_channels, out_channels, message_dropout=0.1, dropout=0.1, **kwargs):
         super(LightGCNConv, self).__init__(aggr='add', **kwargs)
         self.message_dropout = message_dropout
         # no extra parameters
+        self.W2 = nn.Sequential(
+            nn.Linear(in_channels, out_channels),
+            nn.Dropout(dropout)
+        )
+        nn.init.xavier_uniform_(self.W2[0].weight)
 
     def forward(self, x, edge_index, edge_attr=None):
         if self.message_dropout is not None and self.training:
@@ -122,9 +127,9 @@ class LightGCNConv(MessagePassing):
         """
         # calculate all messages
         if weight is not None:
-            messages = weight.view(-1, 1) * norm.view(-1, 1) * x_j
+            messages = weight.view(-1, 1) * norm.view(-1, 1) * self.W2(x_j)
         else:
-            messages = norm.view(-1, 1) * x_j
+            messages = norm.view(-1, 1) * self.W2(x_j)
         return messages
 
 
@@ -154,7 +159,13 @@ class LightGCN(GNN_NCF):
 
         # Light GCN convolutions to fine-tune previous embeddings using the graph
         self.gnn_convs = nn.ModuleList(
-            [LightGCNConv(message_dropout=message_dropout) for _ in range(num_gnn_layers)]
+            # TODO: Decide
+            [LightGCNConv(in_channels=node_emb,
+                          out_channels=node_emb,
+                          dropout=dropout_rate,
+                          message_dropout=message_dropout)
+             for _ in range(num_gnn_layers)]
+            # [LGConv() for _ in range(num_gnn_layers)]
         )
 
         # MLP layers or simply use dot product
