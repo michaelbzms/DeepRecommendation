@@ -3,6 +3,7 @@ from torch import nn
 import torch.nn.functional as F
 from torch_geometric.nn import MessagePassing, LGConv
 from torch_geometric.utils import degree
+import numpy as np
 
 from neural_collaborative_filtering.datasets.gnn_datasets import GraphPointwiseDataset, GraphRankingDataset
 from neural_collaborative_filtering.models.base import GNN_NCF
@@ -133,6 +134,16 @@ class LightGCNConv(MessagePassing):
         return messages
 
 
+def _calculate_mask_for_target_edges(userIds, itemIds, edge_index):
+    """ Removes (userId, itemId) edges from graph """
+    # TODO: This is too slow
+    mask = torch.ones(edge_index.shape[1], dtype=torch.bool, device=edge_index.device)
+    for i in range(userIds.shape[0]):
+        mask = mask & ~((torch.tensor([userIds[i], itemIds[i]], dtype=torch.long, device=edge_index.device) == edge_index.T).all(dim=1)) & \
+                      ~((torch.tensor([itemIds[i], userIds[i]], dtype=torch.long, device=edge_index.device) == edge_index.T).all(dim=1))
+    return mask
+
+
 class LightGCN(GNN_NCF):
     def __init__(self, item_dim, user_dim, num_gnn_layers: int, node_emb=64, mlp_dense_layers=None,
                  dropout_rate=0.2, use_dot_product=False, message_dropout=0.1):
@@ -182,7 +193,7 @@ class LightGCN(GNN_NCF):
     def is_dataset_compatible(self, dataset_class):
         return issubclass(dataset_class, GraphPointwiseDataset) or issubclass(dataset_class, GraphRankingDataset)
 
-    def forward(self, graph, userIds, itemIds, device):
+    def forward(self, graph, userIds, itemIds, device, mask_targets=True):
         # embed item and user input features
         item_emb = self.item_embeddings(graph.item_features)
         user_emb = self.user_embeddings(graph.user_features)
@@ -191,20 +202,37 @@ class LightGCN(GNN_NCF):
         graph_emb = torch.vstack([item_emb, user_emb])
         del item_emb, user_emb   # remove any unnecessary memory
 
+        # if training mask out edges that are currently targets in the batch
+        edge_index = graph.edge_index
+        edge_attr = graph.edge_attr
+        if self.training and mask_targets:
+            # get position of edges to mask
+            _inp = torch.stack([userIds.cpu(), itemIds.cpu()]).T.tolist() + torch.stack([itemIds.cpu(), userIds.cpu()]).T.tolist()
+            _pos = graph.pos_df.loc[_inp]['pos'].values   # TODO: could raise KeyError if an edge is missing
+
+            # create mask
+            mask = torch.ones(edge_index.shape[1], dtype=torch.bool, device=device)
+            mask[_pos] = False
+
+            # apply mask
+            edge_index = graph.edge_index[:, mask]
+            if edge_attr is not None:
+                edge_attr = graph.edge_attr[mask]
+
         # encode all graph nodes with GNN
         hs = [graph_emb]
         for gnn_conv in self.gnn_convs:
-            graph_emb = gnn_conv(graph_emb, graph.edge_index, graph.edge_attr)
+            graph_emb = gnn_conv(graph_emb, edge_index, edge_attr)
             hs.append(graph_emb)
 
         # aggregate all embeddings (including original one) into one node embedding
         combined_graph_emb = torch.mean(torch.stack(hs, dim=0), dim=0)
 
         # find embeddings of items in batch
-        item_emb = combined_graph_emb[itemIds.long()]
+        item_emb = combined_graph_emb[itemIds]
 
         # find embeddings of users in batch
-        user_emb = combined_graph_emb[userIds.long()]
+        user_emb = combined_graph_emb[userIds]
 
         if self.MLP is not None:
             # use these to forward the NCF model

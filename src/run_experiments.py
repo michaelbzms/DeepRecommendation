@@ -140,7 +140,7 @@ if __name__ == '__main__':
          'model_kwargs': {
              'node_emb': 64,
              'num_gnn_layers': 3,
-             'mlp_dense_layers': [256],
+             'mlp_dense_layers': [128],
              'dropout_rate': 0.2,
              'message_dropout': 0.0
          },

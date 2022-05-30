@@ -7,7 +7,7 @@ from globals import full_matrix_file, item_metadata_file, user_embeddings_file
 from neural_collaborative_filtering.content_providers import GraphContentProvider
 
 
-def create_graph(interactions: pd.DataFrame, item_features, user_features, item_to_node_ID, user_to_node_ID, binary=True):
+def create_graph(interactions: pd.DataFrame, item_features, user_features, item_to_node_ID, user_to_node_ID, binary=False):   # TODO: must be false if we are masking later
     """ Assume node features where item nodes go first and then users (we might want to add more users) """
     # calculate mean ratings per user and per item as an edge attribute
     user_mean_ratings = interactions.groupby('userId')['rating'].mean()
@@ -15,35 +15,47 @@ def create_graph(interactions: pd.DataFrame, item_features, user_features, item_
     # create edges and edge attributes
     edge_index = [[], []]
     edge_attr = []
+    pos = []
+    i = 0
     for _, (userId, itemId, rating) in tqdm(interactions.iterrows(),
                                             desc='Loading graph edges...',
                                             total=len(interactions)):
+        # convert to Node IDs
+        userNodeId = user_to_node_ID[userId]
+        itemNodeId = item_to_node_ID[itemId]
+
         # TODO: which should we use?
         # TODO: message dropout does not account for the avg used in the edge_attr so we are kind of cheating there...
         # add edge user ----> item with weight: rating - avg_user_rating
         user_avg = (user_mean_ratings.loc[userId] + 2.5) / 2
         if not binary or rating >= user_avg:
-            edge_index[0].append(user_to_node_ID[userId])
-            edge_index[1].append(item_to_node_ID[itemId])
+            edge_index[0].append(userNodeId)
+            edge_index[1].append(itemNodeId)
             if not binary:
                 edge_attr.append(rating - user_avg)
+            pos.append([userNodeId, itemNodeId, i])
+            i += 1
 
         # add edge item ----> user with weight: rating - avg_item_rating
         item_avg = (item_mean_ratings.loc[itemId] + 2.5) / 2
         if not binary or rating >= item_avg:
-            edge_index[0].append(item_to_node_ID[itemId])
-            edge_index[1].append(user_to_node_ID[userId])
+            edge_index[0].append(itemNodeId)
+            edge_index[1].append(userNodeId)
             if not binary:
                 edge_attr.append(rating - item_avg)
-
+            pos.append([itemNodeId, userNodeId, i])
+            i += 1
     print(f'Used {len(edge_index[0])} (directed) edges ({len(edge_index[0]) / (2 * len(interactions)) * 100.0:.2f}% of all possible) for graph.')
-
+    # create mult index df with the positions of each edge
+    pos_df = pd.DataFrame(pos, columns=['Id1', 'Id2', 'pos']).set_index(['Id1', 'Id2'], inplace=False)
+    print('Created pos multi-index df.')
     # return Data object representing the graph
     return Data(
         item_features=item_features,
         user_features=user_features,
         edge_index=torch.tensor(edge_index, dtype=torch.long),
         edge_attr=torch.tensor(edge_attr, dtype=torch.float) if not binary else None,
+        pos_df=pos_df
     )
 
 
