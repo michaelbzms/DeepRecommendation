@@ -12,18 +12,18 @@ if __name__ == '__main__':
     # define experiments to run #
     #############################
     fixed_experiments = [
-        # {'use_features': False,
-        #  'use_ranking': True,
-        #  'onehot_users': False,
-        #  'model_kwargs': {
-        #      'item_emb': 128, 'user_emb': 128,
-        #      'mlp_dense_layers': [256],
-        #      'dropout_rate': 0.2
-        #  },
-        #  'lr': 7e-4,
-        #  'batch_size': 512,
-        #  'weight_decay': 1e-5,
-        #  },
+        {'use_features': True,
+         'use_ranking': True,
+         'onehot_users': False,
+         'model_kwargs': {
+             'item_emb': 128, 'user_emb': 128,
+             'mlp_dense_layers': [256],
+             'dropout_rate': 0.2
+         },
+         'lr': 7e-4,
+         'batch_size': 512,
+         'weight_decay': 1e-5,
+         },
         # {'use_features': True,
         #  'use_ranking': True,
         #  'onehot_users': False,
@@ -135,19 +135,19 @@ if __name__ == '__main__':
     ]
 
     graph_experiments = [
-        {'use_features': True,
-         'use_ranking': False,
-         'model_kwargs': {
-             'node_emb': 64,
-             'num_gnn_layers': 3,
-             'mlp_dense_layers': [128],
-             'dropout_rate': 0.2,
-             'message_dropout': 0.0
-         },
-         'lr': 1e-3,
-         'batch_size': 512,
-         'weight_decay': 1e-5
-         },
+        # {'use_features': True,
+        #  'use_ranking': False,
+        #  'model_kwargs': {
+        #      'node_emb': 128,
+        #      'num_gnn_layers': 2,
+        #      'mlp_dense_layers': [256],
+        #      'dropout_rate': 0.2,
+        #      'message_dropout': 0.0
+        #  },
+        #  'lr': 1e-3,
+        #  'batch_size': 512,
+        #  'weight_decay': 1e-5
+        #  },
     ]
 
     for exp in fixed_experiments:

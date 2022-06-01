@@ -20,8 +20,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 def train_model(model: NCF, train_dataset, val_dataset: PointwiseDataset,
                 lr, weight_decay, batch_size, val_batch_size, early_stop,
                 final_model_path='final_model.pt', checkpoint_model_path='temp.pt', max_epochs=100,
-                patience=3, max_patience=5, stop_with_train_loss_instead=False,
-                optimizer=None, ndcg_cutoff=10, wandb=None):
+                patience=3, max_patience=5, optimizer=None, ndcg_cutoff=10, wandb=None):
     """
     Main logic for training a model. Hyperparameters (e.g. lr, batch_size, etc) as arguments.
     On each loop (epoch), we forward the model on the training_dataset and backpropagate the loss
@@ -78,7 +77,11 @@ def train_model(model: NCF, train_dataset, val_dataset: PointwiseDataset,
         wandb.watch(model)  # TODO: what does this do?
 
     for epoch in range(max_epochs):  # epoch
-        print(f'\nEpoch {epoch + 1}')
+        w_str = ''
+        if isinstance(train_dataset, RankingDataset):
+            train_dataset.w = schedule_w(epoch + 1)
+            w_str = f' (w = {train_dataset.w})'
+        print(f'\nEpoch {epoch + 1}{w_str}')
 
         ##################
         #    Training    #
@@ -157,6 +160,8 @@ def train_model(model: NCF, train_dataset, val_dataset: PointwiseDataset,
                     'epoch': epoch + 1}
             if isinstance(train_dataset, PointwiseDataset):      # only for point-wise learning
                 logs['val_loss'] = val_loss
+            elif isinstance(train_dataset, RankingDataset):
+                logs['neg_sampling_w'] = train_dataset.w
             if train_ndcg is not None and train_adj_ndcg is not None:
                 logs[f'train_ndcg@{ndcg_cutoff}'] = train_ndcg
                 logs[f'train_adj_ndcg@{ndcg_cutoff}'] = train_adj_ndcg
@@ -231,3 +236,20 @@ def train_model(model: NCF, train_dataset, val_dataset: PointwiseDataset,
             # wandb.save(final_model_path, )
 
     return monitored_metrics
+
+
+def schedule_w(epoch, break_points=(4, 8, 12, 18, 24)):
+    break_points = sorted(break_points)
+    assert len(break_points) >= 5, 'Invalid args'
+    if epoch < break_points[0]:
+        return 0.0
+    elif epoch < break_points[1]:
+        return 0.5
+    elif epoch < break_points[2]:
+        return 1
+    elif epoch < break_points[3]:
+        return 1.5
+    elif epoch < break_points[3]:
+        return 2
+    else:
+        return 3

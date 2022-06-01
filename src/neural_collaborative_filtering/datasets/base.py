@@ -45,20 +45,18 @@ class RankingDataset(Dataset):
         self.samples: pd.DataFrame = pd.read_hdf(ranking_file + '.h5')
         # use BPR loss for ranking
         self.loss_fn = BPR_loss
+        # w hyperparameter for dynamic negative sampling
+        self.w = 0.0
 
-    def _negative_sampling_probs(self, negative_ratings: np.ndarray, type='sum'):
+    def _negative_sampling_probs(self, negative_ratings: np.ndarray, type='sum_dynamic'):
         # TODO: maybe start with sum -> sum_balances -> sum_squared during epochs... use a setter for type?
         if type == 'sum':
             # simple way to boost hard negatives i.e. negatives with bigger ratings
             probs = negative_ratings / sum(negative_ratings)  # give more chances to hard negatives
-        elif type == 'sum_squared':
-            # same as before but boosting hard negatives more heavily
-            negative_ratings_squared = negative_ratings**2
+        elif type == 'sum_dynamic':
+            # modified version of sum that gives more or less boost to higher rated items based on w
+            negative_ratings_squared = negative_ratings**self.w
             probs = negative_ratings_squared / sum(negative_ratings_squared)  # give more chances to hard negatives
-        elif type == 'sum_balanced':
-            # between sum and sum_squared
-            negative_ratings_pow = negative_ratings**1.5
-            probs = negative_ratings_pow / sum(negative_ratings_pow)
         elif type == 'softmax':
             # balanced but too expensive (would not recommend)
             probs = softmax(torch.FloatTensor(negative_ratings), dim=0).numpy()
