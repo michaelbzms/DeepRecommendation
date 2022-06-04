@@ -22,6 +22,9 @@ class NCF(nn.Module):
     def is_dataset_compatible(self, dataset_class):
         raise NotImplementedError
 
+    def important_hypeparams(self) -> str:
+        return ''
+
 
 class GNN_NCF(NCF):
     def __init__(self):

@@ -148,7 +148,7 @@ def run_experiment(model, *, hparams, training_dataset, val_dataset, test_datase
     # if and where to save the trained model
     if save_model:
         if final_model_save_path is None:
-            model_save_path = f'../models/{group_name}/{model_name}.pt'
+            model_save_path = f'../models/{group_name}/{model_name}{model.important_hypeparams()}.pt'
             Path(f'../models/{group_name}').mkdir(parents=True, exist_ok=True)     # create dir if it does not exist
         else:
             model_save_path = final_model_save_path

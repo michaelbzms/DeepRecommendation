@@ -49,7 +49,6 @@ class RankingDataset(Dataset):
         self.w = 0.0
 
     def _negative_sampling_probs(self, negative_ratings: np.ndarray, type='sum_dynamic'):
-        # TODO: maybe start with sum -> sum_balances -> sum_squared during epochs... use a setter for type?
         if type == 'sum':
             # simple way to boost hard negatives i.e. negatives with bigger ratings
             probs = negative_ratings / sum(negative_ratings)  # give more chances to hard negatives
@@ -67,11 +66,9 @@ class RankingDataset(Dataset):
     def __getitem__(self, item):
         # return (user ID, item1 ID, item2 ID) triplets
         data = self.samples.iloc[item]
-        # sample negative from options
-        # TODO: This selects just one out of potentially a lot of choices. e.g 50 - 300
+        # sample negative from options. Note: This selects just one out of potentially a lot of choices e.g 50 - 300
         probs = self._negative_sampling_probs(np.array(data['negative_ratings']))
         negative = np.random.choice(data['negative_movieIds'], p=probs)
-        # negative = .sample(n=1)[0]
         return data['userId'], data['positive_movieId'], negative
 
     def __len__(self):

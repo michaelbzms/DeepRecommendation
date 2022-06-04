@@ -53,13 +53,13 @@ class DynamicProfilesProvider(DynamicContentProvider):
         user_ratings = self.user_ratings.loc[user_ids]
 
         # get unique item ids in batch
-        rated_items_ids = np.sort(np.unique(np.concatenate(user_ratings['movieId'].values)))  # TODO: must return ordered list (seems to)
+        rated_items_ids = np.sort(np.unique(np.concatenate(user_ratings['movieId'].values)))
 
         # multi-hot encode sparse ratings into a matrix form
         user_matrix = multi_hot_encode(user_ratings['movieId'], rated_items_ids).astype(np.float64)
         if not ignore_ratings:
-            # TODO: This will work but ONLY IF ratings are ORDERED by movieId when we create the dataset. Else the ratings will be misplaced! Be careful!
-            # TODO: nudge avg rating towards neutral 2.5
+            # Note: This will work but ONLY IF ratings are ORDERED by movieId when we create the dataset.
+            # Else the ratings will be misplaced! Be careful!
             user_matrix[user_matrix == 1] = np.concatenate((user_ratings['rating'] - ((user_ratings['meanRating'] + 2.5) / 2)).values)
             # check: e.g. user_matrix[0, rated_movies == 'tt0114709']
         user_matrix = torch.FloatTensor(user_matrix)  # convert to tensor

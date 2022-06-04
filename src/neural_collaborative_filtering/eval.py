@@ -10,6 +10,7 @@ from tqdm import tqdm
 from sklearn.metrics import ndcg_score, dcg_score
 
 from neural_collaborative_filtering.datasets.base import PointwiseDataset
+from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF
 from neural_collaborative_filtering.models.base import NCF
 from neural_collaborative_filtering.plots import plot_residuals, plot_stacked_residuals, plot_rated_items_counts, plot_att_stats
 
@@ -57,7 +58,8 @@ def eval_ranking(samples_with_preds: pd.DataFrame, cutoff=10):
             ignored += 1
             continue     # nothing to do if all of them are ties...
 
-        adj_ndcg = (dcg - worst_dcg) / (ideal_dcg - worst_dcg)    # min-max scaling formula
+        # min-max scaling formula
+        adj_ndcg = (dcg - worst_dcg) / (ideal_dcg - worst_dcg)
 
         # append to ndcgs for all users
         ndcgs.append(ndcg)
@@ -100,8 +102,12 @@ def eval_model(model: NCF, test_dataset: PointwiseDataset, batch_size, ranking, 
     with torch.no_grad():
         for batch in tqdm(test_loader, desc='Testing', file=sys.stdout):
             # forward model
-            out, y_batch = test_dataset.__class__.do_forward(model, batch, device, *extra_test_args)
-            if not ranking:         # MSE only makes sense for regression task
+            if isinstance(model, AttentionNCF):
+                out, y_batch, att_weights = test_dataset.__class__.do_forward(model, batch, device, return_attention_weights=True)
+            else:
+                out, y_batch = test_dataset.__class__.do_forward(model, batch, device, *extra_test_args)
+            # MSE only makes sense for regression task
+            if not ranking:
                 # calculate loss
                 mse_loss = test_dataset.calculate_loss(out, y_batch.to(device))
                 # accumulate test loss
@@ -109,6 +115,9 @@ def eval_model(model: NCF, test_dataset: PointwiseDataset, batch_size, ranking, 
             # keep track of fitted values and their actual targets
             fitted_values.append(out.cpu().detach().numpy())
             ground_truth.append(y_batch.view(-1, 1).float().cpu().detach().numpy())
+            if isinstance(model, AttentionNCF):
+                # TODO: Calculate statistics for attention weights
+                pass
 
     if not ranking:
         # MSE only makes sense for regression task

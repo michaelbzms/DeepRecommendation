@@ -51,7 +51,7 @@ class AdvancedNCF(NCF):
 
 class AttentionNCF(NCF):
     def __init__(self, item_dim, item_emb=128, user_emb=128, att_dense=None,
-                 mlp_dense_layers=None, use_cos_sim_instead=True, dropout_rate=0.2):
+                 mlp_dense_layers=None, use_cos_sim_instead=False, dropout_rate=0.2):
         super(AttentionNCF, self).__init__()
         if mlp_dense_layers is None:
             mlp_dense_layers = [256, 128]           # default
@@ -80,6 +80,7 @@ class AttentionNCF(NCF):
         # build attention network if not using cosine similarity
         if not self.use_cos_sim_instead:
             if att_dense is not None:
+                self.att_dense = att_dense
                 self.AttentionNet = nn.Sequential(
                     nn.Linear(2 * item_emb, att_dense),
                     nn.ReLU(),
@@ -87,6 +88,7 @@ class AttentionNCF(NCF):
                     nn.Linear(att_dense, 1)
                 )
             else:
+                self.att_dense = 0
                 self.AttentionNet = nn.Sequential(
                     nn.Linear(2 * item_emb, 1)
                 )
@@ -97,10 +99,13 @@ class AttentionNCF(NCF):
     def get_model_parameters(self) -> dict[str]:
         return self.kwargs
 
+    def important_hypeparams(self) -> str:
+        return '_cosine' if self.use_cos_sim_instead else f'_attNet{self.att_dense}'
+
     def is_dataset_compatible(self, dataset_class):
         return issubclass(dataset_class, DynamicPointwiseDataset) or issubclass(dataset_class, DynamicRankingDataset)
 
-    def forward(self, candidate_items, rated_items, user_matrix, candidate_names=None, rated_names=None, att_stats=None, visualize=False):
+    def forward(self, candidate_items, rated_items, user_matrix, return_attention_weights=False):
         I = rated_items.shape[0]      # == user_matrix.shape[1]
         B = candidate_items.shape[0]  # == user_matrix.shape[0]
 
@@ -151,7 +156,7 @@ class AttentionNCF(NCF):
         # mask item we are trying to rate for each user if we are training so that the network does not learn to overfit
         if self.training:
             try:
-                # TODO: atol is risky because we might accidentally get others or miss valid ones in which case view will throw an error..
+                # TODO: atol is risky because we might accidentally get others or miss valid ones in which case view() will throw an error..
                 _mask = torch.isclose(candidate_interleaved_full, rated_interleaved_full, atol=1e-5).all(dim=1).view(B, I)
                 if _mask.shape[0] != B:    # should not happen for a reasonable atol value
                     print("Warning: Something went wrong!", file=sys.stderr)
@@ -163,20 +168,6 @@ class AttentionNCF(NCF):
         # pass through softmax
         attention_scores = F.softmax(attention_scores, dim=1)   # (B, I)
         attention_scores = attention_scores.nan_to_num(nan=0.0, posinf=0.0, neginf=0.0)  # will get NaNs if a user has 0 ratings. Replace those with 0
-
-        # visualize attention
-        if visualize and candidate_names is not None and rated_names is not None:
-            visualize_attention(attention_scores.to('cpu').detach(), user_matrix.to('cpu').detach(), candidate_names, rated_names.values)
-
-        # keep stats for attention weights and items
-        if att_stats is not None and candidate_names is not None and rated_names is not None:
-            att_scores_np = attention_scores.to('cpu').detach().numpy()
-            counts = np.zeros((B, I), dtype=np.int)
-            counts[user_matrix.to('cpu').detach() != 0.0] = 1
-            # Old attempt: att_scores_df = pd.DataFrame(index=candidate_names, columns=rated_names['primaryTitle'], data=att_scores_np)
-            for i in range(len(candidate_names)):
-                att_stats['sum'].loc[candidate_names[i]] += att_scores_np[i, :]
-                att_stats['count'].loc[candidate_names[i]] += counts[i, :]
 
         # aggregate item features based on ratings and attention weights to build user profiles
         attended_user_matrix = torch.mul(attention_scores, user_matrix)
@@ -191,4 +182,4 @@ class AttentionNCF(NCF):
         # MLP part
         out = self.MLP(combined)
 
-        return out
+        return out if not return_attention_weights else (out, attention_scores)

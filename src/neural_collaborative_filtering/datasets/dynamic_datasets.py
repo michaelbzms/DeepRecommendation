@@ -23,12 +23,18 @@ class DynamicPointwiseDataset(PointwiseDataset):
         return lambda batch: self.dynamic_provider.collate_interacted_items(batch, for_ranking=False)
 
     @staticmethod
-    def do_forward(model: NCF, batch, device):
+    def do_forward(model: NCF, batch, device, return_attention_weights=False):
         # get the input matrices and the target
         candidate_items, rated_items, user_matrix, y_batch = batch
         # forward model
-        out = model(candidate_items.float().to(device), rated_items.float().to(device), user_matrix.float().to(device))
-        return out, y_batch
+        if return_attention_weights:
+            out, att_weights = model(candidate_items.float().to(device), rated_items.float().to(device), user_matrix.float().to(device),
+                                     return_attention_weights=True)
+            return out, y_batch, att_weights
+        else:
+            out = model(candidate_items.float().to(device), rated_items.float().to(device), user_matrix.float().to(device),
+                        return_attention_weights=False)
+            return out, y_batch
 
 
 class DynamicRankingDataset(RankingDataset):
