@@ -1,22 +1,25 @@
 import pandas as pd
 import torch
-from torch_geometric.data import Data
+from torch_geometric.data import Data, HeteroData
 from tqdm import tqdm
 
 from globals import full_matrix_file, item_metadata_file, user_embeddings_file
 from neural_collaborative_filtering.content_providers import GraphContentProvider
 
 
-def create_graph(interactions: pd.DataFrame, item_features, user_features, item_to_node_ID, user_to_node_ID, binary=False):   # TODO: must be false if we are masking later
+def create_graph(interactions: pd.DataFrame, item_features, user_features, item_to_node_ID, user_to_node_ID, binary):
+    # TODO: binary must be false if we are masking later
     """ Assume node features where item nodes go first and then users (we might want to add more users) """
     # calculate mean ratings per user and per item as an edge attribute
     user_mean_ratings = interactions.groupby('userId')['rating'].mean()
     item_mean_ratings = interactions.groupby('movieId')['rating'].mean()
     # create edges and edge attributes
-    edge_index = [[], []]
-    edge_attr = []
+    user2item_edge_index = []
+    user2item_edge_attr = []
+    item2user_edge_index = []
+    item2user_edge_attr = []
     pos = []
-    i = 0
+    i = j = 0
     for _, (userId, itemId, rating) in tqdm(interactions.iterrows(),
                                             desc='Loading graph edges...',
                                             total=len(interactions)):
@@ -24,44 +27,48 @@ def create_graph(interactions: pd.DataFrame, item_features, user_features, item_
         userNodeId = user_to_node_ID[userId]
         itemNodeId = item_to_node_ID[itemId]
 
-        # TODO: which should we use?
-        # TODO: message dropout does not account for the avg used in the edge_attr so we are kind of cheating there...
         # add edge user ----> item with weight: rating - avg_user_rating
         user_avg = (user_mean_ratings.loc[userId] + 2.5) / 2
         if not binary or rating >= user_avg:
-            edge_index[0].append(userNodeId)
-            edge_index[1].append(itemNodeId)
+            user2item_edge_index.append([userNodeId, itemNodeId])
             if not binary:
-                edge_attr.append(rating - user_avg)
+                user2item_edge_attr.append(rating - user_avg)
             pos.append([userNodeId, itemNodeId, i])
             i += 1
 
         # add edge item ----> user with weight: rating - avg_item_rating
         item_avg = (item_mean_ratings.loc[itemId] + 2.5) / 2
         if not binary or rating >= item_avg:
-            edge_index[0].append(itemNodeId)
-            edge_index[1].append(userNodeId)
+            item2user_edge_index.append([itemNodeId, userNodeId])
             if not binary:
-                edge_attr.append(rating - item_avg)
-            pos.append([itemNodeId, userNodeId, i])
-            i += 1
-    print(f'Used {len(edge_index[0])} (directed) edges ({len(edge_index[0]) / (2 * len(interactions)) * 100.0:.2f}% of all possible) for graph.')
-    # create mult index df with the positions of each edge
+                item2user_edge_attr.append(rating - item_avg)
+            pos.append([itemNodeId, userNodeId, j])
+            j += 1
+
+    # stats
+    edges_used = len(user2item_edge_index) + len(item2user_edge_index)
+    print(f'Used {edges_used} (directed) edges ({edges_used / (2 * len(interactions)) * 100.0:.2f}% of all possible) for graph.')
+
+    # create mult index df with the positions of each edge (only works for homogenous graph)
     pos_df = pd.DataFrame(pos, columns=['Id1', 'Id2', 'pos']).set_index(['Id1', 'Id2'], inplace=False)
     print('Created pos multi-index df.')
-    # return Data object representing the graph
+
+    # return custom graph object
     return Data(
         item_features=item_features,
         user_features=user_features,
-        edge_index=torch.tensor(edge_index, dtype=torch.long),
-        edge_attr=torch.tensor(edge_attr, dtype=torch.float) if not binary else None,
+        user2item_edge_index=torch.tensor(user2item_edge_index, dtype=torch.long).T,
+        item2user_edge_index=torch.tensor(item2user_edge_index, dtype=torch.long).T,
+        user2item_edge_attr=torch.tensor(user2item_edge_attr, dtype=torch.float) if not binary else None,
+        item2user_edge_attr=torch.tensor(item2user_edge_attr, dtype=torch.float) if not binary else None,
         pos_df=pos_df
     )
 
 
 class GraphProvider(GraphContentProvider):
     """ Base class for all graph providers where the type of initial node features can be changed via polymorphism."""
-    def __init__(self, file):
+    def __init__(self, file, binary):
+        self.binary = binary
         # load all known interactions (not just train/val/test)
         all_interactions = pd.read_csv(full_matrix_file + '.csv')
         # extract and sort all unique users and items that will become nodes
@@ -70,14 +77,13 @@ class GraphProvider(GraphContentProvider):
         # assign each user and item to a node ID
         self.item_to_node_ID = {i: ind for ind, i in enumerate(self.all_items)}
         self.user_to_node_ID = {u: self.get_num_items() + ind for ind, u in enumerate(self.all_users)}
-
         # load interactions to use for the graph from the file
         self.interactions = pd.read_csv(file + '.csv')
         # node features
         item_features = self.get_item_features()
         user_features = self.get_user_features()
         # create graph
-        self.graph = create_graph(self.interactions, item_features, user_features, self.item_to_node_ID, self.user_to_node_ID)
+        self.graph = create_graph(self.interactions, item_features, user_features, self.item_to_node_ID, self.user_to_node_ID, binary=binary)
 
     def get_item_features(self):
         raise NotImplementedError
@@ -131,10 +137,10 @@ class OneHotGraphProvider(GraphProvider):
 
 class ProfilesGraphProvider(GraphProvider):
     """ A graph where the initial node embeddings are content-based profiles """
-    def __init__(self, file):
+    def __init__(self, file, binary):
         self.metadata: pd.DataFrame = pd.read_hdf(item_metadata_file + '.h5')
         self.user_embeddings: pd.DataFrame = pd.read_hdf(user_embeddings_file + '.h5')
-        super(ProfilesGraphProvider, self).__init__(file)
+        super(ProfilesGraphProvider, self).__init__(file, binary=binary)
 
     def get_item_features(self):
         item_profiles = self.metadata.loc[self.all_items, :].values

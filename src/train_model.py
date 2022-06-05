@@ -93,32 +93,34 @@ def prepare_attention_ncf(ranking=False, model_kwargs=None):
     return model, training_dataset, val_dataset, test_dataset
 
 
-def prepare_graph_ncf(ranking=False, use_features=False, model_kwargs=None):
+def prepare_graph_ncf(ranking=False, use_features=False, hetero=True, binary=False, model_kwargs=None):
     """
     Set up the model and datasets to train a graph NCF model on fixed input.
     """
 
     if use_features:
         # content provider
-        gcp = ProfilesGraphProvider(train_set_file)
+        gcp = ProfilesGraphProvider(train_set_file, binary=binary)
     else:
         # content provider
-        gcp = OneHotGraphProvider(train_set_file)
+        gcp = OneHotGraphProvider(train_set_file, binary=binary)
 
     # model
     if model_kwargs is not None:
         model = LightGCN(item_dim=gcp.get_item_dim(),
                          user_dim=gcp.get_user_dim(),
+                         hetero=hetero,
                          **model_kwargs)
     else:
         model = LightGCN(item_dim=gcp.get_item_dim(),
                          user_dim=gcp.get_user_dim(),
                          node_emb=64,
                          mlp_dense_layers=[256],
-                         num_gnn_layers=3,
+                         num_gnn_layers=2,
                          dropout_rate=dropout_rate,
-                         message_dropout=None,
-                         use_dot_product=False)
+                         message_dropout=0.1,
+                         use_dot_product=False,
+                         hetero=hetero)
     # datasets
     val_dataset = GraphPointwiseDataset(val_set_file, graph_content_provider=gcp)
     test_dataset = GraphPointwiseDataset(test_set_file, graph_content_provider=gcp)    # TODO: add val edges to gcp for this?
@@ -193,13 +195,13 @@ def run_experiment(model, *, hparams, training_dataset, val_dataset, test_datase
 
 if __name__ == '__main__':
     use_features = True
-    ranking = True
+    ranking = False
     onehot_users = False
 
     # prepare model, train and val datasets (Pointwise val dataset always needed for NDCG eval)
-    model, training_dataset, val_dataset, test_dataset = prepare_fixedinput_ncf(ranking=ranking, use_features=use_features, onehot_users=onehot_users)
+    # model, training_dataset, val_dataset, test_dataset = prepare_fixedinput_ncf(ranking=ranking, use_features=use_features, onehot_users=onehot_users)
     # model, training_dataset, val_dataset, test_dataset = prepare_attention_ncf(ranking=ranking)
-    # model, training_dataset, val_dataset, test_dataset = prepare_graph_ncf(ranking=ranking, use_features=use_features)
+    model, training_dataset, val_dataset, test_dataset = prepare_graph_ncf(ranking=ranking, use_features=use_features)
 
     print(model)
 
@@ -220,7 +222,7 @@ if __name__ == '__main__':
     # train and save result at `final_model_save_path`
     monitored_metrics = train_model(model, train_dataset=training_dataset, val_dataset=val_dataset,
                                     lr=1e-3, weight_decay=1e-5,
-                                    batch_size=512,
+                                    batch_size=256,
                                     val_batch_size=val_batch_size,  # not important
                                     early_stop=True, final_model_path=final_model_path,
                                     checkpoint_model_path=checkpoint_model_path,
