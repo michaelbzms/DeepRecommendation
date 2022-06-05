@@ -1,10 +1,8 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-from torch_geometric.data import Data, HeteroData
-from torch_geometric.nn import MessagePassing, LGConv, HeteroConv
+from torch_geometric.nn import MessagePassing
 from torch_geometric.utils import degree
-import numpy as np
 
 from neural_collaborative_filtering.datasets.gnn_datasets import GraphPointwiseDataset, GraphRankingDataset
 from neural_collaborative_filtering.models.base import GNN_NCF
@@ -135,16 +133,17 @@ class LightGCNConv(MessagePassing):
         deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
 
         if self.hetero:
-            # calculate the norm for the two kind of messages separately
-            user2item_norm = deg_inv_sqrt[user2item_edge_index[0]] * deg_inv_sqrt[user2item_edge_index[1]]
-            item2user_norm = deg_inv_sqrt[item2user_edge_index[0]] * deg_inv_sqrt[item2user_edge_index[1]]
-            del from_, to_, deg_inv_sqrt, deg
             # propagate user -> item messages
+            user2item_norm = deg_inv_sqrt[user2item_edge_index[0]] * deg_inv_sqrt[user2item_edge_index[1]]
             out1 = self.propagate(user2item_edge_index, x=x, norm=user2item_norm, weight=user2item_edge_attr, type='user2item')
+            del user2item_norm
             # propagate item -> user messages
+            item2user_norm = deg_inv_sqrt[item2user_edge_index[0]] * deg_inv_sqrt[item2user_edge_index[1]]
             out2 = self.propagate(item2user_edge_index, x=x, norm=item2user_norm, weight=item2user_edge_attr, type='item2user')
+            del item2user_norm
             # add the two messages
             out = out1 + out2
+            del from_, to_, deg_inv_sqrt, deg
         else:
             # calculate one norm
             norm = deg_inv_sqrt[from_] * deg_inv_sqrt[to_]
@@ -175,16 +174,6 @@ class LightGCNConv(MessagePassing):
         else:
             messages = norm.view(-1, 1) * W(x_j)
         return messages
-
-
-def _calculate_mask_for_target_edges(userIds, itemIds, edge_index):
-    """ Removes (userId, itemId) edges from graph """
-    # TODO: This is too slow
-    mask = torch.ones(edge_index.shape[1], dtype=torch.bool, device=edge_index.device)
-    for i in range(userIds.shape[0]):
-        mask = mask & ~((torch.tensor([userIds[i], itemIds[i]], dtype=torch.long, device=edge_index.device) == edge_index.T).all(dim=1)) & \
-                      ~((torch.tensor([itemIds[i], userIds[i]], dtype=torch.long, device=edge_index.device) == edge_index.T).all(dim=1))
-    return mask
 
 
 class LightGCN(GNN_NCF):

@@ -142,7 +142,7 @@ if __name__ == '__main__':
              'num_gnn_layers': 2,
              'mlp_dense_layers': [256],
              'dropout_rate': 0.2,
-             'message_dropout': 0.2
+             'message_dropout': 0.1  # TODO? -> reduces memory requirements
          },
          'lr': 1e-3,
          'batch_size': 512,
