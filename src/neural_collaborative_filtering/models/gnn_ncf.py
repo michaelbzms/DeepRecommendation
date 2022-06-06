@@ -107,17 +107,31 @@ class LightGCNConv(MessagePassing):
     def forward(self, x, user2item_edge_index, item2user_edge_index, user2item_edge_attr=None, item2user_edge_attr=None):
         if self.message_dropout is not None and self.training:
             # message dropout -> randomly ignore p % of edges in the graph
-            if user2item_edge_index.shape[1] != item2user_edge_index.shape[1]:
-                raise ValueError('Error: Unexpected edges')
-            mask = F.dropout(torch.ones(user2item_edge_index.shape[1]), self.message_dropout, self.training) > 0
-            # mask both user -> item and item -> user edge
-            user2item_edge_index = user2item_edge_index[:, mask]
-            item2user_edge_index = item2user_edge_index[:, mask]
-            if user2item_edge_attr is not None:
-                user2item_edge_attr = user2item_edge_attr[mask]
-            if item2user_edge_attr is not None:
-                item2user_edge_attr = item2user_edge_attr[mask]
-            del mask
+            if user2item_edge_index.shape[1] == item2user_edge_index.shape[1] and (
+                    user2item_edge_attr is not None and item2user_edge_attr is not None):  # TODO: assumes edge attr non zero when using all edges (aka binary=False)
+                # assumes all edges are symmetrical (!)
+                mask = F.dropout(torch.ones(user2item_edge_index.shape[1]), self.message_dropout, self.training) > 0
+                # mask both user -> item and item -> user edge
+                user2item_edge_index = user2item_edge_index[:, mask]
+                item2user_edge_index = item2user_edge_index[:, mask]
+                if user2item_edge_attr is not None:
+                    user2item_edge_attr = user2item_edge_attr[mask]
+                if item2user_edge_attr is not None:
+                    item2user_edge_attr = item2user_edge_attr[mask]
+                del mask
+            else:
+                # mask user -> item edges
+                mask1 = F.dropout(torch.ones(user2item_edge_index.shape[1]), self.message_dropout, self.training) > 0
+                user2item_edge_index = user2item_edge_index[:, mask1]
+                if user2item_edge_attr is not None:
+                    user2item_edge_attr = user2item_edge_attr[mask1]
+                del mask1
+                # mask item -> user edges
+                mask2 = F.dropout(torch.ones(item2user_edge_index.shape[1]), self.message_dropout, self.training) > 0
+                item2user_edge_index = item2user_edge_index[:, mask2]
+                if item2user_edge_attr is not None:
+                    item2user_edge_attr = item2user_edge_attr[mask2]
+                del mask2
 
         # combine all edges into one
         total_edges = torch.cat([user2item_edge_index, item2user_edge_index], dim=1)
@@ -151,6 +165,9 @@ class LightGCNConv(MessagePassing):
             # propagate messages
             out = self.propagate(total_edges, x=x, weight=total_edge_attr, norm=norm, type='combined')
 
+        # add self embeddings
+        out += x
+
         return out
 
     def message(self, x_j, weight, norm, type: str):
@@ -178,7 +195,7 @@ class LightGCNConv(MessagePassing):
 
 class LightGCN(GNN_NCF):
     def __init__(self, item_dim, user_dim, num_gnn_layers: int, hetero, node_emb=64, mlp_dense_layers=None,
-                 dropout_rate=0.2, use_dot_product=False, message_dropout=0.1):
+                 dropout_rate=0.2, use_dot_product=False, message_dropout=0.1, concat=True):
         super(LightGCN, self).__init__()
         if mlp_dense_layers is None: mlp_dense_layers = [256, 128]  # default
         self.kwargs = {
@@ -190,8 +207,10 @@ class LightGCN(GNN_NCF):
             'use_dot_product': use_dot_product,     # overrides mlp_dense_layers
             'dropout_rate': dropout_rate,
             'message_dropout': message_dropout,
-            'hetero': hetero
-       }
+            'hetero': hetero,
+            'concat': concat
+        }
+        self.concat = concat
 
         # Item embeddings layer
         self.item_embeddings = nn.Sequential(
@@ -217,7 +236,7 @@ class LightGCN(GNN_NCF):
         if use_dot_product:
             self.MLP = None
         else:
-            self.MLP = build_MLP_layers(node_emb * 2,
+            self.MLP = build_MLP_layers(node_emb * (num_gnn_layers + 1) * 2 if self.concat else node_emb * 2,
                                         mlp_dense_layers,
                                         dropout_rate=dropout_rate)
 
@@ -239,8 +258,8 @@ class LightGCN(GNN_NCF):
         # edge index and (optionally) attr to use
         user2item_edge_index = graph.user2item_edge_index
         item2user_edge_index = graph.item2user_edge_index
-        user2item_edge_attr = graph.user2item_edge_attr
-        item2user_edge_attr = graph.item2user_edge_attr
+        user2item_edge_attr = graph.user2item_edge_attr if hasattr(graph, 'user2item_edge_attr') else None
+        item2user_edge_attr = graph.item2user_edge_attr if hasattr(graph, 'item2user_edge_attr') else None
 
         # if training mask out edges that are currently targets in the batch
         if self.training and mask_targets:
@@ -264,7 +283,11 @@ class LightGCN(GNN_NCF):
             hs.append(graph_emb)
 
         # aggregate all embeddings (including original one) into one node embedding
-        combined_graph_emb = torch.mean(torch.stack(hs, dim=0), dim=0)
+        if self.concat:
+            combined_graph_emb = torch.cat(hs, dim=1)
+        else:
+            combined_graph_emb = torch.mean(torch.stack(hs, dim=0), dim=0)
+
 
         # find embeddings of items in batch
         item_emb = combined_graph_emb[itemIds]
