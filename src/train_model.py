@@ -77,9 +77,10 @@ def prepare_attention_ncf(ranking=False, model_kwargs=None):
     else:
         model = AttentionNCF(dpp.get_item_feature_dim(),
                              item_emb=128, user_emb=128,
-                             att_dense=64,
+                             att_dense=128,
                              use_cos_sim_instead=False,
                              mlp_dense_layers=[256],
+                             message_dropout=None,
                              dropout_rate=dropout_rate)
 
     # datasets
@@ -200,8 +201,8 @@ if __name__ == '__main__':
 
     # prepare model, train and val datasets (Pointwise val dataset always needed for NDCG eval)
     # model, training_dataset, val_dataset, test_dataset = prepare_fixedinput_ncf(ranking=ranking, use_features=use_features, onehot_users=onehot_users)
-    # model, training_dataset, val_dataset, test_dataset = prepare_attention_ncf(ranking=ranking)
-    model, training_dataset, val_dataset, test_dataset = prepare_graph_ncf(ranking=ranking, use_features=use_features)
+    model, training_dataset, val_dataset, test_dataset = prepare_attention_ncf(ranking=ranking)
+    # model, training_dataset, val_dataset, test_dataset = prepare_graph_ncf(ranking=ranking, use_features=use_features)
 
     print(model)
 

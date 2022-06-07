@@ -139,7 +139,6 @@ class LightGCNConv(MessagePassing):
         if user2item_edge_attr is not None and item2user_edge_attr is not None:
             total_edge_attr = torch.cat([user2item_edge_attr, item2user_edge_attr], dim=0)
 
-        # TODO: need to normalize during message construction, how can this be converted...
         # Compute normalization 1/sqrt{|Ni|*|Nj|} where i = from_ and j = to_
         from_, to_ = total_edges
         deg = degree(to_, x.size(0), dtype=x.dtype)
@@ -164,9 +163,6 @@ class LightGCNConv(MessagePassing):
             del from_, to_, deg_inv_sqrt, deg
             # propagate messages
             out = self.propagate(total_edges, x=x, weight=total_edge_attr, norm=norm, type='combined')
-
-        # add self embeddings
-        out += x
 
         return out
 
@@ -195,7 +191,7 @@ class LightGCNConv(MessagePassing):
 
 class LightGCN(GNN_NCF):
     def __init__(self, item_dim, user_dim, num_gnn_layers: int, hetero, node_emb=64, mlp_dense_layers=None,
-                 dropout_rate=0.2, use_dot_product=False, message_dropout=0.1, concat=True):
+                 dropout_rate=0.2, use_dot_product=False, message_dropout=0.1, concat=False):
         super(LightGCN, self).__init__()
         if mlp_dense_layers is None: mlp_dense_layers = [256, 128]  # default
         self.kwargs = {

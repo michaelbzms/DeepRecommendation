@@ -3,11 +3,9 @@ import sys
 import torch
 from torch import nn
 import torch.nn.functional as F
-import numpy as np
 
 from neural_collaborative_filtering.datasets.dynamic_datasets import DynamicPointwiseDataset, DynamicRankingDataset
 from neural_collaborative_filtering.models.base import NCF
-from neural_collaborative_filtering.plots import visualize_attention
 from neural_collaborative_filtering.util import build_MLP_layers
 
 
@@ -51,7 +49,8 @@ class AdvancedNCF(NCF):
 
 class AttentionNCF(NCF):
     def __init__(self, item_dim, item_emb=128, user_emb=128, att_dense=None,
-                 mlp_dense_layers=None, use_cos_sim_instead=False, dropout_rate=0.2):
+                 mlp_dense_layers=None, use_cos_sim_instead=False, dropout_rate=0.2,
+                 message_dropout=None):
         super(AttentionNCF, self).__init__()
         if mlp_dense_layers is None:
             mlp_dense_layers = [256, 128]           # default
@@ -63,10 +62,11 @@ class AttentionNCF(NCF):
             'att_dense': att_dense,
             'mlp_dense_layers': mlp_dense_layers,
             'dropout_rate': dropout_rate,
-            'use_cos_sim_instead': use_cos_sim_instead
+            'use_cos_sim_instead': use_cos_sim_instead,
+            'message_dropout': message_dropout
         }
-
         self.use_cos_sim_instead = use_cos_sim_instead
+        self.message_dropout = message_dropout
 
         # embedding layers
         self.ItemEmbeddings = nn.Sequential(
@@ -151,6 +151,14 @@ class AttentionNCF(NCF):
 
         # create attention scores matrix
         attention_scores = -float('inf') * torch.ones((B, I), dtype=torch.float32, device=attOut.device)
+
+        # perform message dropout by randomly setting some att weights to zero
+        if self.training and self.message_dropout is not None:
+            # randomly zero some
+            F.dropout(attOut, p=self.message_dropout, training=self.training, inplace=True)
+            # replace zeroes with -inf because of softmax later
+            attOut[attOut == 0] = -float('inf')
+
         attention_scores[user_matrix != 0.0] = attOut
 
         # mask item we are trying to rate for each user if we are training so that the network does not learn to overfit

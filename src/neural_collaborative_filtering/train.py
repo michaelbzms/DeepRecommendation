@@ -108,14 +108,14 @@ def train_model(model: NCF, train_dataset, val_dataset: PointwiseDataset,
                 y_preds.append(out.cpu().detach().numpy())
         train_loss = train_sum_loss / len(train_dataset)
         monitored_metrics['train_loss'].append(train_loss)
-        train_ndcg, train_adj_ndcg = None, None
-        if isinstance(train_dataset, PointwiseDataset):
-            y_preds = np.concatenate(y_preds, dtype=np.float64).reshape(-1)
-            train_dataset.samples['prediction'] = y_preds  # overwriting previous is ok
-            train_ndcg, train_adj_ndcg = eval_ranking(train_dataset.samples, cutoff=ndcg_cutoff)
+        # train_ndcg, train_adj_ndcg = None, None
+        # if isinstance(train_dataset, PointwiseDataset):
+        #     y_preds = np.concatenate(y_preds, dtype=np.float64).reshape(-1)
+        #     train_dataset.samples['prediction'] = y_preds  # overwriting previous is ok
+        #     train_ndcg, train_adj_ndcg = eval_ranking(train_dataset.samples, cutoff=ndcg_cutoff)
         print(f'Training loss: {train_loss:.4f}')
-        if train_ndcg is not None and train_adj_ndcg is not None:
-            print(f'Training NDCG@{ndcg_cutoff}: {train_ndcg:.4f}, adj-NDCG@{ndcg_cutoff}: {train_adj_ndcg:.4f}')
+        # if train_ndcg is not None and train_adj_ndcg is not None:
+        #     print(f'Training NDCG@{ndcg_cutoff}: {train_ndcg:.4f}, adj-NDCG@{ndcg_cutoff}: {train_adj_ndcg:.4f}')
 
         ##################
         #   Validation   #
@@ -162,9 +162,9 @@ def train_model(model: NCF, train_dataset, val_dataset: PointwiseDataset,
                 logs['val_loss'] = val_loss
             elif isinstance(train_dataset, RankingDataset):
                 logs['neg_sampling_w'] = train_dataset.w
-            if train_ndcg is not None and train_adj_ndcg is not None:
-                logs[f'train_ndcg@{ndcg_cutoff}'] = train_ndcg
-                logs[f'train_adj_ndcg@{ndcg_cutoff}'] = train_adj_ndcg
+            # if train_ndcg is not None and train_adj_ndcg is not None:
+            #     logs[f'train_ndcg@{ndcg_cutoff}'] = train_ndcg
+            #     logs[f'train_adj_ndcg@{ndcg_cutoff}'] = train_adj_ndcg
             wandb.log(logs)
 
         ######################
