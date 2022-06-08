@@ -12,7 +12,7 @@ from neural_collaborative_filtering.datasets.gnn_datasets import GraphPointwiseD
 from neural_collaborative_filtering.eval import eval_model
 from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF
 from neural_collaborative_filtering.models.basic_ncf import BasicNCF
-from neural_collaborative_filtering.models.gnn_ncf import NGCF, LightGCN
+from neural_collaborative_filtering.models.gnn_ncf import LightGCN
 from neural_collaborative_filtering.plots import plot_train_val_losses
 from neural_collaborative_filtering.train import train_model
 from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, max_epochs, early_stop, \

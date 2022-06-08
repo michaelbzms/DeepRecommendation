@@ -124,6 +124,8 @@ class AttentionNCF(NCF):
         candidate_interleaved_full = candidate_item_embeddings.repeat_interleave(I, dim=0)
         rated_interleaved_full = rated_emb.repeat(B, 1)
 
+        # TODO: Normalized per user dropout by performing it on the user_matrix instead?
+
         # Optimization: forward AttentionNet / do cos similarity only on valid item pairs by pre-filtering
         # based on unrated items. We need to mask unrated items per user as
         # otherwise there will be attention given on 0 entries of the user matrix.
