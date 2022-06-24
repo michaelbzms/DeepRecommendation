@@ -12,7 +12,7 @@ from neural_collaborative_filtering.datasets.gnn_datasets import GraphPointwiseD
 from neural_collaborative_filtering.eval import eval_model
 from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF
 from neural_collaborative_filtering.models.basic_ncf import BasicNCF
-from neural_collaborative_filtering.models.gnn_ncf import LightGCN
+from neural_collaborative_filtering.models.gnn_ncf import GraphNCF
 from neural_collaborative_filtering.plots import plot_train_val_losses
 from neural_collaborative_filtering.train import train_model
 from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, max_epochs, early_stop, \
@@ -108,15 +108,15 @@ def prepare_graph_ncf(ranking=False, use_features=False, hetero=True, binary=Fal
 
     # model
     if model_kwargs is not None:
-        model = LightGCN(item_dim=gcp.get_item_dim(),
+        model = GraphNCF(item_dim=gcp.get_item_dim(),
                          user_dim=gcp.get_user_dim(),
                          hetero=hetero,
                          **model_kwargs)
     else:
-        model = LightGCN(item_dim=gcp.get_item_dim(),
+        model = GraphNCF(item_dim=gcp.get_item_dim(),
                          user_dim=gcp.get_user_dim(),
                          node_emb=64,
-                         mlp_dense_layers=[256],
+                         mlp_dense_layers=[128],
                          num_gnn_layers=2,
                          dropout_rate=dropout_rate,
                          message_dropout=0.1,
@@ -201,8 +201,8 @@ if __name__ == '__main__':
 
     # prepare model, train and val datasets (Pointwise val dataset always needed for NDCG eval)
     # model, training_dataset, val_dataset, test_dataset = prepare_fixedinput_ncf(ranking=ranking, use_features=use_features, onehot_users=onehot_users)
-    model, training_dataset, val_dataset, test_dataset = prepare_attention_ncf(ranking=ranking)
-    # model, training_dataset, val_dataset, test_dataset = prepare_graph_ncf(ranking=ranking, use_features=use_features)
+    # model, training_dataset, val_dataset, test_dataset = prepare_attention_ncf(ranking=ranking)
+    model, training_dataset, val_dataset, test_dataset = prepare_graph_ncf(ranking=ranking, use_features=use_features)
 
     print(model)
 
@@ -223,7 +223,7 @@ if __name__ == '__main__':
     # train and save result at `final_model_save_path`
     monitored_metrics = train_model(model, train_dataset=training_dataset, val_dataset=val_dataset,
                                     lr=1e-3, weight_decay=1e-5,
-                                    batch_size=256,
+                                    batch_size=512,
                                     val_batch_size=val_batch_size,  # not important
                                     early_stop=True, final_model_path=final_model_path,
                                     checkpoint_model_path=checkpoint_model_path,

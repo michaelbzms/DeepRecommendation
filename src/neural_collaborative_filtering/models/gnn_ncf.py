@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torch_geometric.nn import MessagePassing
-from torch_geometric.utils import degree
+from torch_geometric.utils import degree, softmax
 
 from neural_collaborative_filtering.datasets.gnn_datasets import GraphPointwiseDataset, GraphRankingDataset
 from neural_collaborative_filtering.models.base import GNN_NCF
@@ -83,7 +83,7 @@ class LightGCNConv(MessagePassing):
     LightGCN Conv layer implementation taken and modified from:
     https://medium.com/stanford-cs224w/recommender-systems-with-gnns-in-pyg-d8301178e377
     """
-    def __init__(self, in_channels, out_channels, hetero, dropout=0.2, **kwargs):
+    def __init__(self, in_channels, out_channels, hetero, dropout=0.1, **kwargs):
         super(LightGCNConv, self).__init__(aggr='add', **kwargs)
         self.hetero = hetero
         if hetero:
@@ -137,9 +137,6 @@ class LightGCNConv(MessagePassing):
             out = self.propagate(total_edges, x=x, weight=total_edge_attr, norm=norm, type='combined')
             del norm
 
-        # add self embeddings TODO: Yes or No? LightGCN does not do this I think
-        # out += x
-
         return out
 
     def message(self, x_j, weight, norm, type: str):
@@ -165,10 +162,93 @@ class LightGCNConv(MessagePassing):
         return messages
 
 
-class LightGCN(GNN_NCF):
+class LightGATConv(MessagePassing):
+    def __init__(self, in_channels, out_channels, hetero, dropout=0.1, **kwargs):
+        super(LightGATConv, self).__init__(aggr='add', **kwargs)
+        self.hetero = hetero
+        if hetero:
+            self.user2item_W = nn.Sequential(
+                nn.Linear(in_channels, out_channels),
+                nn.Dropout(dropout)
+            )
+            self.item2user_W = nn.Sequential(
+                nn.Linear(in_channels, out_channels),
+                nn.Dropout(dropout)
+            )
+            self.user2item_AttNet = nn.Sequential(
+                nn.Linear(in_channels * 2, 1),
+            )
+            self.item2user_AttNet = nn.Sequential(
+                nn.Linear(in_channels * 2, 1),
+            )
+            nn.init.xavier_uniform_(self.user2item_W[0].weight)
+            nn.init.xavier_uniform_(self.item2user_W[0].weight)
+        else:
+            self.W = nn.Sequential(
+                nn.Linear(in_channels, out_channels),
+                nn.Dropout(dropout)
+            )
+            self.AttNet = nn.Sequential(
+                nn.Linear(in_channels * 2, 1),
+            )
+            nn.init.xavier_uniform_(self.W[0].weight)
+
+    def forward(self, x, user2item_edge_index, item2user_edge_index, user2item_edge_attr=None,
+                item2user_edge_attr=None):
+        if self.hetero:
+            # propagate user -> item messages
+            out1 = self.propagate(user2item_edge_index, x=(x, x), weight=user2item_edge_attr,
+                                  to_index=user2item_edge_index[1], type='user2item')
+            # propagate item -> user messages
+            out2 = self.propagate(item2user_edge_index, x=(x, x), weight=item2user_edge_attr,
+                                  to_index=item2user_edge_index[1], type='item2user')
+            # add the two messages
+            out = out1 + out2
+        else:
+            # combine all edges into one
+            total_edges = torch.cat([user2item_edge_index, item2user_edge_index], dim=1)
+            total_edge_attr = None
+            if user2item_edge_attr is not None and item2user_edge_attr is not None:
+                total_edge_attr = torch.cat([user2item_edge_attr, item2user_edge_attr], dim=0)
+            # propagate messages
+            out = self.propagate(total_edges, x=(x, x), weight=total_edge_attr,
+                                 to_index=total_edges[1], type='combined')
+
+        return out
+
+    def message(self, x_j, x_i, weight, to_index, type: str):
+        """
+        Implements message from node j to node i. To use extra args they must be passed in propagate().
+        Using '_i' and '_j' variable names somehow associates that arg with the node.
+        Weight is optionally a vector of 1d length [num_edges].
+        """
+        # transform and attention input
+        a_input = torch.cat([x_j, x_i], dim=1)
+        if type == 'user2item':
+            W = self.user2item_W
+            a_scores = self.user2item_AttNet(a_input)
+        elif type == 'item2user':
+            W = self.item2user_W
+            a_scores = self.item2user_AttNet(a_input)
+        elif type == 'combined':
+            W = self.W
+            a_scores = self.AttNet(a_input)
+        else:
+            raise ValueError('Unrecognized message type in GNN')
+        # calculate softmax
+        a_scores = softmax(a_scores, index=to_index)
+        # calculate all messages
+        if weight is not None:
+            messages = weight.view(-1, 1) * a_scores * W(x_j)
+        else:
+            messages = a_scores * W(x_j)
+        return messages
+
+
+class GraphNCF(GNN_NCF):
     def __init__(self, item_dim, user_dim, num_gnn_layers: int, hetero, node_emb=64, mlp_dense_layers=None,
-                 dropout_rate=0.2, use_dot_product=False, message_dropout=None, concat=False):
-        super(LightGCN, self).__init__()
+                 dropout_rate=0.2, use_dot_product=False, message_dropout=None, concat=False, convType='LightGAT'):
+        super(GraphNCF, self).__init__()
         if mlp_dense_layers is None: mlp_dense_layers = [256, 128]  # default
         self.kwargs = {
             'item_dim': item_dim,
@@ -180,7 +260,8 @@ class LightGCN(GNN_NCF):
             'dropout_rate': dropout_rate,
             'message_dropout': message_dropout,
             'hetero': hetero,
-            'concat': concat
+            'concat': concat,
+            'convType': convType
         }
         self.concat = concat
         self.message_dropout = message_dropout
@@ -196,13 +277,25 @@ class LightGCN(GNN_NCF):
         )
 
         # Light GCN convolutions to fine-tune previous embeddings using the graph
-        self.gnn_convs = nn.ModuleList(
-            [LightGCNConv(in_channels=node_emb,
-                          out_channels=node_emb,
-                          dropout=dropout_rate,
-                          hetero=hetero)
-             for _ in range(num_gnn_layers)]
-        )
+        self.convType = convType
+        if convType == 'LightGCN':
+            self.gnn_convs = nn.ModuleList(
+                [LightGCNConv(in_channels=node_emb,
+                              out_channels=node_emb,
+                              dropout=dropout_rate / 2,
+                              hetero=hetero)
+                 for _ in range(num_gnn_layers)]
+            )
+        elif convType == 'LightGAT':
+            self.gnn_convs = nn.ModuleList(
+                [LightGATConv(in_channels=node_emb,
+                              out_channels=node_emb,
+                              dropout=dropout_rate / 2,
+                              hetero=hetero)
+                 for _ in range(num_gnn_layers)]
+            )
+        else:
+            raise ValueError('Invalid convType.')
 
         # MLP layers or simply use dot product
         if use_dot_product:
@@ -214,6 +307,9 @@ class LightGCN(GNN_NCF):
 
     def get_model_parameters(self) -> dict[str]:
         return self.kwargs
+
+    def important_hypeparams(self) -> str:
+        return '_' + self.convType
 
     def is_dataset_compatible(self, dataset_class):
         return issubclass(dataset_class, GraphPointwiseDataset) or issubclass(dataset_class, GraphRankingDataset)

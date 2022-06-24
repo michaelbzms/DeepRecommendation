@@ -131,9 +131,10 @@ if __name__ == '__main__':
              'mlp_dense_layers': [128],
              'dropout_rate': 0.2,
              'message_dropout': 0.1,  # TODO? -> reduces memory requirements
-             'concat': False
+             'concat': False,
+             'use_dot_product': False      # TODO
          },
-         'lr': 1e-3,
+         'lr': 7e-4,
          'batch_size': 512,
          'weight_decay': 1e-5
          },
