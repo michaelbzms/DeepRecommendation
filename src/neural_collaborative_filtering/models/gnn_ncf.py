@@ -175,21 +175,12 @@ class LightGATConv(MessagePassing):
                 nn.Linear(in_channels, out_channels),
                 nn.Dropout(dropout)
             )
-            self.user2item_AttNet = nn.Sequential(
-                nn.Linear(in_channels * 2, 1),
-            )
-            self.item2user_AttNet = nn.Sequential(
-                nn.Linear(in_channels * 2, 1),
-            )
             nn.init.xavier_uniform_(self.user2item_W[0].weight)
             nn.init.xavier_uniform_(self.item2user_W[0].weight)
         else:
             self.W = nn.Sequential(
                 nn.Linear(in_channels, out_channels),
                 nn.Dropout(dropout)
-            )
-            self.AttNet = nn.Sequential(
-                nn.Linear(in_channels * 2, 1),
             )
             nn.init.xavier_uniform_(self.W[0].weight)
 
@@ -222,20 +213,17 @@ class LightGATConv(MessagePassing):
         Using '_i' and '_j' variable names somehow associates that arg with the node.
         Weight is optionally a vector of 1d length [num_edges].
         """
-        # transform and attention input
-        a_input = torch.cat([x_j, x_i], dim=1)
+        # transform
         if type == 'user2item':
             W = self.user2item_W
-            a_scores = self.user2item_AttNet(a_input)
         elif type == 'item2user':
             W = self.item2user_W
-            a_scores = self.item2user_AttNet(a_input)
         elif type == 'combined':
             W = self.W
-            a_scores = self.AttNet(a_input)
         else:
             raise ValueError('Unrecognized message type in GNN')
-        # calculate softmax
+        # calculate att weights
+        a_scores = torch.bmm(x_j.unsqueeze(1), x_i.unsqueeze(2)).view(-1, 1)
         a_scores = softmax(a_scores, index=to_index)
         # calculate all messages
         if weight is not None:
