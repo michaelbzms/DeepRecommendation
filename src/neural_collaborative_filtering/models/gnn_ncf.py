@@ -137,6 +137,9 @@ class LightGCNConv(MessagePassing):
             out = self.propagate(total_edges, x=x, weight=total_edge_attr, norm=norm, type='combined')
             del norm
 
+        # TODO: self message or not? --> probably not
+        # out += x
+
         return out
 
     def message(self, x_j, weight, norm, type: str):
@@ -247,7 +250,7 @@ class LightGATConv(MessagePassing):
 
 class GraphNCF(GNN_NCF):
     def __init__(self, item_dim, user_dim, num_gnn_layers: int, hetero, node_emb=64, mlp_dense_layers=None,
-                 dropout_rate=0.2, use_dot_product=False, message_dropout=None, concat=False, convType='LightGAT'):
+                 dropout_rate=0.2, use_dot_product=False, message_dropout=None, concat=False, convType='LightGCN'):
         super(GraphNCF, self).__init__()
         if mlp_dense_layers is None: mlp_dense_layers = [256, 128]  # default
         self.kwargs = {
@@ -278,24 +281,20 @@ class GraphNCF(GNN_NCF):
 
         # Light GCN convolutions to fine-tune previous embeddings using the graph
         self.convType = convType
+        # TODO: same weights on every layer or different ones? -> probably different ones by norm but same also seems to work...
         if convType == 'LightGCN':
-            self.gnn_convs = nn.ModuleList(
-                [LightGCNConv(in_channels=node_emb,
-                              out_channels=node_emb,
-                              dropout=dropout_rate / 2,
-                              hetero=hetero)
-                 for _ in range(num_gnn_layers)]
-            )
+            conv = LightGCNConv(in_channels=node_emb,
+                                out_channels=node_emb,
+                                dropout=dropout_rate / 2,
+                                hetero=hetero)
         elif convType == 'LightGAT':
-            self.gnn_convs = nn.ModuleList(
-                [LightGATConv(in_channels=node_emb,
-                              out_channels=node_emb,
-                              dropout=dropout_rate / 2,
-                              hetero=hetero)
-                 for _ in range(num_gnn_layers)]
-            )
+            conv = LightGATConv(in_channels=node_emb,
+                                out_channels=node_emb,
+                                dropout=dropout_rate / 2,
+                                hetero=hetero)
         else:
             raise ValueError('Invalid convType.')
+        self.gnn_convs = nn.ModuleList([conv for _ in range(num_gnn_layers)])   # same weights on every time step
 
         # MLP layers or simply use dot product
         if use_dot_product:

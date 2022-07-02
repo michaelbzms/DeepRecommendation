@@ -127,14 +127,14 @@ if __name__ == '__main__':
          'use_ranking': False,
          'model_kwargs': {
              'node_emb': 64,
-             'num_gnn_layers': 2,
+             'num_gnn_layers': 3,
              'mlp_dense_layers': [128],
              'dropout_rate': 0.2,
              'message_dropout': 0.1,  # TODO? -> reduces memory requirements
              'concat': False,
              'use_dot_product': False      # TODO
          },
-         'lr': 7e-4,
+         'lr': 1e-3,
          'batch_size': 512,
          'weight_decay': 1e-5
          },
