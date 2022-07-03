@@ -130,9 +130,10 @@ if __name__ == '__main__':
              'num_gnn_layers': 3,
              'mlp_dense_layers': [128],
              'dropout_rate': 0.2,
-             'message_dropout': 0.1,  # TODO? -> reduces memory requirements
+             'message_dropout': 0.1,  # TODO? -> reduces memory requirements because fewer edges
+             'node_dropout': None,    # TODO? -> also reduces memory requirements because fewer edges
              'concat': False,
-             'use_dot_product': False      # TODO
+             'use_dot_product': False      # TODO: seems to overfit more with it at True
          },
          'lr': 1e-3,
          'batch_size': 512,
