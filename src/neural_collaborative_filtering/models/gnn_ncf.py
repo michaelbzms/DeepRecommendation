@@ -290,7 +290,7 @@ class GraphNCF(GNN_NCF):
         if self.node_dropout is None or self.node_dropout <= 0.0: return
         # subset MUST contain all node ids in the current batch (i.e. `except_node_ids`) because we need their embedding
         subset = np.random.choice(np.array([i for i in range(num_nodes) if i not in except_node_ids]),
-                                  size=int((1.0 - self.message_dropout) * (num_nodes - len(except_node_ids))),
+                                  size=int((1.0 - self.node_dropout) * (num_nodes - len(except_node_ids))),
                                   replace=False).tolist()
         subset = torch.cat([torch.LongTensor(subset), torch.LongTensor(list(except_node_ids))])
         # get the edges for the induced subgraph that has (1-p) % of the nodes still in it
