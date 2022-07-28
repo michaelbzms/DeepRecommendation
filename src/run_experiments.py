@@ -1,7 +1,7 @@
 from train_model import prepare_attention_ncf, prepare_graph_ncf, prepare_fixedinput_ncf, run_experiment
 
 
-project_name = '5kusers1kmovies_Ranking'
+project_name = '900kDatasetV2'
 group_name = 'runs'
 save_models = True
 eval_on_test_also = True
@@ -92,15 +92,27 @@ if __name__ == '__main__':
         #  'batch_size': 64,
         #  'weight_decay': 1e-5
         #  },
+
         # {'use_features': True,
         #  'use_ranking': False,
         #  'model_kwargs': {
-        #      'item_emb': 256, 'user_emb': 256,
-        #      'mlp_dense_layers': [512, 256],
+        #      'item_emb': 128, 'user_emb': 128,
+        #      'mlp_dense_layers': [256],
         #      'dropout_rate': 0.2
         #  },
-        #  'lr': 1e-3,
-        #  'batch_size': 64,
+        #  'lr': 7e-4,
+        #  'batch_size': 128,
+        #  'weight_decay': 1e-5
+        #  },
+        # {'use_features': False,
+        #  'use_ranking': False,
+        #  'model_kwargs': {
+        #      'item_emb': 128, 'user_emb': 128,
+        #      'mlp_dense_layers': [256],
+        #      'dropout_rate': 0.2
+        #  },
+        #  'lr': 7e-4,
+        #  'batch_size': 128,
         #  'weight_decay': 1e-5
         #  }
     ]
@@ -134,6 +146,22 @@ if __name__ == '__main__':
              'node_dropout': None,    # TODO? -> also reduces memory requirements because fewer edges
              'concat': False,
              'use_dot_product': False      # TODO: seems to overfit more with it at True
+         },
+         'lr': 1e-3,
+         'batch_size': 512,
+         'weight_decay': 1e-5
+         },
+        {'use_features': False,
+         'use_ranking': False,
+         'model_kwargs': {
+             'node_emb': 64,
+             'num_gnn_layers': 3,
+             'mlp_dense_layers': [128],
+             'dropout_rate': 0.2,
+             'message_dropout': 0.1,  # TODO? -> reduces memory requirements because fewer edges
+             'node_dropout': None,  # TODO? -> also reduces memory requirements because fewer edges
+             'concat': False,
+             'use_dot_product': False  # TODO: seems to overfit more with it at True
          },
          'lr': 1e-3,
          'batch_size': 512,

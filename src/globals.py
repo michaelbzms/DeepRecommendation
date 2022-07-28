@@ -19,7 +19,7 @@ ranking_test_set_file = '../data/ranking_test'
 full_matrix_file = '../data/full_utility_matrix'
 
 # random seed to use for data creation
-seed = 102
+seed = 42
 
 # which features to use for items
 """ 'metadata', 'audio' or 'all' """
@@ -28,7 +28,7 @@ features_to_use = 'metadata'
 """ NN hyperparameters """
 checkpoint_model_path = '../models/checkpoint.pt'
 final_model_path = '../models/final_model.pt'
-max_epochs = 40
+max_epochs = 32
 batch_size = 256
 val_batch_size = 512
 lr = 3e-4  # 5e-4
