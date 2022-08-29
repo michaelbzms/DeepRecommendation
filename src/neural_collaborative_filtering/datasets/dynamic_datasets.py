@@ -25,14 +25,18 @@ class DynamicPointwiseDataset(PointwiseDataset):
     @staticmethod
     def do_forward(model: NCF, batch, device, return_attention_weights=False):
         # get the input matrices and the target
-        candidate_items, rated_items, user_matrix, y_batch = batch
+        candidate_items_IDs, rated_items_IDs, candidate_items, rated_items, user_matrix, y_batch = batch
         # forward model
         if return_attention_weights:
-            out, att_weights = model(candidate_items.float().to(device), rated_items.float().to(device), user_matrix.float().to(device),
+            out, att_weights = model(candidate_items.float().to(device),
+                                     rated_items.float().to(device),
+                                     user_matrix.float().to(device),
                                      return_attention_weights=True)
-            return out, y_batch, att_weights
+            return out, y_batch, candidate_items_IDs, rated_items_IDs, att_weights
         else:
-            out = model(candidate_items.float().to(device), rated_items.float().to(device), user_matrix.float().to(device),
+            out = model(candidate_items.float().to(device),
+                        rated_items.float().to(device),
+                        user_matrix.float().to(device),
                         return_attention_weights=False)
             return out, y_batch
 
@@ -52,7 +56,7 @@ class DynamicRankingDataset(RankingDataset):
     @staticmethod
     def do_forward(model: NCF, batch, device):
         # get the input matrices and the target
-        candidate_items1, rated_items, user_matrix, candidate_items2 = batch
+        rated_items_IDs, candidate_items1, rated_items, user_matrix, candidate_items2 = batch
         # forward model
         out1 = model(candidate_items1.float().to(device), rated_items.float().to(device), user_matrix.float().to(device))
         out2 = model(candidate_items2.float().to(device), rated_items.float().to(device), user_matrix.float().to(device))

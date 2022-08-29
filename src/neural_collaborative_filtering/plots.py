@@ -81,12 +81,12 @@ def plot_stacked_residuals(fitted_values, ground_truth, normalize=True):
         plt.hist([df.loc[k]['fitted_values'] for k in [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]],
                  bins=128, stacked=True)
         plt.legend(title='Ground truth', labels=[str(num) for num in [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]])
-    plt.title(('Normalized (per target) histogram' if normalize else 'Histogram') + ' of predicted ratings per ground truth')
+    plt.title(('Normalized histogram' if normalize else 'Histogram') + ' of predicted ratings per ground truth')
     plt.xlabel('Predicted ratings')
     plt.ylabel('Frequency')
 
     # save image
-    plt.savefig(plots_path + 'fitted_hist.png', dpi=150)
+    plt.savefig(plots_path + ('normalized_' if normalize else '') + 'fitted_hist.png', dpi=150)
 
     # show
     plt.show()
@@ -100,7 +100,7 @@ def visualize_attention(weights: np.array, user_matrix: np.array, candidate_name
     if B == 1:   # if only showing one item order by att weight
         weights = weights.reshape(-1)
         rated_names = rated_names.reshape(-1)
-        LIMIT_VISIBLE = None
+        LIMIT_VISIBLE = 20
         reordered_indx = (-weights).argsort()
         if LIMIT_VISIBLE:
             reordered_indx = reordered_indx[:LIMIT_VISIBLE]
@@ -123,7 +123,7 @@ def visualize_attention(weights: np.array, user_matrix: np.array, candidate_name
     ax.tick_params(axis='both', which='both', length=0)
 
     # ... and label them with the respective list entries
-    ax.set_yticklabels(candidate_names[0] if B == 1 else candidate_names, fontsize=8)
+    ax.set_yticklabels(candidate_names, fontsize=8)
     ax.set_xticklabels(rated_names if B == 1 else [name[0] for name in rated_names], fontsize=8)
 
     # Rotate the tick labels and set their alignment.

@@ -9,16 +9,18 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from sklearn.metrics import ndcg_score, dcg_score
 
+from globals import movie_text_info_file
 from neural_collaborative_filtering.datasets.base import PointwiseDataset
 from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF
 from neural_collaborative_filtering.models.base import NCF
-from neural_collaborative_filtering.plots import plot_residuals, plot_stacked_residuals, plot_rated_items_counts, plot_att_stats
+from neural_collaborative_filtering.plots import plot_residuals, plot_stacked_residuals, plot_rated_items_counts, \
+    plot_att_stats, visualize_attention
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 # perform attention visualization on top of evaluation
-visualize = False
+visualize = True
 keep_att_stats = False
 
 
@@ -86,11 +88,27 @@ def eval_model(model: NCF, test_dataset: PointwiseDataset, batch_size, ranking, 
     # move model to GPU if available
     model.to(device)
 
+    if visualize:
+        batch_size = 1  # smaller batch size
+
     # define data loader (!) Important to use sequential sampler or the NDCG calculated will be wrong (!)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, collate_fn=test_dataset.use_collate())
 
     # get graphs if evaluating gnn (else it will be None)
     test_graph = test_dataset.get_graph(device)
+
+    # movie info and att stats
+    movie_info_df = pd.read_csv(movie_text_info_file, index_col=0)
+    if keep_att_stats and isinstance(model, AttentionNCF):
+        n = movie_info_df.shape[0]
+        att_stats = pd.DataFrame(
+            index=pd.MultiIndex.from_product([movie_info_df.index, movie_info_df.index]),
+            data={
+                'att_sum': np.zeros(n * n),
+                'att_count': np.zeros(n * n, dtype=np.int)
+            })
+    else:
+        att_stats = None
 
     # Calculate val_loss and see if we need to stop
     model.eval()  # gradients "off"
@@ -103,7 +121,7 @@ def eval_model(model: NCF, test_dataset: PointwiseDataset, batch_size, ranking, 
         for batch in tqdm(test_loader, desc='Testing', file=sys.stdout):
             # forward model
             if isinstance(model, AttentionNCF):
-                out, y_batch, att_weights = test_dataset.__class__.do_forward(model, batch, device, return_attention_weights=True)
+                out, y_batch, candidate_items_IDs, rated_items_ids, att_weights = test_dataset.__class__.do_forward(model, batch, device, return_attention_weights=True)
             else:
                 out, y_batch = test_dataset.__class__.do_forward(model, batch, device, *extra_test_args)
             # MSE only makes sense for regression task
@@ -115,9 +133,23 @@ def eval_model(model: NCF, test_dataset: PointwiseDataset, batch_size, ranking, 
             # keep track of fitted values and their actual targets
             fitted_values.append(out.cpu().detach().numpy())
             ground_truth.append(y_batch.view(-1, 1).float().cpu().detach().numpy())
-            if isinstance(model, AttentionNCF):
-                # TODO: Calculate statistics for attention weights
-                pass
+            if keep_att_stats and isinstance(model, AttentionNCF):
+                # TODO: Too slow + nans
+                index = pd.MultiIndex.from_product([candidate_items_IDs, rated_items_ids])
+                # Might have duplicates because of duplicate candidate items in the batch --> group by and sum
+                att_stats['att_sum'] += pd.Series(
+                    index=index,
+                    data=torch.flatten(att_weights).cpu().numpy()
+                ).groupby(level=[0, 1]).sum()
+                att_stats['att_count'] += pd.Series(
+                    index=index,
+                    data=np.array(torch.flatten(att_weights).cpu().numpy() > 0.0, dtype=np.int)
+                ).groupby(level=[0, 1]).sum()
+            if visualize and isinstance(model, AttentionNCF):
+                visualize_attention(att_weights.cpu().numpy(),
+                                    None,
+                                    movie_info_df.loc[candidate_items_IDs]['primaryTitle'].values,
+                                    movie_info_df.loc[rated_items_ids]['primaryTitle'].values)
 
     if not ranking:
         # MSE only makes sense for regression task

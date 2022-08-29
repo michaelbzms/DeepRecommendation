@@ -192,4 +192,4 @@ class AttentionNCF(NCF):
         # MLP part
         out = self.MLP(combined)
 
-        return out if not return_attention_weights else (out, attention_scores)
+        return out if not return_attention_weights else (out, attention_scores.detach())

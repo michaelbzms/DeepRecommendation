@@ -23,7 +23,7 @@ keep_att_stats = False
 if __name__ == '__main__':
     # TODO: this setup is horrible
 
-    model_file = '../models/runs/AttentionNCF_with_features_attNet128.pt'
+    model_file = '../models/runs/AttentionNCF_with_features_attNet128_zerodropout.pt'
 
     if USE_FEATURES:
         # dataset_class = DynamicMovieLensDataset

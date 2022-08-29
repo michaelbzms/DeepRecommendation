@@ -41,7 +41,8 @@ class DynamicProfilesProvider(DynamicContentProvider):
         batch_data = list(zip(*batch))
 
         # get item profiles and stack them
-        candidate_items = torch.FloatTensor(self.get_item_profile(itemID=batch_data[1]))
+        candidate_items_IDs = batch_data[1]
+        candidate_items = torch.FloatTensor(self.get_item_profile(itemID=candidate_items_IDs))
         if for_ranking:
             targets_or_items2 = torch.FloatTensor(self.get_item_profile(itemID=batch_data[2]))
         else:
@@ -67,4 +68,4 @@ class DynamicProfilesProvider(DynamicContentProvider):
         # get features for all rated items in batch
         rated_items = torch.FloatTensor(self.get_item_profile(rated_items_ids))
 
-        return candidate_items, rated_items, user_matrix, targets_or_items2
+        return np.array(candidate_items_IDs), rated_items_ids, candidate_items, rated_items, user_matrix, targets_or_items2

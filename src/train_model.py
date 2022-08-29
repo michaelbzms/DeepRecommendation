@@ -145,8 +145,7 @@ def run_experiment(model, *, hparams, training_dataset, val_dataset, test_datase
     model_hyperparams = {k: (', '.join([str(i) for i in v]) if isinstance(v, list) else v) for k, v in model.kwargs.items()}
     model_hyperparams['ranking'] = ranking
     model_hyperparams['features_used'] = use_features
-    model_name = f"{type(model).__name__}_{('item_features_but_users_onehot' if onehot_users else 'with_features') if use_features or isinstance(model, AttentionNCF) else 'onehot'}" \
-                 + ('_ranking' if ranking else '')
+    model_name = ('ranking_' if ranking else '') + f"{type(model).__name__}_{('item_features_but_users_onehot' if onehot_users else 'with_features') if use_features or isinstance(model, AttentionNCF) else 'onehot'}"
 
     # if and where to save the trained model
     if save_model:
