@@ -147,7 +147,7 @@ def plot_att_stats(att_stats, item_names):
 
     I = len(item_names)
 
-    ratios = att_stats['sum'] / np.max(att_stats['count'].values, 1)
+    ratios = att_stats['sum'] / np.max(att_stats['count'], 1)
 
     fig, ax = plt.subplots(figsize=(16, 10))
     ax = sns.heatmap(ratios, robust=True, vmin=0, linewidths=0.5, square=True, annot=False, annot_kws={"size": 6},

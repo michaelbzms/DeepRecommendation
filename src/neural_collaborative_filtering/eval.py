@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from sklearn.metrics import ndcg_score, dcg_score
 
-from globals import movie_text_info_file
+from globals import movie_text_info_file, full_matrix_file
 from neural_collaborative_filtering.datasets.base import PointwiseDataset
 from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF
 from neural_collaborative_filtering.models.base import NCF
@@ -20,8 +20,8 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 # perform attention visualization on top of evaluation
-visualize = True
-keep_att_stats = False
+visualize = False
+keep_att_stats = True
 
 
 def eval_ranking(samples_with_preds: pd.DataFrame, cutoff=10):
@@ -99,16 +99,18 @@ def eval_model(model: NCF, test_dataset: PointwiseDataset, batch_size, ranking, 
 
     # movie info and att stats
     movie_info_df = pd.read_csv(movie_text_info_file, index_col=0)
+    full_utility_matrix = pd.read_csv(full_matrix_file + '.csv')
+    all_items = sorted(full_utility_matrix['movieId'].unique())
     if keep_att_stats and isinstance(model, AttentionNCF):
-        n = movie_info_df.shape[0]
-        att_stats = pd.DataFrame(
-            index=pd.MultiIndex.from_product([movie_info_df.index, movie_info_df.index]),
-            data={
-                'att_sum': np.zeros(n * n),
-                'att_count': np.zeros(n * n, dtype=np.int)
-            })
+        n = len(all_items)
+        att_stats = {
+            'sum': np.zeros((n, n)),
+            'count': np.zeros((n, n), dtype=np.int)
+        }
+        itemIDsPos = pd.Series(index=all_items, data=np.arange(n))
     else:
         att_stats = None
+        itemIDsPos = None
 
     # Calculate val_loss and see if we need to stop
     model.eval()  # gradients "off"
@@ -134,22 +136,21 @@ def eval_model(model: NCF, test_dataset: PointwiseDataset, batch_size, ranking, 
             fitted_values.append(out.cpu().detach().numpy())
             ground_truth.append(y_batch.view(-1, 1).float().cpu().detach().numpy())
             if keep_att_stats and isinstance(model, AttentionNCF):
-                # TODO: Too slow + nans
-                index = pd.MultiIndex.from_product([candidate_items_IDs, rated_items_ids])
-                # Might have duplicates because of duplicate candidate items in the batch --> group by and sum
-                att_stats['att_sum'] += pd.Series(
-                    index=index,
-                    data=torch.flatten(att_weights).cpu().numpy()
-                ).groupby(level=[0, 1]).sum()
-                att_stats['att_count'] += pd.Series(
-                    index=index,
-                    data=np.array(torch.flatten(att_weights).cpu().numpy() > 0.0, dtype=np.int)
-                ).groupby(level=[0, 1]).sum()
+                candidate_pos = itemIDsPos.loc[candidate_items_IDs]
+                rated_pos = itemIDsPos.loc[rated_items_ids]
+                att_weights = att_weights.cpu().numpy()
+                counts = np.array(att_weights > 0.0, dtype=np.int)
+                for i, c in enumerate(candidate_pos):
+                    att_stats['sum'][c, rated_pos] += att_weights[i, :]
+                    att_stats['count'][c, rated_pos] += counts[i, :]
             if visualize and isinstance(model, AttentionNCF):
                 visualize_attention(att_weights.cpu().numpy(),
                                     None,
                                     movie_info_df.loc[candidate_items_IDs]['primaryTitle'].values,
                                     movie_info_df.loc[rated_items_ids]['primaryTitle'].values)
+
+    if keep_att_stats and isinstance(model, AttentionNCF):
+        plot_att_stats(att_stats, movie_info_df.loc[itemIDsPos.index]['primaryTitle'].values)   # TODO: is correct?
 
     if not ranking:
         # MSE only makes sense for regression task
@@ -179,76 +180,3 @@ def eval_model(model: NCF, test_dataset: PointwiseDataset, batch_size, ranking, 
         # plot_fitted_vs_targets(fitted_values, ground_truth)
         plot_stacked_residuals(fitted_values, ground_truth)
         plot_residuals(fitted_values, ground_truth)
-
-
-# def eval_model_with_visualization(model: NCF, test_dataset, batch_size):
-#     model.to(device)
-#
-#     # load dataset
-#     print('Test size:', len(test_dataset))
-#
-#     att_stats = None
-#     I = test_dataset.__class__.get_number_of_items()
-#     if visualize and isinstance(model, AttentionNCF):
-#         B = 1
-#         test_loader = DataLoader(test_dataset, batch_size=B, collate_fn=MyCollator(only_rated=True, with_names=True),
-#                                  shuffle=True)
-#     elif keep_att_stats and isinstance(model, AttentionNCF):
-#         att_stats = {'sum': pd.DataFrame(index=test_dataset.__class__.get_sorted_item_names(),
-#                                          columns=test_dataset.__class__.get_sorted_item_names(), data=np.zeros((I, I))),
-#                      'count': pd.DataFrame(index=test_dataset.__class__.get_sorted_item_names(),
-#                                            columns=test_dataset.__class__.get_sorted_item_names(),
-#                                            data=np.zeros((I, I), dtype=np.int32))}
-#         test_loader = DataLoader(test_dataset, batch_size=batch_size,
-#                                  collate_fn=MyCollator(only_rated=False, with_names=True))
-#     else:
-#         test_loader = DataLoader(test_dataset, batch_size=batch_size, collate_fn=test_dataset.use_collate())
-#
-#     criterion = nn.MSELoss(reduction='sum')  # don't average the loss as we shall do that ourselves for the whole epoch
-#
-#     # Calculate val_loss and see if we need to stop
-#     model.eval()  # gradients "off"
-#     test_sum_loss = 0.0
-#     test_size = 0
-#     fitted_values = []
-#     ground_truth = []
-#     with torch.no_grad():
-#         for batch in tqdm(test_loader, desc='Testing'):
-#             if visualize and isinstance(model, AttentionNCF):
-#                 # get the input matrices and the target
-#                 candidate_items, rated_items, user_matrix, y_batch, candidate_names, rated_names = batch
-#                 # forward model
-#                 out = model(candidate_items.float().to(device), rated_items.float().to(device),
-#                             user_matrix.float().to(device),
-#                             candidate_names=candidate_names, rated_names=rated_names, visualize=True)
-#             elif keep_att_stats and isinstance(model, AttentionNCF):
-#                 # get the input matrices and the target
-#                 candidate_items, rated_items, user_matrix, y_batch, candidate_names, rated_names = batch
-#                 # forward model
-#                 out = model(candidate_items.float().to(device), rated_items.float().to(device),
-#                             user_matrix.float().to(device),
-#                             att_stats=att_stats, candidate_names=candidate_names, rated_names=rated_names)
-#             else:
-#                 # forward model
-#                 out, y_batch = test_dataset.__class__.do_forward(model, batch, device)
-#             # calculate loss
-#             loss = criterion(out, y_batch.view(-1, 1).float().to(device))
-#             # accumulate validation loss
-#             test_sum_loss += loss.detach().item()
-#             test_size += len(y_batch)
-#             # keep track of fitted values and their actual targets
-#             fitted_values.append(out.cpu().detach().numpy())
-#             ground_truth.append(y_batch.view(-1, 1).float().cpu().detach().numpy())
-#
-#     test_mse = test_sum_loss / test_size
-#     print(f'Test loss (MSE): {test_mse:.6f} - RMSE: {sqrt(test_mse):.6f}')
-#
-#     if keep_att_stats and isinstance(model, AttentionNCF):
-#         plot_rated_items_counts(att_stats['count'], item_names=test_dataset.__class__.get_sorted_item_names())
-#         plot_att_stats(att_stats, item_names=test_dataset.__class__.get_sorted_item_names())
-#     else:
-#         fitted_values = np.concatenate(fitted_values, dtype=np.float64).reshape(-1)
-#         ground_truth = np.concatenate(ground_truth, dtype=np.float64).reshape(-1)
-#         # plot_fitted_vs_targets(fitted_values, ground_truth)
-#         plot_stacked_residuals(fitted_values, ground_truth)
-#         plot_residuals(fitted_values, ground_truth)
