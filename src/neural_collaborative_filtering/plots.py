@@ -142,24 +142,30 @@ def visualize_attention(weights: np.array, user_matrix: np.array, candidate_name
 
 def plot_att_stats(att_stats, item_names, item_ids):
     """ x-axis is rated items and y-axis is candidate items. It's not a symmetric relationship """
-    keep_movies = [
+    keep_movies = np.array([
         'tt0167261', 'tt0120737', 'tt0903624',  # LOTR + hobbit,
         'tt0325980', 'tt0449088',               # Pirates of the caribean
-        'tt0145487', 'tt0316654', 'tt0413300',  # Spiderman
+        'tt0145487', 'tt0316654', 'tt0413300', 'tt1872181'     # Spiderman + Amazing Spiderman
         'tt0126029', 'tt0298148', 'tt0413267',  # Shrek
-        'tt3606756', 'tt2293640', 'tt0366548', 'tt0266543',    # other cartoons
+        'tt3606756', 'tt2293640', 'tt0366548', 'tt0266543', 'tt1667889',   # other cartoons
         'tt0848228', 'tt2395427', 'tt4154756', 'tt4154796',    # Avengers
+        'tt3896198', 'tt3498820', 'tt1211837', 'tt3501632',    # marvel
         'tt0120903', 'tt3385516', 'tt1877832',  # X-men
-        'tt3896198', 'tt3498820', 'tt1211837',  # marvel
+        'tt0372784', 'tt2975590',               # Batman
+        'tt0305357', 'tt2140479',               # action
+        'tt1375670', 'tt0306047', 'tt1723121', 'tt0974661',   # comedies
+        'tt0427229', 'tt2582846', 'tt0832266', 'tt0265208', 'tt0362227',  # romances
         'tt0790724', 'tt1397280', 'tt0816711', 'tt0240772',    # thrillers
         'tt1853728', 'tt1210819', 'tt1403865',  # westerns
-        'tt0203009', 'tt0344510', 'tt0243155', 'tt0265208', 'tt0362227',   # romances
         'tt0248667', 'tt0265662', 'tt0360201',  # sports
-        'tt0372784', 'tt2975590'                # Batman
-    ]
+        # 'tt0241527', 'tt0295297', 'tt0304141', 'tt0330373', 'tt0373889', 'tt0417741', 'tt0926084', 'tt1201607'  # Harry Potter
+        'tt1324999', 'tt1673434'                # twilight
+    ])
 
     # mask out the other movies
-    mask = [item in keep_movies for item in item_ids]
+    # Old way: mask = [item in keep_movies for item in item_ids]
+    # This reorders them as in keep_movies
+    mask = np.where(keep_movies.reshape(keep_movies.size, 1) == item_ids)[1]
     att_stats['sum'] = att_stats['sum'][mask, :][:, mask]
     att_stats['count'] = att_stats['count'][mask, :][:, mask]
     item_names = item_names[mask]
