@@ -150,7 +150,7 @@ def eval_model(model: NCF, test_dataset: PointwiseDataset, batch_size, ranking, 
                                     movie_info_df.loc[rated_items_ids]['primaryTitle'].values)
 
     if keep_att_stats and isinstance(model, AttentionNCF):
-        plot_att_stats(att_stats, movie_info_df.loc[itemIDsPos.index]['primaryTitle'].values)   # TODO: is correct?
+        plot_att_stats(att_stats, movie_info_df.loc[itemIDsPos.index]['primaryTitle'].values, itemIDsPos.index.to_numpy())   # TODO: is correct?
 
     if not ranking:
         # MSE only makes sense for regression task

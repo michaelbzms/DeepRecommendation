@@ -140,8 +140,29 @@ def visualize_attention(weights: np.array, user_matrix: np.array, candidate_name
     plt.show()
 
 
-def plot_att_stats(att_stats, item_names):
+def plot_att_stats(att_stats, item_names, item_ids):
     """ x-axis is rated items and y-axis is candidate items. It's not a symmetric relationship """
+    keep_movies = [
+        'tt0167261', 'tt0120737', 'tt0903624',  # LOTR + hobbit,
+        'tt0325980', 'tt0449088',               # Pirates of the caribean
+        'tt0145487', 'tt0316654', 'tt0413300',  # Spiderman
+        'tt0126029', 'tt0298148', 'tt0413267',  # Shrek
+        'tt3606756', 'tt2293640', 'tt0366548', 'tt0266543',    # other cartoons
+        'tt0848228', 'tt2395427', 'tt4154756', 'tt4154796',    # Avengers
+        'tt0120903', 'tt3385516', 'tt1877832',  # X-men
+        'tt3896198', 'tt3498820', 'tt1211837',  # marvel
+        'tt0790724', 'tt1397280', 'tt0816711', 'tt0240772',    # thrillers
+        'tt1853728', 'tt1210819', 'tt1403865',  # westerns
+        'tt0203009', 'tt0344510', 'tt0243155', 'tt0265208', 'tt0362227',   # romances
+        'tt0248667', 'tt0265662', 'tt0360201',  # sports
+        'tt0372784', 'tt2975590'                # Batman
+    ]
+
+    # mask out the other movies
+    mask = [item in keep_movies for item in item_ids]
+    att_stats['sum'] = att_stats['sum'][mask, :][:, mask]
+    att_stats['count'] = att_stats['count'][mask, :][:, mask]
+    item_names = item_names[mask]
 
     item_names = [(i[:17] + '...' if len(i) > 20 else i) for i in item_names]
 
@@ -164,8 +185,8 @@ def plot_att_stats(att_stats, item_names):
     ax.tick_params(axis='both', which='both', length=0)
 
     # ... and label them with the respective list entries
-    ax.set_yticklabels(item_names, fontsize=3)
-    ax.set_xticklabels(item_names, fontsize=3)
+    ax.set_yticklabels(item_names, fontsize=8)
+    ax.set_xticklabels(item_names, fontsize=8)
     ax.set_ylabel('Candidate items')
     ax.set_xlabel('Rated items')
 
