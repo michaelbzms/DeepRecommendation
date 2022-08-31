@@ -170,7 +170,7 @@ def plot_att_stats(att_stats, item_names, item_ids):
     att_stats['count'] = att_stats['count'][mask, :][:, mask]
     item_names = item_names[mask]
 
-    item_names = [(i[:17] + '...' if len(i) > 20 else i) for i in item_names]
+    item_names = [(i[:27] + '...' if len(i) > 30 else i) for i in item_names]
 
     I = len(item_names)
 

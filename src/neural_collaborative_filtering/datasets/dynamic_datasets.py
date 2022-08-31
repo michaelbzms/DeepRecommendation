@@ -32,7 +32,7 @@ class DynamicPointwiseDataset(PointwiseDataset):
                                      rated_items.float().to(device),
                                      user_matrix.float().to(device),
                                      return_attention_weights=True)
-            return out, y_batch, candidate_items_IDs, rated_items_IDs, att_weights
+            return out, y_batch, candidate_items_IDs, rated_items_IDs, att_weights, user_matrix
         else:
             out = model(candidate_items.float().to(device),
                         rated_items.float().to(device),

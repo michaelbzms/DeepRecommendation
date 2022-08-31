@@ -123,7 +123,9 @@ def eval_model(model: NCF, test_dataset: PointwiseDataset, batch_size, ranking, 
         for batch in tqdm(test_loader, desc='Testing', file=sys.stdout):
             # forward model
             if isinstance(model, AttentionNCF):
-                out, y_batch, candidate_items_IDs, rated_items_ids, att_weights = test_dataset.__class__.do_forward(model, batch, device, return_attention_weights=True)
+                out, y_batch, candidate_items_IDs, rated_items_ids, att_weights, user_matrix = test_dataset.__class__.do_forward(model, batch, device, return_attention_weights=True)
+                att_weights = att_weights.cpu().numpy()
+                user_matrix = user_matrix.cpu().numpy()
             else:
                 out, y_batch = test_dataset.__class__.do_forward(model, batch, device, *extra_test_args)
             # MSE only makes sense for regression task
@@ -138,14 +140,13 @@ def eval_model(model: NCF, test_dataset: PointwiseDataset, batch_size, ranking, 
             if keep_att_stats and isinstance(model, AttentionNCF):
                 candidate_pos = itemIDsPos.loc[candidate_items_IDs]
                 rated_pos = itemIDsPos.loc[rated_items_ids]
-                att_weights = att_weights.cpu().numpy()
-                counts = np.array(att_weights > 0.0, dtype=np.int)
+                counts = np.array(np.logical_or(user_matrix != 0.0, att_weights > 0.0), dtype=np.int)
                 for i, c in enumerate(candidate_pos):
                     att_stats['sum'][c, rated_pos] += att_weights[i, :]
                     att_stats['count'][c, rated_pos] += counts[i, :]
             if visualize and isinstance(model, AttentionNCF):
                 visualize_attention(att_weights.cpu().numpy(),
-                                    None,
+                                    user_matrix.cpu().numpy(),
                                     movie_info_df.loc[candidate_items_IDs]['primaryTitle'].values,
                                     movie_info_df.loc[rated_items_ids]['primaryTitle'].values)
 
