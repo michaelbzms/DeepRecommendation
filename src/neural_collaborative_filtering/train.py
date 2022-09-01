@@ -20,7 +20,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 def train_model(model: NCF, train_dataset, val_dataset: PointwiseDataset,
                 lr, weight_decay, batch_size, val_batch_size, early_stop,
                 final_model_path='final_model.pt', checkpoint_model_path='temp.pt', max_epochs=100,
-                patience=3, max_patience=5, optimizer=None, ndcg_cutoff=10, wandb=None):
+                patience=3, max_patience=5, optimizer=None, ndcg_cutoff=10, wandb=None, num_workers=0):
     """
     Main logic for training a model. Hyperparameters (e.g. lr, batch_size, etc) as arguments.
     On each loop (epoch), we forward the model on the training_dataset and backpropagate the loss
@@ -43,9 +43,12 @@ def train_model(model: NCF, train_dataset, val_dataset: PointwiseDataset,
 
     print('Training size:', len(train_dataset), ' - Validation size:', len(val_dataset))
 
+    if num_workers > 0:
+        print(f'Using {num_workers} worker processes for training data loader.')
+
     # define data loaders
     # Note: Important to shuffle train set (!) - do NOT shuffle val set (if we do the NDCG calculation will be wrong)
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=train_dataset.use_collate())
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=train_dataset.use_collate(), num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=val_batch_size, collate_fn=val_dataset.use_collate())
 
     # define optimizer if not given

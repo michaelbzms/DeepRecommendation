@@ -24,6 +24,9 @@ full_matrix_file = '../data/full_utility_matrix'
 # random seed to use for data creation
 seed = 42
 
+# parallelism on dataloaders on training
+num_workers = 0    # Note: Can't do more workers than 0 because collate functions cannot be pickled
+
 # which features to use for items
 """ 'metadata', 'audio' or 'all' """
 features_to_use = 'metadata'

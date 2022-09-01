@@ -18,7 +18,7 @@ from neural_collaborative_filtering.train import train_model
 from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, max_epochs, early_stop, \
     checkpoint_model_path, patience, dropout_rate, final_model_path, \
     val_batch_size, ranking_train_set_file, \
-    ranking_val_set_file, test_set_file, user_ratings_file, user_ratings_with_val_file, train_and_val_set_file
+    ranking_val_set_file, test_set_file, user_ratings_file, user_ratings_with_val_file, train_and_val_set_file, num_workers
 
 
 def prepare_fixedinput_ncf(ranking=False, use_features=False, onehot_users=False, model_kwargs=None, include_val_ratings_to_user_profiles=False):
@@ -201,7 +201,8 @@ def run_experiment(model, *, hparams, training_dataset, val_dataset, test_datase
                                     early_stop=True, final_model_path=model_save_path,
                                     checkpoint_model_path=checkpoint_model_path,
                                     max_epochs=max_epochs, patience=patience,
-                                    wandb=wandb)
+                                    wandb=wandb,
+                                    num_workers=num_workers)
 
     if test_dataset is not None:
         eval_model(model, test_dataset, val_batch_size, wandb=wandb, ranking=ranking, doplots=False)

@@ -15,9 +15,7 @@ from neural_collaborative_filtering.util import load_model
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-# perform attention visualization on top of evaluation
-visualize = False
-keep_att_stats = False
+include_val_ratings_to_user_profiles = False
 
 
 if __name__ == '__main__':
@@ -26,15 +24,7 @@ if __name__ == '__main__':
     model_file = '../models/runs/AttentionNCF_with_features_attNet128_zerodropout.pt'
 
     if USE_FEATURES:
-        # dataset_class = DynamicMovieLensDataset
-        #
-        # # get metadata dim
-        # item_dim = dataset_class.get_item_feature_dim()
-        #
-        # # load model with correct layer sizes
-        # model = load_model(model_file, AttentionNCF)
-
-        cp = DynamicProfilesProvider()
+        cp = DynamicProfilesProvider(include_val_ratings_to_user_profiles=include_val_ratings_to_user_profiles)
         test_dataset = DynamicPointwiseDataset(test_set_file, dynamic_provider=cp)
 
         model = load_model(model_file, AttentionNCF)
@@ -55,4 +45,4 @@ if __name__ == '__main__':
     print(model)
 
     # evaluate model on test set
-    eval_model(model, test_dataset, val_batch_size, ranking=False)
+    eval_model(model, test_dataset, val_batch_size, ranking=False, val_ratings_included=include_val_ratings_to_user_profiles and USE_FEATURES)
