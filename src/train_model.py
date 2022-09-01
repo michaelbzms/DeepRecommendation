@@ -18,10 +18,10 @@ from neural_collaborative_filtering.train import train_model
 from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, max_epochs, early_stop, \
     checkpoint_model_path, patience, dropout_rate, final_model_path, \
     val_batch_size, ranking_train_set_file, \
-    ranking_val_set_file, test_set_file
+    ranking_val_set_file, test_set_file, user_ratings_file, user_ratings_with_val_file, train_and_val_set_file
 
 
-def prepare_fixedinput_ncf(ranking=False, use_features=False, onehot_users=False, model_kwargs=None):
+def prepare_fixedinput_ncf(ranking=False, use_features=False, onehot_users=False, model_kwargs=None, include_val_ratings_to_user_profiles=False):
     """
     Set up the model and datasets to train an NCF model on fixed input.
     """
@@ -61,10 +61,16 @@ def prepare_fixedinput_ncf(ranking=False, use_features=False, onehot_users=False
     else:
         training_dataset = FixedPointwiseDataset(train_set_file, content_provider=cp)
 
-    return model, training_dataset, val_dataset, test_dataset
+    if include_val_ratings_to_user_profiles and use_features:
+        cp_with_val = FixedProfilesProvider(include_val_ratings_to_user_profiles=True)
+        test_dataset_with_val = FixedPointwiseDataset(test_set_file, content_provider=cp_with_val)
+    else:
+        test_dataset_with_val = None
+
+    return model, training_dataset, val_dataset, test_dataset, test_dataset_with_val
 
 
-def prepare_attention_ncf(ranking=False, model_kwargs=None):
+def prepare_attention_ncf(ranking=False, model_kwargs=None, include_val_ratings_to_user_profiles=False):
     """
     Set up the model and datasets to train the attention NCF model on dynamic input
     (i.e. dynamic user profiles).
@@ -91,10 +97,16 @@ def prepare_attention_ncf(ranking=False, model_kwargs=None):
     else:
         training_dataset = DynamicPointwiseDataset(train_set_file, dynamic_provider=dpp)
 
-    return model, training_dataset, val_dataset, test_dataset
+    if include_val_ratings_to_user_profiles:
+        dpp_with_val = DynamicProfilesProvider(include_val_ratings_to_user_profiles=True)
+        test_dataset_with_val = DynamicPointwiseDataset(test_set_file, dynamic_provider=dpp_with_val)
+    else:
+        test_dataset_with_val = None
+
+    return model, training_dataset, val_dataset, test_dataset, test_dataset_with_val
 
 
-def prepare_graph_ncf(ranking=False, use_features=False, hetero=True, binary=False, model_kwargs=None):
+def prepare_graph_ncf(ranking=False, use_features=False, hetero=True, binary=False, model_kwargs=None, include_val_ratings_to_user_profiles=False):
     """
     Set up the model and datasets to train a graph NCF model on fixed input.
     """
@@ -130,10 +142,16 @@ def prepare_graph_ncf(ranking=False, use_features=False, hetero=True, binary=Fal
     else:
         training_dataset = GraphPointwiseDataset(train_set_file, graph_content_provider=gcp)
 
-    return model, training_dataset, val_dataset, test_dataset
+    if include_val_ratings_to_user_profiles and use_features:
+        gcp_with_val = ProfilesGraphProvider(train_and_val_set_file, binary=binary, include_val_ratings_to_user_profiles=True)
+        test_dataset_with_val = GraphPointwiseDataset(test_set_file, graph_content_provider=gcp_with_val)
+    else:
+        test_dataset_with_val = None
+
+    return model, training_dataset, val_dataset, test_dataset, test_dataset_with_val
 
 
-def run_experiment(model, *, hparams, training_dataset, val_dataset, test_dataset=None,
+def run_experiment(model, *, hparams, training_dataset, val_dataset, test_dataset=None, test_dataset_with_val=None,
                    use_features=False, ranking=False, onehot_users=False, save_model=True,
                    final_model_save_path=None, group_name='runs', project_name='DeepRecommendation', **kwargs):
     print('___________________ Running experiment ___________________')
@@ -187,6 +205,8 @@ def run_experiment(model, *, hparams, training_dataset, val_dataset, test_datase
 
     if test_dataset is not None:
         eval_model(model, test_dataset, val_batch_size, wandb=wandb, ranking=ranking, doplots=False)
+    if test_dataset_with_val is not None:
+        eval_model(model, test_dataset_with_val, val_batch_size, wandb=wandb, ranking=ranking, doplots=False, val_ratings_included=True)
 
     run.finish()
 
@@ -199,9 +219,9 @@ if __name__ == '__main__':
     onehot_users = False
 
     # prepare model, train and val datasets (Pointwise val dataset always needed for NDCG eval)
-    # model, training_dataset, val_dataset, test_dataset = prepare_fixedinput_ncf(ranking=ranking, use_features=use_features, onehot_users=onehot_users)
-    # model, training_dataset, val_dataset, test_dataset = prepare_attention_ncf(ranking=ranking)
-    model, training_dataset, val_dataset, test_dataset = prepare_graph_ncf(ranking=ranking, use_features=use_features)
+    # model, training_dataset, val_dataset, test_dataset, test_dataset_with_val = prepare_fixedinput_ncf(ranking=ranking, use_features=use_features, onehot_users=onehot_users)
+    # model, training_dataset, val_dataset, test_dataset, test_dataset_with_val = prepare_attention_ncf(ranking=ranking)
+    model, training_dataset, val_dataset, test_dataset, test_dataset_with_val = prepare_graph_ncf(ranking=ranking, use_features=use_features)
 
     print(model)
 

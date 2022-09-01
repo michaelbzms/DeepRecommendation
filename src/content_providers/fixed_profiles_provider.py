@@ -2,15 +2,17 @@ import numpy as np
 import pandas as pd
 
 from neural_collaborative_filtering.content_providers import ContentProvider
-from globals import item_metadata_file, user_embeddings_file, full_matrix_file
+from globals import item_metadata_file, user_embeddings_file, full_matrix_file, user_embeddings_with_val_file
 from util import one_hot_encode
 
 
 class FixedProfilesProvider(ContentProvider):
     # noinspection PyTypeChecker
-    def __init__(self):
+    def __init__(self, include_val_ratings_to_user_profiles=False):
         self.metadata: pd.DataFrame = pd.read_hdf(item_metadata_file + '.h5')
-        self.user_embeddings: pd.DataFrame = pd.read_hdf(user_embeddings_file + '.h5')
+        emb_file = user_embeddings_with_val_file if include_val_ratings_to_user_profiles else user_embeddings_file
+        print(f'Loading user embeddings from {emb_file}.')
+        self.user_embeddings: pd.DataFrame = pd.read_hdf(emb_file + '.h5')
 
     def get_item_profile(self, itemID):
         return self.metadata.loc[itemID, :].values

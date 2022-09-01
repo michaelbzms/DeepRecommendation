@@ -3,7 +3,7 @@ import torch
 from content_providers.dynamic_profiles_provider import DynamicProfilesProvider
 from content_providers.fixed_profiles_provider import FixedProfilesProvider
 from content_providers.one_hot_provider import OneHotProvider
-from globals import test_set_file, val_batch_size, USE_FEATURES
+from globals import test_set_file, val_batch_size, USE_FEATURES, user_ratings_file
 from neural_collaborative_filtering.datasets.dynamic_datasets import DynamicPointwiseDataset
 from neural_collaborative_filtering.datasets.fixed_datasets import FixedPointwiseDataset
 from neural_collaborative_filtering.eval import eval_model

@@ -4,14 +4,16 @@ import numpy as np
 
 from neural_collaborative_filtering.content_providers import DynamicContentProvider
 from util import multi_hot_encode
-from globals import item_metadata_file, user_ratings_file
+from globals import item_metadata_file, user_ratings_file, user_ratings_with_val_file
 
 
 class DynamicProfilesProvider(DynamicContentProvider):
     # noinspection PyTypeChecker
-    def __init__(self):
+    def __init__(self, include_val_ratings_to_user_profiles=False):
         self.metadata: pd.DataFrame = pd.read_hdf(item_metadata_file + '.h5')
-        self.user_ratings: pd.DataFrame = pd.read_hdf(user_ratings_file + '.h5')
+        ratings_file = user_ratings_with_val_file if include_val_ratings_to_user_profiles else user_ratings_file
+        print(f'Loading user ratings from {ratings_file}.')
+        self.user_ratings: pd.DataFrame = pd.read_hdf(ratings_file + '.h5')
 
     def get_item_profile(self, itemID):  # ID or IDs
         return self.metadata.loc[itemID, :].values
