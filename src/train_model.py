@@ -61,7 +61,7 @@ def prepare_fixedinput_ncf(ranking=False, use_features=False, onehot_users=False
     else:
         training_dataset = FixedPointwiseDataset(train_set_file, content_provider=cp)
 
-    if include_val_ratings_to_user_profiles and use_features:
+    if include_val_ratings_to_user_profiles and use_features and not onehot_users:
         cp_with_val = FixedProfilesProvider(include_val_ratings_to_user_profiles=True)
         test_dataset_with_val = FixedPointwiseDataset(test_set_file, content_provider=cp_with_val)
     else:
@@ -174,9 +174,6 @@ def run_experiment(model, *, hparams, training_dataset, val_dataset, test_datase
             model_save_path = final_model_save_path
     else:
         model_save_path = None
-
-    if isinstance(model, AttentionNCF):
-        pass
 
     # init weights & biases
     run = wandb.init(project=project_name,

@@ -69,9 +69,6 @@ class LightGCNConv(MessagePassing):
             out = self.propagate(total_edges, x=x, weight=total_edge_attr, norm=norm, type='combined')
             del norm
 
-        # TODO: self message or not? --> probably not
-        # out += x
-
         return out
 
     def message(self, x_j, weight, norm, type: str):
@@ -252,7 +249,8 @@ class GraphNCF(GNN_NCF):
         """
         Randomly remove p% of undirected edges (i.e. both directed edges between two nodes) in the graph.
         """
-        if self.message_dropout is None or self.message_dropout <= 0.0: return
+        if self.message_dropout is None or self.message_dropout <= 0.0:
+            return user2item_edge_index, item2user_edge_index, user2item_edge_attr, item2user_edge_attr
         # message dropout -> randomly ignore p % of edges in the graph
         if user2item_edge_index.shape[1] == item2user_edge_index.shape[1] and (
                 user2item_edge_attr is not None and item2user_edge_attr is not None):  # TODO: assumes edge attr non zero when using all edges (aka binary=False)
@@ -287,7 +285,8 @@ class GraphNCF(GNN_NCF):
         Randomly remove p% of graph nodes (along with all their edges) that are not in the current batch themselves.
         Note: must be in k-hop neighbours to affect nodes in current batch. Can't control that.
         """
-        if self.node_dropout is None or self.node_dropout <= 0.0: return
+        if self.node_dropout is None or self.node_dropout <= 0.0:
+            return user2item_edge_index, item2user_edge_index, user2item_edge_attr, item2user_edge_attr
         # subset MUST contain all node ids in the current batch (i.e. `except_node_ids`) because we need their embedding
         subset = np.random.choice(np.array([i for i in range(num_nodes) if i not in except_node_ids]),
                                   size=int((1.0 - self.node_dropout) * (num_nodes - len(except_node_ids))),
@@ -323,14 +322,14 @@ class GraphNCF(GNN_NCF):
             item2user_edge_index, item2user_edge_attr = self._mask_edge_index(_inp1,  graph.pos_df, item2user_edge_index, item2user_edge_attr, device)
 
         # apply node dropout ONCE for ALL graph convolutions
-        if self.node_dropout is not None and self.training:
+        if self.node_dropout is not None and self.node_dropout > 0.0 and self.training:
             user2item_edge_index, item2user_edge_index, user2item_edge_attr, item2user_edge_attr = self._node_dropout(
                 graph_emb.shape[0], set(torch.unique(torch.cat((itemIds, userIds))).tolist()),
                 user2item_edge_index, item2user_edge_index, user2item_edge_attr, item2user_edge_attr
             )
 
         # apply message dropout ONCE for ALL graph convolutions
-        if self.message_dropout is not None and self.training:
+        if self.message_dropout is not None and self.message_dropout > 0.0 and self.training:
             user2item_edge_index, item2user_edge_index, user2item_edge_attr, item2user_edge_attr = self._message_dropout(
                 user2item_edge_index, item2user_edge_index, user2item_edge_attr, item2user_edge_attr
             )

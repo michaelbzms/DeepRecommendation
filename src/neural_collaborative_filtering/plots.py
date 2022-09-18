@@ -143,23 +143,27 @@ def visualize_attention(weights: np.array, user_matrix: np.array, candidate_name
 def plot_att_stats(att_stats, item_names, item_ids):
     """ x-axis is rated items and y-axis is candidate items. It's not a symmetric relationship """
     keep_movies = np.array([
-        'tt0167261', 'tt0120737', 'tt0903624',  # LOTR + hobbit,
-        'tt0325980', 'tt0449088',               # Pirates of the caribean
-        'tt0145487', 'tt0316654', 'tt0413300', 'tt1872181'     # Spiderman + Amazing Spiderman
-        'tt0126029', 'tt0298148', 'tt0413267',  # Shrek
-        'tt3606756', 'tt2293640', 'tt0366548', 'tt0266543', 'tt1667889',   # other cartoons
-        'tt0848228', 'tt2395427', 'tt4154756', 'tt4154796',    # Avengers
-        'tt3896198', 'tt3498820', 'tt1211837', 'tt3501632',    # marvel
-        'tt0120903', 'tt3385516', 'tt1877832',  # X-men
-        'tt0372784', 'tt2975590',               # Batman
-        'tt0305357', 'tt2140479',               # action
-        'tt1375670', 'tt0306047', 'tt1723121', 'tt0974661',   # comedies
-        'tt0427229', 'tt2582846', 'tt0832266', 'tt0265208', 'tt0362227',  # romances
-        'tt0790724', 'tt1397280', 'tt0816711', 'tt0240772',    # thrillers
-        'tt1853728', 'tt1210819', 'tt1403865',  # westerns
-        'tt0248667', 'tt0265662', 'tt0360201',  # sports
-        # 'tt0241527', 'tt0295297', 'tt0304141', 'tt0330373', 'tt0373889', 'tt0417741', 'tt0926084', 'tt1201607'  # Harry Potter
-        'tt1324999', 'tt1673434'                # twilight
+        # 'tt0167261', 'tt0120737', 'tt0167260', 'tt0903624',    # LOTR + hobbit,
+        # 'tt0325980', 'tt0449088',                 # Pirates of the caribean
+        # 'tt0145487', 'tt0316654', 'tt0413300', 'tt1872181',    # Spiderman + Amazing Spiderman
+        # 'tt0126029', 'tt0298148', 'tt0413267',  # Shrek
+        'tt0317705', 'tt3606756',                              # incredibles
+        # 'tt0266543', 'tt1667889',    # other cartoons
+        # 'tt0848228', 'tt2395427', 'tt4154756', 'tt4154796',    # Avengers
+        # 'tt3896198', 'tt3498820', 'tt1211837', 'tt3501632',    # marvel
+        # 'tt0120903', 'tt3385516', 'tt1877832',  # X-men
+        # 'tt0372784', 'tt2975590', 'tt0770828',  # DC
+        'tt0305357', 'tt2140479',  'tt0181689', 'tt0258463',    # action
+        'tt0120755', 'tt0317919', 'tt1229238', 'tt2381249',       # spies
+        'tt0795421', 'tt0203009', 'tt0293508',                    # musical
+        'tt1375670', 'tt0306047', 'tt1723121', 'tt0974661',     # comedies
+        'tt0427229', 'tt2582846', 'tt0832266', 'tt0265208', 'tt0362227', 'tt0251127',  # romances
+        # 'tt0790724', 'tt1397280', 'tt0816711', 'tt0240772',    # thrillers
+        # 'tt1853728', 'tt1210819', 'tt1403865',  # westerns
+        # 'tt0248667', 'tt0265662', 'tt0360201', 'tt0393162',    # sports
+        # 'tt1185834', 'tt0121765', 'tt0121766', 'tt3748528', 'tt2488496', 'tt2527336',   # star wars
+        # 'tt0241527', 'tt0295297', 'tt0304141', 'tt0330373', 'tt0373889', 'tt0417741', 'tt0926084', 'tt1201607',  # Harry Potter
+        # 'tt1324999', 'tt1673434'                # twilight
     ])
 
     # mask out the other movies
@@ -170,7 +174,7 @@ def plot_att_stats(att_stats, item_names, item_ids):
     att_stats['count'] = att_stats['count'][mask, :][:, mask]
     item_names = item_names[mask]
 
-    item_names = [(i[:27] + '...' if len(i) > 30 else i) for i in item_names]
+    item_names = [(i[:37] + '...' if len(i) > 40 else i) for i in item_names]
 
     I = len(item_names)
 

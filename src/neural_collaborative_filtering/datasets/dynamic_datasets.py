@@ -59,7 +59,7 @@ class DynamicRankingDataset(RankingDataset):
     @staticmethod
     def do_forward(model: NCF, batch, device):
         # get the input matrices and the target
-        rated_items_IDs, candidate_items1, rated_items, user_matrix, candidate_items2 = batch
+        candidate_items_IDs, rated_items_IDs, candidate_items1, rated_items, user_matrix, candidate_items2 = batch
         # forward model
         out1 = model(candidate_items1.float().to(device), rated_items.float().to(device), user_matrix.float().to(device))
         out2 = model(candidate_items2.float().to(device), rated_items.float().to(device), user_matrix.float().to(device))
