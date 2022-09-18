@@ -1,6 +1,10 @@
 <div style="height: 100vh">
   <div class="text-center">
-    <h1 class="p-2">Movie Recommender</h1>
+    <h1 class="p-2 pt-4">
+      <img class="text-icon" src="/assets/images/popcorn1_fixed.png" alt="popcorn-icon"/>
+      Movie Recommender
+      <img class="text-icon" src="/assets/images/popcorn1_fixed_flipped.png" alt="popcorn-icon"/>
+    </h1>
   </div>
 
   <div class="container ratings-table">
@@ -52,9 +56,8 @@
 <!--      </ng-template>-->
     </p-table>
   </div>
-
-  <div class="d-block text-center mt-3">
-    <p-button (click)="recommend()">Make me recommendations</p-button>
+  <div class="text-center mt-5">
+    <p-button class="main-button" (click)="recommend()">Make me recommendations</p-button>
   </div>
 </div>
 

@@ -11,11 +11,28 @@
   --contrast-color: #03233c;
 }
 
+.text-icon {
+  display: inline-block;
+  height: 1.25em;
+  margin-bottom: 0.25em;
+}
 
 /* Remove shadows for focused elements */
 button:focus, .pi-star-fill:focus, .pi-ban {
   outline: none !important;
   box-shadow: none !important;;
+}
+
+.main-button button {
+  box-shadow: 3px 3px 3px black !important;
+  position: relative;
+  top: 0;
+  transition: top ease 0.05s;
+}
+
+.main-button button:hover {
+  box-shadow: 5px 5px 5px black !important;
+  top: -1px;
 }
 
 body {
@@ -24,40 +41,9 @@ body {
     linear-gradient(90deg, rgba(0, 0, 0, 0), var(--dark-main-color), rgba(0, 0, 0, 0)),
     /*linear-gradient(-90deg, var(--dark-main-color), rgba(0, 0, 0, 0)),*/
     /*linear-gradient(90deg, var(--dark-main-color), rgba(0, 0, 0, 0)),*/
-    repeating-linear-gradient(45deg, var(--main-color-3), var(--main-color-2) 15px, var(--main-color-1) 20px, var(--main-color) 40px);
+    repeating-linear-gradient(-225deg, var(--main-color-3), var(--main-color-2) 15px, var(--main-color-1) 20px, var(--main-color) 40px);
 }
 
-h1 {
-  font-size: 300% !important;
-}
-
-h1, h2, h3 {
-  color: whitesmoke;
-  text-shadow: 1px 1px 0px #000,
-              -1px 1px 0px #000,
-              1px -1px 0px #000,
-              -1px -1px 0px #000,
-              0px 1px 0px #000,
-              0px -1px 0px #000,
-              -1px 0px 0px #000,
-              1px 0px 0px #000,
-              2px 2px 0px #000,
-              -2px 2px 0px #000,
-              2px -2px 0px #000,
-              -2px -2px 0px #000,
-              0px 2px 0px #000,
-              0px -2px 0px #000,
-              -2px 0px 0px #000,
-              2px 0px 0px #000,
-              1px 2px 0px #000,
-              -1px 2px 0px #000,
-              1px -2px 0px #000,
-              -1px -2px 0px #000,
-              2px 1px 0px #000,
-              -2px 1px 0px #000,
-              2px -1px 0px #000,
-              -2px -1px 0px #000;
-}
 
 .movie_title {
   text-decoration: none;
@@ -71,8 +57,19 @@ h1, h2, h3 {
 
 .ratings-table {
   max-width: 90vw !important;
-  border-radius: 10px !important;
 }
+
+.ratings-table .p-datatable-sm {
+  border-radius: 10px !important;
+  /*border-style: solid;*/
+  /*border-width: 2px;*/
+  /*border-color: white;*/
+  box-shadow: 5px 5px 20px black;
+}
+
+/*.ratings-table .p-datatable-sm:hover {*/
+/*  box-shadow: 5px 5px 30px black;*/
+/*}*/
 
 .oneliner {
   overflow: hidden;
@@ -83,4 +80,34 @@ h1, h2, h3 {
   width: 95vw;
 }
 
+h1 {
+  font-size: 300% !important;
+}
 
+h1, h2, h3 {
+  color: whitesmoke;
+  text-shadow: 1px 1px 0px #000,
+  -1px 1px 0px #000,
+  1px -1px 0px #000,
+  -1px -1px 0px #000,
+  0px 1px 0px #000,
+  0px -1px 0px #000,
+  -1px 0px 0px #000,
+  1px 0px 0px #000,
+  2px 2px 0px #000,
+  -2px 2px 0px #000,
+  2px -2px 0px #000,
+  -2px -2px 0px #000,
+  0px 2px 0px #000,
+  0px -2px 0px #000,
+  -2px 0px 0px #000,
+  2px 0px 0px #000,
+  1px 2px 0px #000,
+  -1px 2px 0px #000,
+  1px -2px 0px #000,
+  -1px -2px 0px #000,
+  2px 1px 0px #000,
+  -2px 1px 0px #000,
+  2px -1px 0px #000,
+  -2px -1px 0px #000;
+}
