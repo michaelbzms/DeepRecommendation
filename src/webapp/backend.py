@@ -103,7 +103,11 @@ def recommend():
 #     return predictions
 
 
-def recommend_for_user(model: AttentionNCF, item_features: pd.DataFrame, user_ratings: pd.Series,  k, ignore_seen):
+def recommend_for_user(model: AttentionNCF, item_features: pd.DataFrame, user_ratings: pd.Series,  k, ignore_seen,
+                       explain_factor=1.25, explain_constant=0.05):
+    """
+    The higher the explain_factor and/or explain_constant the higher the attention weight needed for explanations.
+    """
     # candidate item profiles
     items_to_use = item_features.drop(user_ratings.index) if ignore_seen else item_features
     candidate_items = torch.FloatTensor(items_to_use.values).to(device)                 # (B, F)
@@ -123,16 +127,25 @@ def recommend_for_user(model: AttentionNCF, item_features: pd.DataFrame, user_ra
                                     return_attention_weights=True)
         # from torch tensors to numpy vectors
         y_pred = y_pred.view(-1).cpu().numpy()
-        att_weights = att_weights.view(-1).cpu().numpy()
+        att_weights = att_weights.cpu().numpy()   # (Β, Ι)
 
-    # sort the output with their imdb id
+    # apply an explainability_threshold
+    exp_thr = explain_factor * (1 / max(len(rated_items_ids), 1)) + explain_constant
+    mask = att_weights > exp_thr
+
+    # keep track of which rated items where attended to and how much
+    exp = [rated_items_ids[m] for m in mask]
+    att = [att_weights[i, m] for i, m in enumerate(mask)]
+
+    # sort the output with their imdb id by their predicted score
     predictions = pd.DataFrame(data={
         'imdbID': items_to_use.index,
-        'score': y_pred
-        # TODO: column with list of why
+        'score': y_pred,
+        'because': exp,
+        'attention': att
     }).sort_values(by='score', ascending=False).iloc[:k]
 
-    # return sorted imdb_id and predicted score pairs
+    # return recommendations list
     return predictions
 
 
