@@ -48,6 +48,8 @@ export class AppComponent {
       for (let r of recommendations) {
         let m = this.movies_dict[r.imdbID];
         m.score = r.score;        // TODO: this changes score of original movies object but that should be ok?
+        m.because = r.because;
+        m.attention = r.attention;
         this.recommendations.push(m);
       }
     })

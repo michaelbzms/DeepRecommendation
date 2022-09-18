@@ -3,7 +3,7 @@
     <h1 class="p-2">Movie Recommender</h1>
   </div>
 
-  <div class="container" style="max-width: 95vw !important;">
+  <div class="container ratings-table">
     <p-table [value]="movies" [paginator]="true" [rows]="10"
              styleClass="p-datatable-sm p-datatable-striped">
       <ng-template pTemplate="caption">
@@ -59,13 +59,36 @@
 </div>
 
 <div class="container" style="max-width: 95vw !important;">
-    <p-card *ngFor="let movie of recommendations"
-            class="d-inline-block m-2"
-            [style]="{'width': '320px', 'height': '400px'}">
-      <h2>{{movie.title}}</h2>
+
+<!--  <p-table [value]="recommendations" styleClass="p-datatable-striped" responsiveLayout="scroll">-->
+<!--    <ng-template pTemplate="header">-->
+<!--      <tr>-->
+<!--        <th>Title</th>-->
+<!--        <th>Predicted Score</th>-->
+<!--        <th>Because You Watched</th>-->
+<!--      </tr>-->
+<!--    </ng-template>-->
+<!--    <ng-template pTemplate="body" let-movie>-->
+<!--      <tr>-->
+<!--        <td>{{movie.title}}</td>-->
+<!--        <td>{{movie.score}}</td>-->
+<!--        <td>{{movie.because}}</td>-->
+<!--      </tr>-->
+<!--    </ng-template>-->
+<!--  </p-table>-->
+
+
+
+    <div *ngFor="let movie of recommendations"
+            class="d-inline-block m-2 recommended-card">
+      <h2 class="oneliner">{{movie.title}}</h2>
       {{movie.genres}} {{movie.year}} <br>
-      Predicted score: {{movie.score}}
-    </p-card>
+      Predicted score: {{movie.score}} <br>
+      Because you watched:
+      <div *ngFor="let rated_move of movie.because; let i = index">
+        {{movies_dict[rated_move].title}} ({{movie.attention ? movie.attention[i]  : ''}})
+      </div>
+    </div>
 </div>
 
 <!--<router-outlet></router-outlet>-->

@@ -15,6 +15,8 @@ export class Movie implements MovieInterface {
   genres: string;
   rating: number | null;
   score?: number;
+  because?: [string];
+  attention?: [number];
 
   constructor(imdbID: string, title: string, year: number, genres: string) {
     this.imdbID = imdbID;
