@@ -16,6 +16,10 @@
             Movies <span style="font-weight: 400 !important;">({{movies ? movies.length : 0 }} in total)</span>
           </div>
           <div class="d-inline-block col-4 text-end">
+            <button pButton pRipple type="button" label="Download ratings" class="p-button-text p-button-secondary"
+                    (click)="download_ratings()">
+            </button>
+<!--            <p-divider class="d-inline-block" layout="vertical"></p-divider>-->
             <button pButton pRipple type="button" label="Clear ratings" class="p-button-text p-button-secondary"
                     (click)="clear_ratings()">
             </button>
@@ -56,11 +60,6 @@
         </tr>
       </ng-template>
 
-<!--      <ng-template pTemplate="summary">-->
-<!--        <div class="flex align-items-center justify-content-between">-->
-<!--          In total there are {{movies ? movies.length : 0 }} movies.-->
-<!--        </div>-->
-<!--      </ng-template>-->
     </p-table>
   </div>
 
@@ -73,14 +72,10 @@
                     (uploadHandler)="onRatingsUpload($event)"
                     (onError)="test($event)"
       >
+        <ng-template pTemplate="file"></ng-template>  <!-- This stops feedback for file uploaded  -->
       </p-fileUpload>
     </div>
-<!--    <div class="d-inline-block text-end col-6" style="text-align: end !important;">-->
-<!--      <button pButton pRipple type="button" label="Clear" class="p-button-text p-button-secondary"></button>-->
-<!--    </div>-->
-<!--    (onUpload)="onBasicUploadAuto($event)" -->
   </div>
-
 
   <div class="text-center mt-4">
     <p-button class="main-button" (click)="recommend()">Make me recommendations</p-button>

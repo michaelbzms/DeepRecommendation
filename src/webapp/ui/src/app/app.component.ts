@@ -48,7 +48,7 @@ export class AppComponent {
       this.recommendations = [];
       for (let r of recommendations) {
         let m = this.movies_dict[r.imdbID];
-        m.score = r.score;        // TODO: this changes score of original movies object but that should be ok?
+        m.score = r.score;        // Note: this changes score of original movies object but that should be ok
         m.because = r.because;
         m.attention = r.attention;
         this.recommendations.push(m);
@@ -57,20 +57,48 @@ export class AppComponent {
   }
 
   clear_ratings() {
-    for (let movie of this.movies) {
-      movie.rating = null;
+    if (confirm('Are you sure?')) {
+      for (let movie of this.movies) {
+        movie.rating = null;
+      }
     }
   }
 
+  update_ratings(ratings: any) {
+    for (let r of ratings) {
+      try {
+        this.movies_dict[r.imdbID].rating = r.rating;
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  }
+
+  exportJson(obj: object[]) {
+    const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'text/json' });
+    const url = window.URL.createObjectURL(blob);
+    window.open(url);
+  }
+
+  download_ratings() {
+    let res: object[] = [];
+    for (let m of this.movies) {
+      if (m.rating) {
+        res.push({"imdbID": m.imdbID, "rating": m.rating});
+      }
+    }
+    console.log(res);
+    this.exportJson(res);
+  }
+
   onRatingsUpload(event: any) {
-    console.log("I was fired!");
     const reader = new FileReader();
     reader.onload = (event) => {
       if (event.target) {
         try {
           let ratings = JSON.parse((event.target.result) as string);
-          // TODO
           console.log('uploaded ratings:', ratings);
+          this.update_ratings(ratings);
         } catch (error) {
           console.error(error);
         }
