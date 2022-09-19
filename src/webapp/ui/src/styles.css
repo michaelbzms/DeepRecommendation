@@ -41,7 +41,7 @@ body {
     linear-gradient(90deg, rgba(0, 0, 0, 0), var(--dark-main-color), rgba(0, 0, 0, 0)),
     /*linear-gradient(-90deg, var(--dark-main-color), rgba(0, 0, 0, 0)),*/
     /*linear-gradient(90deg, var(--dark-main-color), rgba(0, 0, 0, 0)),*/
-    repeating-linear-gradient(-225deg, var(--main-color-2), var(--main-color-1) 22.5px, var(--main-color) 30px, var(--dark-main-color) 60px);
+    repeating-linear-gradient(-225deg, var(--main-color-2), var(--main-color-1) 16px, var(--main-color) 22px, var(--dark-main-color) 45px);
 }
 
 
@@ -64,12 +64,12 @@ body {
   max-width: 85vw !important;
 }
 
-.ratings-table .p-datatable-sm {
-  border-radius: 0 !important;
+.ratings-table .p-datatable-sm, .box-shadow-main {
+  /*border-radius: 10px !important;*/
   /*border-style: solid;*/
   /*border-width: 2px;*/
   /*border-color: white;*/
-  box-shadow: 5px 5px 20px black;
+  box-shadow: 5px 5px 15px black;
 }
 
 /*.ratings-table .p-datatable-sm:hover {*/
@@ -91,28 +91,28 @@ h1 {
 
 h1, h2, h3 {
   color: whitesmoke;
-  text-shadow: 1px 1px 0px #000,
-  -1px 1px 0px #000,
-  1px -1px 0px #000,
-  -1px -1px 0px #000,
-  0px 1px 0px #000,
-  0px -1px 0px #000,
-  -1px 0px 0px #000,
-  1px 0px 0px #000,
-  2px 2px 0px #000,
-  -2px 2px 0px #000,
-  2px -2px 0px #000,
-  -2px -2px 0px #000,
-  0px 2px 0px #000,
-  0px -2px 0px #000,
-  -2px 0px 0px #000,
-  2px 0px 0px #000,
-  1px 2px 0px #000,
-  -1px 2px 0px #000,
-  1px -2px 0px #000,
-  -1px -2px 0px #000,
-  2px 1px 0px #000,
-  -2px 1px 0px #000,
-  2px -1px 0px #000,
-  -2px -1px 0px #000;
+  text-shadow: 1px 1px 0 #000,
+  -1px 1px 0 #000,
+  1px -1px 0 #000,
+  -1px -1px 0 #000,
+  0px 1px 0 #000,
+  0px -1px 0 #000,
+  -1px 0px 0 #000,
+  1px 0px 0 #000,
+  2px 2px 0 #000,
+  -2px 2px 0 #000,
+  2px -2px 0 #000,
+  -2px -2px 0 #000,
+  0px 2px 0 #000,
+  0px -2px 0 #000,
+  -2px 0px 0 #000,
+  2px 0px 0 #000,
+  1px 2px 0 #000,
+  -1px 2px 0 #000,
+  1px -2px 0 #000,
+  -1px -2px 0 #000,
+  2px 1px 0 #000,
+  -2px 1px 0 #000,
+  2px -1px 0 #000,
+  -2px -1px 0  #000;
 }

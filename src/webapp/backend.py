@@ -74,35 +74,6 @@ def recommend():
     return response
 
 
-# def create_user_profile(item_features: pd.DataFrame, user_ratings: pd.Series):
-#     return ((user_ratings.values - (user_ratings.mean() + 2.5) / 2).reshape(-1, 1) * item_features.loc[user_ratings.index].values).mean(axis=0)
-#
-#
-# def recommend_for_user(model: BasicNCF, item_features: pd.DataFrame, user_ratings: pd.Series,  k, ignore_seen):
-#     # determine items to be forwarded
-#     items_to_use = item_features.drop(user_ratings.index) if ignore_seen else item_features
-#
-#     # prepare item input
-#     item_input = torch.FloatTensor(items_to_use.values).to(device)
-#
-#     # build user profile from user ratings (repeat it once for each item)
-#     user_features = create_user_profile(item_features, user_ratings)
-#     user_input = torch.FloatTensor(user_features.reshape(1, -1).repeat(items_to_use.shape[0], axis=0)).to(device)
-#
-#     # forward the model
-#     with torch.no_grad():
-#         y_pred = model(user_input, item_input).cpu().view(-1).numpy()
-#
-#     # sort the output with their imdb id
-#     predictions = pd.DataFrame(data={
-#         'imdbID': items_to_use.index,
-#         'score': y_pred
-#     }).sort_values(by='score', ascending=False).iloc[:k]
-#
-#     # return sorted imdb_id - predicted score pairs
-#     return predictions
-
-
 def recommend_for_user(model: AttentionNCF, item_features: pd.DataFrame, user_ratings: pd.Series,  k, ignore_seen,
                        explain_factor=1.25, explain_constant=0.05):
     """
