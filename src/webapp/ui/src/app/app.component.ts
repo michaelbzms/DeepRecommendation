@@ -14,6 +14,7 @@ export class AppComponent {
   movies: Movie[] = []
   movies_dict: { [id: string] : Movie; } = {}
   recommendations: Movie[] = [];
+  files: any = {};
 
   constructor(private backendService: BackendService) {
     this.movies$.subscribe(dict => {
@@ -62,8 +63,26 @@ export class AppComponent {
   }
 
   onRatingsUpload(event: any) {
-    console.log(event);
-    // TODO:
-    // data = JSON(event.files);
+    console.log("I was fired!");
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target) {
+        try {
+          let ratings = JSON.parse((event.target.result) as string);
+          // TODO
+          console.log('uploaded ratings:', ratings);
+        } catch (error) {
+          console.error(error);
+        }
+      } else {
+        console.error("Null target")
+      }
+    };
+    reader.readAsText(event.files[0]);
+  }
+
+  test(event: any) {
+    console.log("Error trying to upload file");
+    console.error(event)
   }
 }

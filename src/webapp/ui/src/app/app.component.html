@@ -65,13 +65,15 @@
   </div>
 
   <div class="container upload-div mt-3">
-<!--    <p-fileUpload name="myfile[]" url="./upload.php" accept="*.json" [auto]="true"></p-fileUpload>-->
     <div class="d-block text-start">
-      <p-fileUpload #ratingsUpload mode="basic" name="demo[]"
-                    url="" accept=".json"
+      <p-fileUpload [customUpload]="true"
+                    accept=".json"
                     styleClass="p-button-raised"
                     [auto]="true" chooseLabel="Upload ratings"
-                    (onUpload)="onRatingsUpload($event)"></p-fileUpload>
+                    (uploadHandler)="onRatingsUpload($event)"
+                    (onError)="test($event)"
+      >
+      </p-fileUpload>
     </div>
 <!--    <div class="d-inline-block text-end col-6" style="text-align: end !important;">-->
 <!--      <button pButton pRipple type="button" label="Clear" class="p-button-text p-button-secondary"></button>-->
@@ -122,3 +124,19 @@
 </div>
 
 <!--<router-outlet></router-outlet>-->
+<!--<p-fileUpload [auto]="true" [customUpload]="true"-->
+<!--              (uploadHandler)="onUpload($event)" (onRemove)="onRemove($event)" [files]="uploadedFiles"-->
+<!--              accept="image/*" [maxFileSize]="1000000">-->
+<!--  <ng-template pTemplate="content">-->
+<!--    <div class="grid" *ngIf="uploadedFiles[0] == null">-->
+<!--      <div class="col photo">-->
+<!--        <i class="pi pi-cloud-upload" style="font-size: 1.7rem"></i>-->
+<!--      </div>-->
+<!--    </div>-->
+<!--    <div class="grid">-->
+<!--      <div class="col photo">-->
+<!--        <p *ngIf="uploadedFiles[0] == null">{{'authpage.reg_form.steps.step2.photo_prompt' | translate}}</p>-->
+<!--      </div>-->
+<!--    </div>-->
+<!--  </ng-template>-->
+<!--</p-fileUpload>-->
