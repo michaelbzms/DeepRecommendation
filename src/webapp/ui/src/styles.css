@@ -5,9 +5,9 @@
   --dark-main-color: #9c1616;
   --light-main-color: whitesmoke;
   --main-color: #b72e2e;
-  --main-color-1: #c03030;
-  --main-color-2: #ce3232;
-  --main-color-3: #f83b3b;
+  --main-color-1: #ce3535;
+  --main-color-2: #ea3838;
+  --main-color-3: #f34141;
   --contrast-color: #03233c;
 }
 
@@ -41,9 +41,14 @@ body {
     linear-gradient(90deg, rgba(0, 0, 0, 0), var(--dark-main-color), rgba(0, 0, 0, 0)),
     /*linear-gradient(-90deg, var(--dark-main-color), rgba(0, 0, 0, 0)),*/
     /*linear-gradient(90deg, var(--dark-main-color), rgba(0, 0, 0, 0)),*/
-    repeating-linear-gradient(-225deg, var(--main-color-3), var(--main-color-2) 15px, var(--main-color-1) 20px, var(--main-color) 40px);
+    repeating-linear-gradient(-225deg, var(--main-color-2), var(--main-color-1) 22.5px, var(--main-color) 30px, var(--dark-main-color) 60px);
 }
 
+
+.upload-div {
+  /*width: 200px !important;*/
+  max-width: 85vw !important;
+}
 
 .movie_title {
   text-decoration: none;
@@ -56,11 +61,11 @@ body {
 }
 
 .ratings-table {
-  max-width: 90vw !important;
+  max-width: 85vw !important;
 }
 
 .ratings-table .p-datatable-sm {
-  border-radius: 10px !important;
+  border-radius: 0 !important;
   /*border-style: solid;*/
   /*border-width: 2px;*/
   /*border-color: white;*/

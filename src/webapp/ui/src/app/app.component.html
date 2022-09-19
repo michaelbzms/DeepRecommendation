@@ -12,7 +12,14 @@
              styleClass="p-datatable-sm p-datatable-striped">
       <ng-template pTemplate="caption">
         <div class="flex align-items-center justify-content-between">
-          Movies <span style="font-weight: 400 !important;">({{movies ? movies.length : 0 }} in total)</span>
+          <div class="d-inline-block col-8 text-start">
+            Movies <span style="font-weight: 400 !important;">({{movies ? movies.length : 0 }} in total)</span>
+          </div>
+          <div class="d-inline-block col-4 text-end">
+            <button pButton pRipple type="button" label="Clear ratings" class="p-button-text p-button-secondary"
+                    (click)="clear_ratings()">
+            </button>
+          </div>
         </div>
       </ng-template>
       <ng-template pTemplate="header">
@@ -56,10 +63,30 @@
 <!--      </ng-template>-->
     </p-table>
   </div>
-  <div class="text-center mt-5">
+
+  <div class="container upload-div mt-3">
+<!--    <p-fileUpload name="myfile[]" url="./upload.php" accept="*.json" [auto]="true"></p-fileUpload>-->
+    <div class="d-block text-start">
+      <p-fileUpload #ratingsUpload mode="basic" name="demo[]"
+                    url="" accept=".json"
+                    styleClass="p-button-raised"
+                    [auto]="true" chooseLabel="Upload ratings"
+                    (onUpload)="onRatingsUpload($event)"></p-fileUpload>
+    </div>
+<!--    <div class="d-inline-block text-end col-6" style="text-align: end !important;">-->
+<!--      <button pButton pRipple type="button" label="Clear" class="p-button-text p-button-secondary"></button>-->
+<!--    </div>-->
+<!--    (onUpload)="onBasicUploadAuto($event)" -->
+  </div>
+
+
+  <div class="text-center mt-4">
     <p-button class="main-button" (click)="recommend()">Make me recommendations</p-button>
   </div>
 </div>
+
+
+
 
 <div class="container" style="max-width: 95vw !important;">
 

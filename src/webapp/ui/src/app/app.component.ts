@@ -55,4 +55,15 @@ export class AppComponent {
     })
   }
 
+  clear_ratings() {
+    for (let movie of this.movies) {
+      movie.rating = null;
+    }
+  }
+
+  onRatingsUpload(event: any) {
+    console.log(event);
+    // TODO:
+    // data = JSON(event.files);
+  }
 }
