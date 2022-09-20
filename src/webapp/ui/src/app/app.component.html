@@ -85,6 +85,9 @@
 
 <div #target>
   <div *ngIf="recommendations.length > 0" class="container ml-2 mr-2 mt-4">
+    <div>
+      <h1 class="text-center m-3">Top {{this.k}} Recommendations</h1>
+    </div>
     <div *ngFor="let movie of recommendations; let i = index"
             class="m-3 p-3 bg-light-transparent">
       <h2 class="d-inline-block oneliner col-8 clickable pt-2">

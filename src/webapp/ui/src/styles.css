@@ -6,8 +6,8 @@
   --light-main-color: whitesmoke;
   --main-color: #b72e2e;
   --main-color-1: #ce3535;
-  --main-color-2: #ea3838;
-  --main-color-3: #f34141;
+  --main-color-2: #d53333;
+  --main-color-3: #f14040;
   --contrast-color: #03233c;
   --box-shadow-col: rgba(0, 0, 0, 0.75);
   --box-shadow-col2: rgba(0, 0, 0, 0.5);
@@ -47,7 +47,7 @@ body {
     linear-gradient(90deg, rgba(0, 0, 0, 0), var(--dark-main-color), rgba(0, 0, 0, 0)),
     /*linear-gradient(-90deg, var(--dark-main-color), rgba(0, 0, 0, 0)),*/
     /*linear-gradient(90deg, var(--dark-main-color), rgba(0, 0, 0, 0)),*/
-    repeating-linear-gradient(-225deg, var(--main-color-2), var(--main-color-1) 16px, var(--main-color) 22px, var(--dark-main-color) 45px);
+    repeating-linear-gradient(-225deg, var(--main-color-2), var(--main-color-1) 22.5px, var(--main-color) 30px, var(--dark-main-color) 60px);
 }
 
 
