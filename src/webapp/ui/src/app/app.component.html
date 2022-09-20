@@ -82,11 +82,6 @@
   </div>
 </div>
 
-
-
-
-<div class="container" style="max-width: 95vw !important;">
-
 <!--  <p-table [value]="recommendations" styleClass="p-datatable-striped" responsiveLayout="scroll">-->
 <!--    <ng-template pTemplate="header">-->
 <!--      <tr>-->
@@ -104,18 +99,32 @@
 <!--    </ng-template>-->
 <!--  </p-table>-->
 
-
-
-    <div *ngFor="let movie of recommendations"
-            class="d-inline-block m-2 recommended-card">
-      <h2 class="oneliner">{{movie.title}}</h2>
-      {{movie.genres}} {{movie.year}} <br>
-      Predicted score: {{movie.score}} <br>
-      Because you watched:
-      <div *ngFor="let rated_move of movie.because; let i = index">
-        {{movies_dict[rated_move].title}} ({{movie.attention ? movie.attention[i]  : ''}})
+<div class="container ml-2 mr-2 mt-4">
+  <div *ngFor="let movie of recommendations; let i = index"
+          class="m-3 p-3 bg-light-transparent">
+    <h2 class="d-inline-block oneliner col-8 clickable pt-2">
+      <a class="clickable" href="https://www.imdb.com/title/{{movie.imdbID}}" target="_blank">
+        &nbsp;{{i+1}}. {{movie.title}}&nbsp;
+      </a>
+    </h2>
+    <div class="d-inline-block col-4 text-end">with a predicted score of {{movie.score ? round_decimal(movie.score) : ''}}</div>
+    <hr>
+    <div class="container rec-content">
+      <div>
+        <h4 class="d-inline-block col-6">{{movie.genres}}</h4>
+        <h4 class="d-inline-block col-6 text-end">{{movie.year}}</h4>
+      </div>
+      <br>
+      <div>
+        <div class="d-block mb-1">Because you rated:</div>
+        <div *ngFor="let rated_move of movie.because; let j = index">
+          {{j+1}}.
+          <h6 class="d-inline-block"><a class="clickable-black" href="https://www.imdb.com/title/{{movies_dict[rated_move].imdbID}}" target="_blank">{{movies_dict[rated_move].title}}</a></h6>
+          ({{movie.attention ? round_decimal(movie.attention[j])  : ''}})
+        </div>
       </div>
     </div>
+  </div>
 </div>
 
 <!--<router-outlet></router-outlet>-->

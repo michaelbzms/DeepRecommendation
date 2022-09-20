@@ -29,6 +29,10 @@ export class AppComponent {
     })
   }
 
+  round_decimal(num: number) {
+    return Math.round((num + Number.EPSILON) * 1000) / 1000;
+  }
+
   recommend() {
     // gather user ratings TODO: don't wait to do this now
     let user_ratings: object[] = []
@@ -48,9 +52,13 @@ export class AppComponent {
       this.recommendations = [];
       for (let r of recommendations) {
         let m = this.movies_dict[r.imdbID];
-        m.score = r.score;        // Note: this changes score of original movies object but that should be ok
-        m.because = r.because;
-        m.attention = r.attention;
+        // Note: this changes score of original movies object but that should be ok
+        m.score = r.score;
+        // sort because & attention
+        let ix = r.attention.map((x: any,i: any) => i);
+        ix.sort((a: any, b: any) => r.attention[b] - r.attention[a]);
+        m.because = ix.map((x: any) => r.because[x]);
+        m.attention = ix.map((x: any) => r.attention[x]);
         this.recommendations.push(m);
       }
     })
