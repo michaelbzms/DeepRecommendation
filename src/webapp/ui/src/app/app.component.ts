@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ElementRef, ViewChild} from '@angular/core';
 import {BackendService} from "./services/backend.service";
 import {Movie} from "./models/movies";
 
@@ -15,6 +15,8 @@ export class AppComponent {
   movies_dict: { [id: string] : Movie; } = {}
   recommendations: Movie[] = [];
   files: any = {};
+
+  @ViewChild('hidden_button') hidden_button: ElementRef<HTMLElement> | undefined;
 
   constructor(private backendService: BackendService) {
     this.movies$.subscribe(dict => {
@@ -44,6 +46,10 @@ export class AppComponent {
         })
       }
     }
+    if (user_ratings.length < 3) {
+      alert("Not enough ratings. Needs at least three.")
+      return;
+    }
     console.log(user_ratings);
 
     let recommendations$ = this.backendService.getRecommendations(user_ratings, this.k)
@@ -61,7 +67,23 @@ export class AppComponent {
         m.attention = ix.map((x: any) => r.attention[x]);
         this.recommendations.push(m);
       }
+      if (this.hidden_button) {
+        this.hidden_button.nativeElement.click();
+      }
     })
+  }
+
+  wait(ms: number){
+    const timeInitial : Date = new Date();
+    let timeNow : Date = new Date();
+    // @ts-ignore
+    for ( ; timeNow - timeInitial < ms; ){
+      timeNow = new Date();
+    }
+  }
+
+  scroll(el: HTMLElement) {
+    el.scrollIntoView({behavior: 'smooth'});
   }
 
   clear_ratings() {

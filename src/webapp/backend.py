@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import flask
-from flask import jsonify, request
+from flask import jsonify, request, Response
 import json
 import torch
 
@@ -40,7 +40,6 @@ def get_test():
 
 @app.route('/recommend', methods=['POST'])
 def recommend():
-    print('I ran')
     if model is None or item_features is None: return
 
     # get input json args
@@ -56,6 +55,8 @@ def recommend():
     user_ratings = {}
     for rating in input_json['user_ratings']:
         user_ratings[rating['imdbID']] = rating['rating']
+    if len(user_ratings) == 0:
+        return Response(status=204)
     user_ratings = pd.Series(index=user_ratings.keys(), data=user_ratings.values(), dtype=float)
     k = input_json['k'] if 'k' in input_json else 10  # default
 

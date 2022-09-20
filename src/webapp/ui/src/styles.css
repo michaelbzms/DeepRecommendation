@@ -9,6 +9,12 @@
   --main-color-2: #ea3838;
   --main-color-3: #f34141;
   --contrast-color: #03233c;
+  --box-shadow-col: rgba(0, 0, 0, 0.75);
+  --box-shadow-col2: rgba(0, 0, 0, 0.5);
+}
+
+html, body {
+  scroll-behavior: smooth;
 }
 
 .text-icon {
@@ -24,14 +30,14 @@ button:focus, .pi-star-fill:focus, .pi-ban {
 }
 
 .main-button button {
-  box-shadow: 3px 3px 3px black !important;
+  box-shadow: 3px 3px 3px var(--box-shadow-col) !important;
   position: relative;
   top: 0;
   transition: top ease 0.05s;
 }
 
 .main-button button:hover {
-  box-shadow: 5px 5px 5px black !important;
+  box-shadow: 5px 5px 5px var(--box-shadow-col) !important;
   top: -1px;
 }
 
@@ -46,7 +52,6 @@ body {
 
 
 .upload-div {
-  /*width: 200px !important;*/
   max-width: 85vw !important;
 }
 
@@ -89,7 +94,7 @@ h6 {
   /*border-style: solid;*/
   /*border-width: 2px;*/
   /*border-color: white;*/
-  box-shadow: 5px 5px 15px black;
+  box-shadow: 5px 5px 15px var(--box-shadow-col);
 }
 
 /*.ratings-table .p-datatable-sm:hover {*/
@@ -114,6 +119,7 @@ h6 {
   -webkit-border-radius: 5px;
   -moz-border-radius: 5px;
   border-radius: 5px;
+  box-shadow: 2px 2px 10px var(--box-shadow-col2);
 }
 
 h1 {

@@ -64,7 +64,7 @@
   </div>
 
   <div class="container upload-div mt-3">
-    <div class="d-block text-start">
+    <div class="d-block text-start box-shadow-main">
       <p-fileUpload [customUpload]="true"
                     accept=".json"
                     styleClass="p-button-raised"
@@ -79,68 +79,36 @@
 
   <div class="text-center mt-4">
     <p-button class="main-button" (click)="recommend()">Make me recommendations</p-button>
+    <button #hidden_button style="display: none !important;" (click)="scroll(target)"></button>
   </div>
 </div>
 
-<!--  <p-table [value]="recommendations" styleClass="p-datatable-striped" responsiveLayout="scroll">-->
-<!--    <ng-template pTemplate="header">-->
-<!--      <tr>-->
-<!--        <th>Title</th>-->
-<!--        <th>Predicted Score</th>-->
-<!--        <th>Because You Watched</th>-->
-<!--      </tr>-->
-<!--    </ng-template>-->
-<!--    <ng-template pTemplate="body" let-movie>-->
-<!--      <tr>-->
-<!--        <td>{{movie.title}}</td>-->
-<!--        <td>{{movie.score}}</td>-->
-<!--        <td>{{movie.because}}</td>-->
-<!--      </tr>-->
-<!--    </ng-template>-->
-<!--  </p-table>-->
-
-<div class="container ml-2 mr-2 mt-4">
-  <div *ngFor="let movie of recommendations; let i = index"
-          class="m-3 p-3 bg-light-transparent">
-    <h2 class="d-inline-block oneliner col-8 clickable pt-2">
-      <a class="clickable" href="https://www.imdb.com/title/{{movie.imdbID}}" target="_blank">
-        &nbsp;{{i+1}}. {{movie.title}}&nbsp;
-      </a>
-    </h2>
-    <div class="d-inline-block col-4 text-end">with a predicted score of {{movie.score ? round_decimal(movie.score) : ''}}</div>
-    <hr>
-    <div class="container rec-content">
-      <div>
-        <h4 class="d-inline-block col-6">{{movie.genres}}</h4>
-        <h4 class="d-inline-block col-6 text-end">{{movie.year}}</h4>
-      </div>
-      <br>
-      <div>
-        <div class="d-block mb-1">Because you rated:</div>
-        <div *ngFor="let rated_move of movie.because; let j = index">
-          {{j+1}}.
-          <h6 class="d-inline-block"><a class="clickable-black" href="https://www.imdb.com/title/{{movies_dict[rated_move].imdbID}}" target="_blank">{{movies_dict[rated_move].title}}</a></h6>
-          ({{movie.attention ? round_decimal(movie.attention[j])  : ''}})
+<div #target>
+  <div *ngIf="recommendations.length > 0" class="container ml-2 mr-2 mt-4">
+    <div *ngFor="let movie of recommendations; let i = index"
+            class="m-3 p-3 bg-light-transparent">
+      <h2 class="d-inline-block oneliner col-8 clickable pt-2">
+        <a class="clickable" href="https://www.imdb.com/title/{{movie.imdbID}}" target="_blank">
+          &nbsp;{{i+1}}. {{movie.title}}&nbsp;
+        </a>
+      </h2>
+      <div class="d-inline-block col-4 text-end">with a predicted score of {{movie.score ? round_decimal(movie.score) : ''}}</div>
+      <hr>
+      <div class="container rec-content">
+        <div>
+          <h4 class="d-inline-block col-6">{{movie.genres}}</h4>
+          <h4 class="d-inline-block col-6 text-end">{{movie.year}}</h4>
+        </div>
+        <br>
+        <div>
+          <div class="d-block mb-1">Because you rated:</div>
+          <div *ngFor="let rated_move of movie.because; let j = index">
+            {{j+1}}.
+            <h6 class="d-inline-block"><a class="clickable-black" href="https://www.imdb.com/title/{{movies_dict[rated_move].imdbID}}" target="_blank">{{movies_dict[rated_move].title}}</a></h6>
+            ({{movie.attention ? round_decimal(movie.attention[j])  : ''}})
+          </div>
         </div>
       </div>
     </div>
   </div>
 </div>
-
-<!--<router-outlet></router-outlet>-->
-<!--<p-fileUpload [auto]="true" [customUpload]="true"-->
-<!--              (uploadHandler)="onUpload($event)" (onRemove)="onRemove($event)" [files]="uploadedFiles"-->
-<!--              accept="image/*" [maxFileSize]="1000000">-->
-<!--  <ng-template pTemplate="content">-->
-<!--    <div class="grid" *ngIf="uploadedFiles[0] == null">-->
-<!--      <div class="col photo">-->
-<!--        <i class="pi pi-cloud-upload" style="font-size: 1.7rem"></i>-->
-<!--      </div>-->
-<!--    </div>-->
-<!--    <div class="grid">-->
-<!--      <div class="col photo">-->
-<!--        <p *ngIf="uploadedFiles[0] == null">{{'authpage.reg_form.steps.step2.photo_prompt' | translate}}</p>-->
-<!--      </div>-->
-<!--    </div>-->
-<!--  </ng-template>-->
-<!--</p-fileUpload>-->
