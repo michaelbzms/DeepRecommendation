@@ -1,6 +1,5 @@
 import sys
 from math import sqrt
-
 import pandas as pd
 import numpy as np
 import torch
@@ -28,8 +27,8 @@ def eval_ranking(samples_with_preds: pd.DataFrame, cutoff=10):
     Parameter `samples_with_preds` should be the (userId, movieId, rating) DataFrame we are using elsewhere
     but with a new column `prediction` added with the model's prediction of the rating.
 
-    This is not implementation agnostic but it was the only convenient way I found to implement the NDCG metric.
-    TODO: make more generic, perhaps a wrapper class that should be extended.
+    This is not implementation agnostic but it was a convenient way I found to implement the NDCG metric.
+    TODO: make more generic
     """
     ndcgs = []
     adj_ndcgs = []

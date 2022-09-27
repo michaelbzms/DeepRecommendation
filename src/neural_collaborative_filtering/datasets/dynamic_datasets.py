@@ -39,9 +39,6 @@ class DynamicPointwiseDataset(PointwiseDataset):
                         return_attention_weights=False)
             return out, y_batch
 
-    def change_content_provider(self, provider):
-        self.dynamic_provider = provider
-
 
 class DynamicRankingDataset(RankingDataset):
     """
@@ -62,6 +59,3 @@ class DynamicRankingDataset(RankingDataset):
         out1 = model(candidate_items1.float().to(device), rated_items.float().to(device), user_matrix.float().to(device))
         out2 = model(candidate_items2.float().to(device), rated_items.float().to(device), user_matrix.float().to(device))
         return out1, out2
-
-    def change_content_provider(self, provider):
-        self.dynamic_provider = provider

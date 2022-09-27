@@ -41,9 +41,6 @@ class PointwiseDataset(Dataset):
     def do_forward(*args, **kwargs):
         raise NotImplementedError
 
-    def change_content_provider(self, provider):
-        raise NotImplementedError
-
 
 class RankingDataset(Dataset):
     """
@@ -94,9 +91,6 @@ class RankingDataset(Dataset):
 
     @staticmethod
     def do_forward(*args, **kwargs):
-        raise NotImplementedError
-
-    def change_content_provider(self, provider):
         raise NotImplementedError
 
 

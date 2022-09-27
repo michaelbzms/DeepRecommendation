@@ -29,9 +29,6 @@ class FixedPointwiseDataset(PointwiseDataset):
         out = model(user_vec.float().to(device), item_vec.float().to(device))
         return out, y_batch
 
-    def change_content_provider(self, provider):
-        self.content_provider = provider
-
 
 class FixedRankingDataset(RankingDataset):
     def __init__(self, ranking_file: str, content_provider: ContentProvider):
@@ -58,6 +55,3 @@ class FixedRankingDataset(RankingDataset):
         out1 = model(user_vec.float().to(device), item1_vec.float().to(device))
         out2 = model(user_vec.float().to(device), item2_vec.float().to(device))
         return out1, out2
-
-    def change_content_provider(self, provider):
-        self.content_provider = provider

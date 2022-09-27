@@ -1,6 +1,6 @@
 import pandas as pd
 import torch
-from torch_geometric.data import Data, HeteroData
+from torch_geometric.data import Data
 from tqdm import tqdm
 
 from globals import full_matrix_file, item_metadata_file, user_embeddings_file, user_embeddings_with_val_file
@@ -8,11 +8,14 @@ from neural_collaborative_filtering.content_providers import GraphContentProvide
 
 
 def create_graph(interactions: pd.DataFrame, item_features, user_features, item_to_node_ID, user_to_node_ID, binary):
-    # TODO: binary must be false if we are masking later
-    """ Assume node features where item nodes go first and then users (we might want to add more users) """
+    """
+    Assume node features where item nodes go first and then users (as we might want to add more users).
+    Note: binary must be false if we are masking later.
+    """
     # calculate mean ratings per user and per item as an edge attribute
     user_mean_ratings = interactions.groupby('userId')['rating'].mean()
     item_mean_ratings = interactions.groupby('movieId')['rating'].mean()
+
     # create edges and edge attributes
     user2item_edge_index = []
     user2item_edge_attr = []
@@ -20,9 +23,7 @@ def create_graph(interactions: pd.DataFrame, item_features, user_features, item_
     item2user_edge_attr = []
     pos = []
     i = j = 0
-    for _, (userId, itemId, rating) in tqdm(interactions.iterrows(),
-                                            desc='Loading graph edges...',
-                                            total=len(interactions)):
+    for _, (userId, itemId, rating) in tqdm(interactions.iterrows(), desc='Loading graph edges...', total=len(interactions)):
         # convert to Node IDs
         userNodeId = user_to_node_ID[userId]
         itemNodeId = item_to_node_ID[itemId]
@@ -140,7 +141,6 @@ class ProfilesGraphProvider(GraphProvider):
     def __init__(self, file, binary, include_val_ratings_to_user_profiles=False):
         self.metadata: pd.DataFrame = pd.read_hdf(item_metadata_file + '.h5')
         emb_file = user_embeddings_with_val_file if include_val_ratings_to_user_profiles else user_embeddings_file
-        print(f'Loading user embeddings from {emb_file}.')
         self.user_embeddings: pd.DataFrame = pd.read_hdf(emb_file + '.h5')
         super(ProfilesGraphProvider, self).__init__(file, binary=binary)
 

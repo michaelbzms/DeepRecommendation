@@ -28,9 +28,6 @@ class GraphPointwiseDataset(PointwiseDataset):
         out = model(graph.to(device), userIds.long().to(device), itemIds.long().to(device), device, *args)
         return out, y_batch
 
-    def change_content_provider(self, provider):
-        self.gcp = provider
-
 
 class GraphRankingDataset(RankingDataset):
     def __init__(self, file: str, graph_content_provider: GraphContentProvider):
@@ -58,6 +55,3 @@ class GraphRankingDataset(RankingDataset):
         out1 = model(graph.to(device), userIds.long().to(device), item1Ids.long().to(device), device, *args)
         out2 = model(graph.to(device), userIds.long().to(device), item2Ids.long().to(device), device, *args)
         return out1, out2
-
-    def change_content_provider(self, provider):
-        self.gcp = provider

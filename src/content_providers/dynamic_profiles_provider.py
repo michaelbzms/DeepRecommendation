@@ -18,10 +18,10 @@ class DynamicProfilesProvider(DynamicContentProvider):
     def get_item_profile(self, itemID):  # ID or IDs
         return self.metadata.loc[itemID, :].values
 
-    def get_num_items(self):                     # TODO: what if we store more than are in our samples?
+    def get_num_items(self):
         return self.metadata.shape[0]
 
-    def get_num_users(self):                     # TODO: what if we store more than are in our samples?
+    def get_num_users(self):
         return self.user_ratings.shape[0]
 
     def get_item_feature_dim(self):
