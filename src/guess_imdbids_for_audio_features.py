@@ -51,7 +51,7 @@ all_dfs = []
 for file_path in glob.glob(audio_features_path + '/*.npy'):
     file = file_path.split('\\')[-1]
     # print(file)
-    if 'features' in file:      # TODO: Assumes this comes first!!!
+    if 'features' in file:      # Note: Assumes this comes first!!!
         f_names = None
         f_list = None
         features = np.load(file_path)
