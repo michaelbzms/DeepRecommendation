@@ -215,15 +215,17 @@ def run_experiment(model, *, hparams, training_dataset, val_dataset, test_datase
 
 
 if __name__ == '__main__':
+    # parameters
     use_features = True
     ranking = False
     onehot_users = False
 
-    # prepare model, train and val datasets (Pointwise val dataset always needed for NDCG eval)
+    # prepare model, train and val datasets
     # model, training_dataset, val_dataset, test_dataset, test_dataset_with_val = prepare_fixedinput_ncf(ranking=ranking, use_features=use_features, onehot_users=onehot_users)
     model, training_dataset, val_dataset, test_dataset, test_dataset_with_val = prepare_attention_ncf(ranking=ranking)
     # model, training_dataset, val_dataset, test_dataset, test_dataset_with_val = prepare_graph_ncf(ranking=ranking, use_features=use_features)
 
+    # model to use
     print(model)
 
     # train and save result at `final_model_save_path`

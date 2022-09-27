@@ -102,8 +102,7 @@ if __name__ == '__main__':
                        hparams={
                            'lr': exp['lr'],
                            'batch_size': exp['batch_size'],
-                           'weight_decay': exp['weight_decay'],
-                           'dropout_rate': exp['dropout_rate']
+                           'weight_decay': exp['weight_decay']
                        },
                        training_dataset=training_dataset,
                        val_dataset=val_dataset,
@@ -129,8 +128,7 @@ if __name__ == '__main__':
                        hparams={
                            'lr': exp['lr'],
                            'batch_size': exp['batch_size'],
-                           'weight_decay': exp['weight_decay'],
-                           'dropout_rate': exp['dropout_rate']
+                           'weight_decay': exp['weight_decay']
                        },
                        training_dataset=training_dataset,
                        val_dataset=val_dataset,
@@ -156,8 +154,7 @@ if __name__ == '__main__':
                        hparams={
                            'lr': exp['lr'],
                            'batch_size': exp['batch_size'],
-                           'weight_decay': exp['weight_decay'],
-                           'dropout_rate': exp['dropout_rate']
+                           'weight_decay': exp['weight_decay']
                        },
                        training_dataset=training_dataset,
                        val_dataset=val_dataset,
