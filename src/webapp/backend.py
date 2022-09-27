@@ -6,7 +6,7 @@ import json
 import torch
 
 from globals import item_metadata_file
-from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF
+from neural_collaborative_filtering.models.attention_ncf import AttentionNCF
 from neural_collaborative_filtering.util import load_model
 
 

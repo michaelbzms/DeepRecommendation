@@ -157,9 +157,6 @@ def train_model(model: NCF, train_dataset, val_dataset: PointwiseDataset,
                 logs['val_loss'] = val_loss
             elif isinstance(train_dataset, RankingDataset):
                 logs['neg_sampling_w'] = train_dataset.w
-            # if train_ndcg is not None and train_adj_ndcg is not None:
-            #     logs[f'train_ndcg@{ndcg_cutoff}'] = train_ndcg
-            #     logs[f'train_adj_ndcg@{ndcg_cutoff}'] = train_adj_ndcg
             wandb.log(logs)
 
         ######################

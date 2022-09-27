@@ -201,19 +201,17 @@ class GraphNCF(GNN_NCF):
         self.message_dropout = message_dropout
         self.node_dropout = node_dropout
 
-        # Item embeddings layer
+        # embeddings layers
         self.item_embeddings = nn.Sequential(
             nn.Linear(item_dim, node_emb)
         )
-
-        # User embeddings layer
         self.user_embeddings = nn.Sequential(
             nn.Linear(user_dim, node_emb)
         )
 
         # Light GCN convolutions to fine-tune previous embeddings using the graph
+        # Note: Experimentally found that using the same weights on each layer works better
         self.convType = convType
-        # TODO: same weights on every layer or different ones? -> probably different ones by norm but same also seems to work...
         if convType == 'LightGCN':
             conv = LightGCNConv(in_channels=node_emb,
                                 out_channels=node_emb,
@@ -252,8 +250,8 @@ class GraphNCF(GNN_NCF):
         if self.message_dropout is None or self.message_dropout <= 0.0:
             return user2item_edge_index, item2user_edge_index, user2item_edge_attr, item2user_edge_attr
         # message dropout -> randomly ignore p % of edges in the graph
-        if user2item_edge_index.shape[1] == item2user_edge_index.shape[1] and (
-                user2item_edge_attr is not None and item2user_edge_attr is not None):  # TODO: assumes edge attr non zero when using all edges (aka binary=False)
+        # Note: assumes edge attr non zero when using all edges (aka binary=False)
+        if user2item_edge_index.shape[1] == item2user_edge_index.shape[1] and (user2item_edge_attr is not None and item2user_edge_attr is not None):
             # assumes all edges are symmetrical (!)
             mask = F.dropout(torch.ones(user2item_edge_index.shape[1]), self.message_dropout, self.training) > 0
             # mask both user -> item and item -> user edge
@@ -369,7 +367,7 @@ class GraphNCF(GNN_NCF):
         return out
 
     def _mask_edge_index(self, input_pos, pos_df, edge_index, edge_attr, device):
-        _pos = pos_df.loc[input_pos]['pos'].values     # TODO: could raise KeyError if an edge is missing
+        _pos = pos_df.loc[input_pos]['pos'].values     # Note: could raise KeyError if an edge is missing!
         # create mask
         mask = torch.ones(edge_index.shape[1], dtype=torch.bool, device=device)
         mask[_pos] = False

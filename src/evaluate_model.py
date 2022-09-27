@@ -4,7 +4,7 @@ from content_providers.dynamic_profiles_provider import DynamicProfilesProvider
 from globals import test_set_file, val_batch_size
 from neural_collaborative_filtering.datasets.dynamic_datasets import DynamicPointwiseDataset
 from neural_collaborative_filtering.eval import eval_model
-from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF
+from neural_collaborative_filtering.models.attention_ncf import AttentionNCF
 from neural_collaborative_filtering.util import load_model
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

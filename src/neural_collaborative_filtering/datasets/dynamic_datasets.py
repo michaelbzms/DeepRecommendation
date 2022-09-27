@@ -14,7 +14,6 @@ class DynamicPointwiseDataset(PointwiseDataset):
     > user_matrix: (B, I) a subarray (not exactly) of the utility matrix with the (normalized) ratings of B users on I items.
     The order must match rated_items_feature's order on I axis.
     """
-
     def __init__(self, file: str, dynamic_provider: DynamicContentProvider):
         super().__init__(file)
         self.dynamic_provider = dynamic_provider
@@ -48,7 +47,6 @@ class DynamicRankingDataset(RankingDataset):
     """
     Same but for pairwise learning.
     """
-
     def __init__(self, ranking_file: str, dynamic_provider: DynamicContentProvider):
         super().__init__(ranking_file)
         self.dynamic_provider = dynamic_provider

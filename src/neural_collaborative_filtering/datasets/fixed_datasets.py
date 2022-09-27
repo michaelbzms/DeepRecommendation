@@ -6,8 +6,6 @@ from neural_collaborative_filtering.models.base import NCF
 
 
 class FixedPointwiseDataset(PointwiseDataset):
-    """ Base template and functionality for point-wise learning and evaluation """
-
     def __init__(self, file: str, content_provider: ContentProvider):
         super().__init__(file)
         self.content_provider = content_provider
@@ -36,8 +34,6 @@ class FixedPointwiseDataset(PointwiseDataset):
 
 
 class FixedRankingDataset(RankingDataset):
-    """ Base template and functionality for pair-wise learning and evaluation """
-
     def __init__(self, ranking_file: str, content_provider: ContentProvider):
         super().__init__(ranking_file)
         self.content_provider = content_provider

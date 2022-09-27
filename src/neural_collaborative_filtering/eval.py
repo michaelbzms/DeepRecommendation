@@ -10,7 +10,7 @@ from sklearn.metrics import ndcg_score, dcg_score
 
 from globals import movie_text_info_file, full_matrix_file
 from neural_collaborative_filtering.datasets.base import PointwiseDataset
-from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF
+from neural_collaborative_filtering.models.attention_ncf import AttentionNCF
 from neural_collaborative_filtering.models.base import NCF
 from neural_collaborative_filtering.plots import plot_residuals, plot_stacked_residuals, \
     plot_att_stats, visualize_attention
@@ -179,6 +179,5 @@ def eval_model(model: NCF, test_dataset: PointwiseDataset, batch_size, ranking, 
         wandb.log(logs)
 
     if not ranking and doplots:
-        # plot_fitted_vs_targets(fitted_values, ground_truth)
         plot_stacked_residuals(fitted_values, ground_truth)
         plot_residuals(fitted_values, ground_truth)

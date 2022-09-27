@@ -4,9 +4,6 @@ from neural_collaborative_filtering.models.base import GNN_NCF
 
 
 class GraphPointwiseDataset(PointwiseDataset):
-    """
-    Use __getitem__() to return batches of (user_index, item_index, target rating)
-    """
     def __init__(self, file: str, graph_content_provider: GraphContentProvider):
         super().__init__(file)
         self.gcp = graph_content_provider
@@ -24,7 +21,7 @@ class GraphPointwiseDataset(PointwiseDataset):
 
     @staticmethod
     def do_forward(model: GNN_NCF, batch, device, graph, *args):
-        """ expects samples of (userId, itemId, target) and a graph to pass on to the model """
+        """ #xpects samples of (userId, itemId, target) and a graph to pass on to the model. """
         # get the input matrices and the target
         userIds, itemIds, y_batch = batch
         # forward model
@@ -36,9 +33,6 @@ class GraphPointwiseDataset(PointwiseDataset):
 
 
 class GraphRankingDataset(RankingDataset):
-    """
-    Use __getitem__() to return batches of (user_index, item_index, target rating)
-    """
     def __init__(self, file: str, graph_content_provider: GraphContentProvider):
         super().__init__(file)
         self.gcp = graph_content_provider
@@ -57,7 +51,7 @@ class GraphRankingDataset(RankingDataset):
 
     @staticmethod
     def do_forward(model: GNN_NCF, batch, device, graph, *args):
-        """ expects samples of (userId, item1Id, item2Id) and a graph to pass on to the model """
+        """ Expects samples of (userId, item1Id, item2Id) and a graph to pass on to the model. """
         # get the input matrices and the target
         userIds, item1Ids, item2Ids = batch
         # forward model

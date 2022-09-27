@@ -10,7 +10,7 @@ from neural_collaborative_filtering.datasets.dynamic_datasets import DynamicPoin
 from neural_collaborative_filtering.datasets.fixed_datasets import FixedPointwiseDataset, FixedRankingDataset
 from neural_collaborative_filtering.datasets.gnn_datasets import GraphPointwiseDataset, GraphRankingDataset
 from neural_collaborative_filtering.eval import eval_model
-from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF
+from neural_collaborative_filtering.models.attention_ncf import AttentionNCF
 from neural_collaborative_filtering.models.basic_ncf import BasicNCF
 from neural_collaborative_filtering.models.gnn_ncf import GraphNCF
 from neural_collaborative_filtering.plots import plot_train_val_losses

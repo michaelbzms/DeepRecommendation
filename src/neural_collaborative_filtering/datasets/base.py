@@ -6,6 +6,9 @@ import numpy as np
 
 
 class PointwiseDataset(Dataset):
+    """
+    Base template and functionality for point-wise learning and evaluation.
+    """
     def __init__(self, file, use_bce_loss=False):
         # expects to read (user, item, rating) triplets
         self.samples: pd.DataFrame = pd.read_csv(file + '.csv')
@@ -43,6 +46,9 @@ class PointwiseDataset(Dataset):
 
 
 class RankingDataset(Dataset):
+    """
+    Base template and functionality for pair-wise learning and evaluation.
+    """
     def __init__(self, ranking_file):
         # expects to read (user, item1, item2) triplets where item1 > item2 for user
         self.samples: pd.DataFrame = pd.read_hdf(ranking_file + '.h5')
