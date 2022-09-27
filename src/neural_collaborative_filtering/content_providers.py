@@ -60,5 +60,3 @@ class GraphContentProvider:
 
     def get_graph(self) -> Data:
         raise NotImplementedError     # returns graph (as in Data in PyG) reference
-
-    # TODO: methods to add more nodes (e.g. user nodes for inference on new users)?

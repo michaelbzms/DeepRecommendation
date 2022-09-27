@@ -15,10 +15,10 @@ from neural_collaborative_filtering.models.basic_ncf import BasicNCF
 from neural_collaborative_filtering.models.gnn_ncf import GraphNCF
 from neural_collaborative_filtering.plots import plot_train_val_losses
 from neural_collaborative_filtering.train import train_model
-from globals import train_set_file, val_set_file, weight_decay, lr, batch_size, max_epochs, early_stop, \
-    checkpoint_model_path, patience, dropout_rate, final_model_path, \
+from globals import train_set_file, val_set_file, max_epochs, \
+    checkpoint_model_path, patience, final_model_path, \
     val_batch_size, ranking_train_set_file, \
-    ranking_val_set_file, test_set_file, user_ratings_file, user_ratings_with_val_file, train_and_val_set_file, num_workers
+    test_set_file, train_and_val_set_file, num_workers
 
 
 def prepare_fixedinput_ncf(ranking=False, use_features=False, onehot_users=False, model_kwargs=None, include_val_ratings_to_user_profiles=False):
@@ -38,7 +38,7 @@ def prepare_fixedinput_ncf(ranking=False, use_features=False, onehot_users=False
                              user_dim=cp.get_num_users() if onehot_users else cp.get_item_feature_dim(),
                              item_emb=128, user_emb=128,
                              mlp_dense_layers=[256],
-                             dropout_rate=dropout_rate)
+                             dropout_rate=0.2)
     else:
         # content provider
         cp = OneHotProvider()
@@ -52,7 +52,7 @@ def prepare_fixedinput_ncf(ranking=False, use_features=False, onehot_users=False
                              user_dim=cp.get_num_users(),
                              item_emb=128, user_emb=128,
                              mlp_dense_layers=[256],
-                             dropout_rate=dropout_rate)
+                             dropout_rate=0.2)
     # datasets
     val_dataset = FixedPointwiseDataset(val_set_file, content_provider=cp)
     test_dataset = FixedPointwiseDataset(test_set_file, content_provider=cp)
@@ -87,7 +87,7 @@ def prepare_attention_ncf(ranking=False, model_kwargs=None, include_val_ratings_
                              use_cos_sim_instead=False,
                              mlp_dense_layers=[256],
                              message_dropout=None,
-                             dropout_rate=dropout_rate)
+                             dropout_rate=0.2)
 
     # datasets
     val_dataset = DynamicPointwiseDataset(val_set_file, dynamic_provider=dpp)
@@ -129,14 +129,14 @@ def prepare_graph_ncf(ranking=False, use_features=False, hetero=True, binary=Fal
                          user_dim=gcp.get_user_dim(),
                          node_emb=64,
                          mlp_dense_layers=[128],
-                         num_gnn_layers=2,
-                         dropout_rate=dropout_rate,
+                         num_gnn_layers=3,
+                         dropout_rate=0.2,
                          message_dropout=0.1,
                          use_dot_product=False,
                          hetero=hetero)
     # datasets
     val_dataset = GraphPointwiseDataset(val_set_file, graph_content_provider=gcp)
-    test_dataset = GraphPointwiseDataset(test_set_file, graph_content_provider=gcp)    # TODO: add val edges to gcp for this?
+    test_dataset = GraphPointwiseDataset(test_set_file, graph_content_provider=gcp)
     if ranking:
         training_dataset = GraphRankingDataset(ranking_train_set_file, graph_content_provider=gcp)
     else:
@@ -191,22 +191,25 @@ def run_experiment(model, *, hparams, training_dataset, val_dataset, test_datase
     print(wandb.config)
 
     # train and save result at `final_model_save_path`
-    monitored_metrics = train_model(model, train_dataset=training_dataset, val_dataset=val_dataset,
-                                    lr=hparams['lr'], weight_decay=hparams['weight_decay'],
-                                    batch_size=hparams['batch_size'],
-                                    val_batch_size=val_batch_size,      # not important
-                                    early_stop=True, final_model_path=model_save_path,
-                                    checkpoint_model_path=checkpoint_model_path,
-                                    max_epochs=max_epochs, patience=patience,
-                                    wandb=wandb,
-                                    num_workers=num_workers)
+    monitored_metrics = None
+    try:
+        monitored_metrics = train_model(model, train_dataset=training_dataset, val_dataset=val_dataset,
+                                        lr=hparams['lr'], weight_decay=hparams['weight_decay'],
+                                        batch_size=hparams['batch_size'],
+                                        val_batch_size=val_batch_size,      # not important
+                                        early_stop=True, final_model_path=model_save_path,
+                                        checkpoint_model_path=checkpoint_model_path,
+                                        max_epochs=max_epochs, patience=patience,
+                                        wandb=wandb,
+                                        num_workers=num_workers)
 
-    if test_dataset is not None:
-        eval_model(model, test_dataset, val_batch_size, wandb=wandb, ranking=ranking, doplots=False)
-    if test_dataset_with_val is not None:
-        eval_model(model, test_dataset_with_val, val_batch_size, wandb=wandb, ranking=ranking, doplots=False, val_ratings_included=True)
-
-    run.finish()
+        if test_dataset is not None:
+            eval_model(model, test_dataset, val_batch_size, wandb=wandb, ranking=ranking, doplots=False)
+        if test_dataset_with_val is not None:
+            eval_model(model, test_dataset_with_val, val_batch_size, wandb=wandb, ranking=ranking, doplots=False, val_ratings_included=True)
+        run.finish()
+    except:
+        run.finish()
 
     return monitored_metrics
 
@@ -218,24 +221,10 @@ if __name__ == '__main__':
 
     # prepare model, train and val datasets (Pointwise val dataset always needed for NDCG eval)
     # model, training_dataset, val_dataset, test_dataset, test_dataset_with_val = prepare_fixedinput_ncf(ranking=ranking, use_features=use_features, onehot_users=onehot_users)
-    # model, training_dataset, val_dataset, test_dataset, test_dataset_with_val = prepare_attention_ncf(ranking=ranking)
-    model, training_dataset, val_dataset, test_dataset, test_dataset_with_val = prepare_graph_ncf(ranking=ranking, use_features=use_features)
+    model, training_dataset, val_dataset, test_dataset, test_dataset_with_val = prepare_attention_ncf(ranking=ranking)
+    # model, training_dataset, val_dataset, test_dataset, test_dataset_with_val = prepare_graph_ncf(ranking=ranking, use_features=use_features)
 
     print(model)
-
-    # train and save result
-    # monitored_metrics = run_experiment(model,
-    #                                    hparams={
-    #                                        'lr': lr,
-    #                                        'batch_size': batch_size,
-    #                                        'weight_decay': weight_decay
-    #                                    },
-    #                                    training_dataset=training_dataset,
-    #                                    val_dataset=val_dataset,
-    #                                    pointwise_val_dataset=pointwise_val_dataset,
-    #                                    final_model_save_path=final_model_path,
-    #                                    use_features=use_features,
-    #                                    ranking=ranking)
 
     # train and save result at `final_model_save_path`
     monitored_metrics = train_model(model, train_dataset=training_dataset, val_dataset=val_dataset,

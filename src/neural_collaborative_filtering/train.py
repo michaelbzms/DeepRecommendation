@@ -30,7 +30,6 @@ def train_model(model: NCF, train_dataset, val_dataset: PointwiseDataset,
     Logic for how to call forward() on the given model is expected to be in the dataset's do_forward()
     instead of here so that this code does not have to change for different model-dataset combos.
     """
-
     # For Debug: this slows down training but detects errors
     # torch.autograd.set_detect_anomaly(True)
 
@@ -77,7 +76,7 @@ def train_model(model: NCF, train_dataset, val_dataset: PointwiseDataset,
 
     # logs
     if wandb is not None:
-        wandb.watch(model)  # TODO: what does this do?
+        wandb.watch(model)
 
     for epoch in range(max_epochs):  # epoch
         w_str = ''
@@ -111,14 +110,7 @@ def train_model(model: NCF, train_dataset, val_dataset: PointwiseDataset,
                 y_preds.append(out.cpu().detach().numpy())
         train_loss = train_sum_loss / len(train_dataset)
         monitored_metrics['train_loss'].append(train_loss)
-        # train_ndcg, train_adj_ndcg = None, None
-        # if isinstance(train_dataset, PointwiseDataset):
-        #     y_preds = np.concatenate(y_preds, dtype=np.float64).reshape(-1)
-        #     train_dataset.samples['prediction'] = y_preds  # overwriting previous is ok
-        #     train_ndcg, train_adj_ndcg = eval_ranking(train_dataset.samples, cutoff=ndcg_cutoff)
         print(f'Training loss: {train_loss:.4f}')
-        # if train_ndcg is not None and train_adj_ndcg is not None:
-        #     print(f'Training NDCG@{ndcg_cutoff}: {train_ndcg:.4f}, adj-NDCG@{ndcg_cutoff}: {train_adj_ndcg:.4f}')
 
         ##################
         #   Validation   #
@@ -233,10 +225,6 @@ def train_model(model: NCF, train_dataset, val_dataset: PointwiseDataset,
         print('Saving model...')
         model.save_model(final_model_path)
         print('Done!')
-
-        # if wandb is not None:
-            # TODO: this doesnt work, something todo with dir
-            # wandb.save(final_model_path, )
 
     return monitored_metrics
 

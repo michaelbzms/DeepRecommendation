@@ -12,7 +12,7 @@ from globals import movie_text_info_file, full_matrix_file
 from neural_collaborative_filtering.datasets.base import PointwiseDataset
 from neural_collaborative_filtering.models.advanced_ncf import AttentionNCF
 from neural_collaborative_filtering.models.base import NCF
-from neural_collaborative_filtering.plots import plot_residuals, plot_stacked_residuals, plot_rated_items_counts, \
+from neural_collaborative_filtering.plots import plot_residuals, plot_stacked_residuals, \
     plot_att_stats, visualize_attention
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

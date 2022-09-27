@@ -1,53 +1,36 @@
-imdb_path = '../data/imdb/'
-movielens_path = '../data/movielens/'
-audio_features_path = '../data/audio_features_movies/'
+# file paths
 plots_path = '../plots/'
 
-data_folder = '../data'
-item_metadata_file = '../data/item_metadata'
-movie_imdb_df_file = '../data/movies_imdb_df'
+imdb_path = '../data/imdb/'
+movielens_path = '../data/movielens/'
 movie_text_info_file = '../data/movie_info.csv'
+movie_imdb_df_file = '../data/movies_imdb_df'
+
+item_metadata_file = '../data/item_metadata'
+audio_features_path = '../data/audio_features_movies/'
+audio_features_file = '../data/audio_features'
+
 user_ratings_file = '../data/user_ratings'
 user_embeddings_file = '../data/user_embeddings'
 user_ratings_with_val_file = '../data/user_ratings_with_val'
 user_embeddings_with_val_file = '../data/user_embeddings_with_val'
-audio_features_file = '../data/audio_features'
+
 train_set_file = '../data/train'
 train_and_val_set_file = '../data/train_and_val'
+ranking_train_set_file = '../data/ranking_train'
 val_set_file = '../data/val'
 test_set_file = '../data/test'
-ranking_train_set_file = '../data/ranking_train'
-ranking_val_set_file = '../data/ranking_val'
-ranking_test_set_file = '../data/ranking_test'
 full_matrix_file = '../data/full_utility_matrix'
 
-# random seed to use for data creation
+# random seed to use for reproducible data creation
 seed = 42
 
 # parallelism on dataloaders on training
-num_workers = 0    # Note: Can't do more workers than 0 because collate functions cannot be pickled
+num_workers = 0    # Note: Currently can't do more workers than 0 because collate functions cannot be pickled
 
-# which features to use for items
-""" 'metadata', 'audio' or 'all' """
-features_to_use = 'metadata'
-
-""" NN hyperparameters """
+# NN hyperparameters (some are global some are set locally)
 checkpoint_model_path = '../models/checkpoint.pt'
 final_model_path = '../models/final_model.pt'
 max_epochs = 32
-batch_size = 256
-val_batch_size = 512
-lr = 3e-4  # 5e-4
-weight_decay = 1e-5
-dropout_rate = 0.2
-early_stop = True
-stop_with_train_loss_instead = False  # Note: useful if we are trying to overfit
 patience = 3
-
-# This doesn't help
-mask_target_edges_when_training = False
-message_passing_vs_supervised_edges_ratio = 0.7
-
-
-USE_FEATURES = True
-use_genre_nodes = False
+val_batch_size = 512

@@ -13,102 +13,45 @@ if __name__ == '__main__':
     # define experiments to run #
     #############################
     fixed_experiments = [
-        # TODO: measure time for this run
-        # {'use_features': True,
-        #  'onehot_users': False,
-        #  'use_ranking': False,
-        #  'model_kwargs': {
-        #      'item_emb': 128, 'user_emb': 128,
-        #      'mlp_dense_layers': [256],
-        #      'dropout_rate': 0.2
-        #  },
-        #  'lr': 1e-3,
-        #  'batch_size': 512,
-        #  'weight_decay': 1e-5
-        #  },
-        # {'use_features': True,
-        #  'use_ranking': True,
-        #  'model_kwargs': {
-        #      'item_emb': 128, 'user_emb': 128,
-        #      'mlp_dense_layers': [256],
-        #      'dropout_rate': 0.2
-        #  },
-        #  'lr': 1e-3,
-        #  'batch_size': 512,
-        #  'weight_decay': 1e-5
-        #  },
-        # {'use_features': False,
-        #  'use_ranking': True,
-        #  'model_kwargs': {
-        #      'item_emb': 128, 'user_emb': 128,
-        #      'mlp_dense_layers': [256],
-        #      'dropout_rate': 0.2
-        #  },
-        #  'lr': 1e-3,
-        #  'batch_size': 512,
-        #  'weight_decay': 1e-5
-        #  },
-        # {'use_features': True,
-        #  'use_ranking': False,
-        #  'model_kwargs': {
-        #      'item_emb': 256, 'user_emb': 256,
-        #      'mlp_dense_layers': [256],
-        #      'dropout_rate': 0.2
-        #  },
-        #  'lr': 7e-4,
-        #  'batch_size': 128,
-        #  'weight_decay': 1e-5
-        #  },
-        # {'use_features': True,
-        #  'use_ranking': False,
-        #  'model_kwargs': {
-        #      'item_emb': 256, 'user_emb': 256,
-        #      'mlp_dense_layers': [512],
-        #      'dropout_rate': 0.2
-        #  },
-        #  'lr': 7e-4,
-        #  'batch_size': 128,
-        #  'weight_decay': 1e-5
-        #  },
-        # {'use_features': True,
-        #  'use_ranking': False,
-        #  'model_kwargs': {
-        #      'item_emb': 256, 'user_emb': 256,
-        #      'mlp_dense_layers': [512, 256],
-        #      'dropout_rate': 0.2
-        #  },
-        #  'lr': 7e-4,
-        #  'batch_size': 128,
-        #  'weight_decay': 1e-5
-        #  },
-        # {'use_features': True,
-        #  'use_ranking': False,
-        #  'model_kwargs': {
-        #      'item_emb': 256, 'user_emb': 256,
-        #      'mlp_dense_layers': [512, 256, 128],
-        #      'dropout_rate': 0.2
-        #  },
-        #  'lr': 7e-4,
-        #  'batch_size': 128,
-        #  'weight_decay': 1e-5
-        #  },
+        {'use_features': False,
+         'onehot_users': False,
+         'use_ranking': False,
+         'model_kwargs': {
+             'item_emb': 128, 'user_emb': 128,
+             'mlp_dense_layers': [256],
+             'dropout_rate': 0.2
+         },
+         'lr': 7e-4,
+         'batch_size': 128,
+         'weight_decay': 1e-5
+         },
+        {'use_features': True,
+         'onehot_users': True,
+         'use_ranking': False,
+         'model_kwargs': {
+             'item_emb': 128, 'user_emb': 128,
+             'mlp_dense_layers': [256],
+             'dropout_rate': 0.2
+         },
+         'lr': 7e-4,
+         'batch_size': 128,
+         'weight_decay': 1e-5
+         },
+        {'use_features': True,
+         'onehot_users': False,
+         'use_ranking': False,
+         'model_kwargs': {
+             'item_emb': 128, 'user_emb': 128,
+             'mlp_dense_layers': [256],
+             'dropout_rate': 0.2
+         },
+         'lr': 7e-4,
+         'batch_size': 128,
+         'weight_decay': 1e-5
+         },
     ]
 
     attention_experiments = [
-        # {'use_features': True,
-        #  'use_ranking': True,
-        #  'model_kwargs': {
-        #      'item_emb': 128, 'user_emb': 128,
-        #      'att_dense': 128,
-        #      'use_cos_sim_instead': False,
-        #      'mlp_dense_layers': [256, 128],
-        #      'dropout_rate': 0.2,
-        #      'message_dropout': 0.0
-        #  },
-        #  'lr': 1e-3,
-        #  'batch_size': 512,
-        #  'weight_decay': 1e-5
-        #  },
         {'use_features': True,
          'use_ranking': False,
          'model_kwargs': {
@@ -119,109 +62,29 @@ if __name__ == '__main__':
              'dropout_rate': 0.2,
              'message_dropout': 0.0
          },
-         'lr': 9e-4,
+         'lr': 7e-4,
          'batch_size': 512,
          'weight_decay': 1e-5
          },
     ]
 
     graph_experiments = [
-        # {'use_features': True,
-        #  'use_ranking': True,
-        #  'model_kwargs': {
-        #      'node_emb': 64,
-        #      'num_gnn_layers': 3,
-        #      'mlp_dense_layers': [128, 64],
-        #      'dropout_rate': 0.2,
-        #      'message_dropout': 0.2,
-        #      'node_dropout': None,
-        #      'concat': False,
-        #      'use_dot_product': False
-        #     },
-        #  'lr': 1e-3,
-        #  'batch_size': 512,
-        #  'weight_decay': 1e-5
-        #  },
-        # {'use_features': False,
-        #  'use_ranking': True,
-        #  'model_kwargs': {
-        #      'node_emb': 64,
-        #      'num_gnn_layers': 3,
-        #      'mlp_dense_layers': [128, 64],
-        #      'dropout_rate': 0.2,
-        #      'message_dropout': 0.2,
-        #      'node_dropout': None,
-        #      'concat': False,
-        #      'use_dot_product': False
-        #     },
-        #  'lr': 1e-3,
-        #  'batch_size': 512,
-        #  'weight_decay': 1e-5
-        #  },
-        # {'use_features': True,
-        #  'use_ranking': False,
-        #  'model_kwargs': {
-        #      'node_emb': 128,
-        #      'num_gnn_layers': 3,
-        #      'mlp_dense_layers': [256, 128],
-        #      'dropout_rate': 0.2,
-        #      'message_dropout': 0.2,
-        #      'node_dropout': None,
-        #      'concat': False,
-        #      'use_dot_product': False
-        #  },
-        #  'lr': 1e-3,
-        #  'batch_size': 512,
-        #  'weight_decay': 1e-5
-        #  },
-        # {'use_features': True,
-        #  'use_ranking': False,
-        #  'model_kwargs': {
-        #      'node_emb': 64,
-        #      'num_gnn_layers': 3,
-        #      'mlp_dense_layers': [128],
-        #      'dropout_rate': 0.2,
-        #      'message_dropout': 0.1,
-        #      'node_dropout': None,
-        #      'concat': True,
-        #      'use_dot_product': False
-        #  },
-        #  'lr': 1e-3,
-        #  'batch_size': 512,
-        #  'weight_decay': 1e-5
-        #  },
-        # {'use_features': False,
-        #  'use_ranking': False,
-        #  'model_kwargs': {
-        #      'node_emb': 64,
-        #      'num_gnn_layers': 3,
-        #      'mlp_dense_layers': [128, 64],
-        #      'dropout_rate': 0.2,
-        #      'message_dropout': 0.1,  # TODO? -> reduces memory requirements because fewer edges
-        #      'node_dropout': None,  # TODO? -> also reduces memory requirements because fewer edges
-        #      'concat': False,
-        #      'use_dot_product': False  # TODO: seems to overfit more with it at True
-        #  },
-        #  'lr': 1e-3,
-        #  'batch_size': 512,
-        #  'weight_decay': 1e-5
-        #  },
-        # {'use_features': True,
-        #  'use_ranking': False,
-        #  'model_kwargs': {
-        #      'node_emb': 64,
-        #      'num_gnn_layers': 3,
-        #      'mlp_dense_layers': [128],
-        #      'dropout_rate': 0.2,
-        #      'message_dropout': 0.1,  # TODO? -> reduces memory requirements because fewer edges
-        #      'node_dropout': None,  # TODO? -> also reduces memory requirements because fewer edges
-        #      'concat': False,
-        #      'use_dot_product': False  # TODO: seems to overfit more with it at True
-        #  },
-        #  'lr': 1e-3,
-        #  'batch_size': 512,
-        #  'weight_decay': 1e-5
-        #  },
+        {'use_features': True,
+         'use_ranking': False,
+         'model_kwargs': {
+             'node_emb': 128,
+             'num_gnn_layers': 2,
+             'mlp_dense_layers': [256, 128],
+             'dropout_rate': 0.2,
+             'message_dropout': 0.2,
+             'node_dropout': None,
+             'concat': False,
+             'use_dot_product': False
+            },
+         'lr': 1e-3,
+         'batch_size': 512,
+         'weight_decay': 1e-5
+         },
     ]
 
     for exp in fixed_experiments:
@@ -239,7 +102,8 @@ if __name__ == '__main__':
                        hparams={
                            'lr': exp['lr'],
                            'batch_size': exp['batch_size'],
-                           'weight_decay': exp['weight_decay']
+                           'weight_decay': exp['weight_decay'],
+                           'dropout_rate': exp['dropout_rate']
                        },
                        training_dataset=training_dataset,
                        val_dataset=val_dataset,
@@ -265,7 +129,8 @@ if __name__ == '__main__':
                        hparams={
                            'lr': exp['lr'],
                            'batch_size': exp['batch_size'],
-                           'weight_decay': exp['weight_decay']
+                           'weight_decay': exp['weight_decay'],
+                           'dropout_rate': exp['dropout_rate']
                        },
                        training_dataset=training_dataset,
                        val_dataset=val_dataset,
@@ -291,7 +156,8 @@ if __name__ == '__main__':
                        hparams={
                            'lr': exp['lr'],
                            'batch_size': exp['batch_size'],
-                           'weight_decay': exp['weight_decay']
+                           'weight_decay': exp['weight_decay'],
+                           'dropout_rate': exp['dropout_rate']
                        },
                        training_dataset=training_dataset,
                        val_dataset=val_dataset,
