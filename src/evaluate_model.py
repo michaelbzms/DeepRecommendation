@@ -13,13 +13,12 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 if __name__ == '__main__':
     # parameters
     include_val_ratings_to_user_profiles = False
-    model_file = '../models/runs/AttentionNCF_with_features_attNet128_zerodropout.pt'
+    model_file = '../models/runs/AttentionNCF_with_features_attNet128_3mil.pt'
 
     # load model (must be of the correct type)
     cp = DynamicProfilesProvider(include_val_ratings_to_user_profiles=include_val_ratings_to_user_profiles)
     test_dataset = DynamicPointwiseDataset(test_set_file, dynamic_provider=cp)
     model = load_model(model_file, AttentionNCF)
-
     print(model)
 
     # evaluate model on test set
