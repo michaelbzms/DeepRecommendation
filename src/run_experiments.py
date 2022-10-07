@@ -1,7 +1,7 @@
 from train_model import prepare_attention_ncf, prepare_graph_ncf, prepare_fixedinput_ncf, run_experiment
 
 
-project_name = '3milDataset'  # '900kDatasetV2_flat_split'
+project_name = '900kDatasetV2_flat_split'
 group_name = 'runs'
 save_models = True
 eval_on_test_also = True
@@ -71,6 +71,7 @@ if __name__ == '__main__':
     graph_experiments = [
         {'use_features': True,
          'use_ranking': False,
+         'convType': 'LightGAT',   # 'LightGCN' or 'LightGAT'
          'model_kwargs': {
              'node_emb': 128,
              'num_gnn_layers': 2,

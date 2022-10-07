@@ -12,7 +12,7 @@ from neural_collaborative_filtering.util import load_model
 
 app = flask.Flask('movie_recommender_backend')
 
-app.config["DEBUG"] = True
+app.config["DEBUG"] = False
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -76,7 +76,7 @@ def recommend():
 
 
 def recommend_for_user(model: AttentionNCF, item_features: pd.DataFrame, user_ratings: pd.Series,  k, ignore_seen,
-                       explain_factor=1.25, explain_constant=0.05):
+                       explain_factor=1.25, explain_constant=0.01):
     """
     The higher the explain_factor and/or explain_constant the higher the attention weight needed for explanations.
     """

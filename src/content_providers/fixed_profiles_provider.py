@@ -6,6 +6,12 @@ from globals import item_metadata_file, user_embeddings_file, full_matrix_file, 
 from util import one_hot_encode
 
 
+""" Future work (TODO):
+- Perform target interaction masking in Basic NCF too by precalculating only the sum of the user profile
+and then during inference subtract the candidate profile to undo its addition and then divide by (N-1).
+"""
+
+
 class FixedProfilesProvider(ContentProvider):
     # noinspection PyTypeChecker
     def __init__(self, include_val_ratings_to_user_profiles=False):
