@@ -76,7 +76,7 @@ def recommend():
 
 
 def recommend_for_user(model: AttentionNCF, item_features: pd.DataFrame, user_ratings: pd.Series,  k, ignore_seen,
-                       explain_factor=1.25, explain_constant=0.01):
+                       explain_factor=1.5, explain_constant=0.025):
     """
     The higher the explain_factor and/or explain_constant the higher the attention weight needed for explanations.
     """
