@@ -13,6 +13,7 @@ from neural_collaborative_filtering.eval import eval_model
 from neural_collaborative_filtering.models.attention_ncf import AttentionNCF
 from neural_collaborative_filtering.models.basic_ncf import BasicNCF
 from neural_collaborative_filtering.models.gnn_ncf import GraphNCF
+from neural_collaborative_filtering.models.mf import MF
 from neural_collaborative_filtering.plots import plot_train_val_losses
 from neural_collaborative_filtering.train import train_model
 from globals import train_set_file, val_set_file, max_epochs, \
@@ -66,6 +67,30 @@ def prepare_fixedinput_ncf(ranking=False, use_features=False, onehot_users=False
         test_dataset_with_val = FixedPointwiseDataset(test_set_file, content_provider=cp_with_val)
     else:
         test_dataset_with_val = None
+
+    return model, training_dataset, val_dataset, test_dataset, test_dataset_with_val
+
+
+def prepare_matrix_factorization(model_kwargs=None):
+    """
+    Set up the model and datasets for purelly CF method of MF.
+    """
+    # content provider
+    cp = OneHotProvider()
+    # model
+    if model_kwargs is not None:
+        model = MF(item_dim=cp.get_num_items(),
+                   user_dim=cp.get_num_users(),
+                   **model_kwargs)
+    else:
+        model = MF(item_dim=cp.get_num_items(),
+                   user_dim=cp.get_num_users(),
+                   item_emb=128, user_emb=128)
+    # datasets
+    training_dataset = FixedPointwiseDataset(train_set_file, content_provider=cp)
+    val_dataset = FixedPointwiseDataset(val_set_file, content_provider=cp)
+    test_dataset = FixedPointwiseDataset(test_set_file, content_provider=cp)
+    test_dataset_with_val = None
 
     return model, training_dataset, val_dataset, test_dataset, test_dataset_with_val
 
@@ -221,6 +246,7 @@ if __name__ == '__main__':
     onehot_users = False
 
     # prepare model, train and val datasets
+    # model, training_dataset, val_dataset, test_dataset, test_dataset_with_val = prepare_matrix_factorization()
     # model, training_dataset, val_dataset, test_dataset, test_dataset_with_val = prepare_fixedinput_ncf(ranking=ranking, use_features=use_features, onehot_users=onehot_users)
     model, training_dataset, val_dataset, test_dataset, test_dataset_with_val = prepare_attention_ncf(ranking=ranking)
     # model, training_dataset, val_dataset, test_dataset, test_dataset_with_val = prepare_graph_ncf(ranking=ranking, use_features=use_features)
@@ -237,6 +263,12 @@ if __name__ == '__main__':
                                     checkpoint_model_path=checkpoint_model_path,
                                     max_epochs=max_epochs, patience=patience,
                                     wandb=None)
+
+    # evaluate on test set
+    if test_dataset is not None:
+        eval_model(model, test_dataset, val_batch_size, wandb=wandb, ranking=ranking, doplots=False)
+    if test_dataset_with_val is not None:
+        eval_model(model, test_dataset_with_val, val_batch_size, wandb=wandb, ranking=ranking, doplots=False, val_ratings_included=True)
 
     # plot and save losses
     plot_train_val_losses(monitored_metrics['train_loss'], monitored_metrics['val_ndcg'] if ranking else monitored_metrics['val_loss'])

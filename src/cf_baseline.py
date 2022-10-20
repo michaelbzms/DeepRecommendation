@@ -12,6 +12,8 @@ def read_data(file):
 
 
 if __name__ == '__main__':
+    # Source: https://pypi.org/project/matrix-factorization/
+
     # read data
     train_df = read_data(train_set_file)
     val_df = read_data(val_set_file)
