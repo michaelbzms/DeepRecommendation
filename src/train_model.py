@@ -71,21 +71,34 @@ def prepare_fixedinput_ncf(ranking=False, use_features=False, onehot_users=False
     return model, training_dataset, val_dataset, test_dataset, test_dataset_with_val
 
 
-def prepare_matrix_factorization(model_kwargs=None):
+def prepare_matrix_factorization(use_features=False, onehot_users=False, model_kwargs=None):
     """
     Set up the model and datasets for purelly CF method of MF.
     """
-    # content provider
-    cp = OneHotProvider()
-    # model
-    if model_kwargs is not None:
-        model = MF(item_dim=cp.get_num_items(),
-                   user_dim=cp.get_num_users(),
-                   **model_kwargs)
+    if use_features:
+        # content provider
+        cp = FixedItemProfilesOnlyProvider() if onehot_users else FixedProfilesProvider()
+        # model
+        if model_kwargs is not None:
+            model = MF(item_dim=cp.get_item_feature_dim(),
+                       user_dim=cp.get_num_users() if onehot_users else cp.get_item_feature_dim(),
+                       **model_kwargs)
+        else:
+            model = MF(item_dim=cp.get_item_feature_dim(),
+                       user_dim=cp.get_num_users() if onehot_users else cp.get_item_feature_dim(),
+                       item_emb=128, user_emb=128)
     else:
-        model = MF(item_dim=cp.get_num_items(),
-                   user_dim=cp.get_num_users(),
-                   item_emb=128, user_emb=128)
+        # content provider
+        cp = OneHotProvider()
+        # model
+        if model_kwargs is not None:
+            model = MF(item_dim=cp.get_num_items(),
+                       user_dim=cp.get_num_users(),
+                       **model_kwargs)
+        else:
+            model = MF(item_dim=cp.get_num_items(),
+                       user_dim=cp.get_num_users(),
+                       item_emb=128, user_emb=128)
     # datasets
     training_dataset = FixedPointwiseDataset(train_set_file, content_provider=cp)
     val_dataset = FixedPointwiseDataset(val_set_file, content_provider=cp)
@@ -246,7 +259,7 @@ if __name__ == '__main__':
     onehot_users = False
 
     # prepare model, train and val datasets
-    # model, training_dataset, val_dataset, test_dataset, test_dataset_with_val = prepare_matrix_factorization()
+    # model, training_dataset, val_dataset, test_dataset, test_dataset_with_val = prepare_matrix_factorization(use_features=use_features)
     # model, training_dataset, val_dataset, test_dataset, test_dataset_with_val = prepare_fixedinput_ncf(ranking=ranking, use_features=use_features, onehot_users=onehot_users)
     model, training_dataset, val_dataset, test_dataset, test_dataset_with_val = prepare_attention_ncf(ranking=ranking)
     # model, training_dataset, val_dataset, test_dataset, test_dataset_with_val = prepare_graph_ncf(ranking=ranking, use_features=use_features)
@@ -256,8 +269,8 @@ if __name__ == '__main__':
 
     # train and save result at `final_model_save_path`
     monitored_metrics = train_model(model, train_dataset=training_dataset, val_dataset=val_dataset,
-                                    lr=1e-3, weight_decay=1e-5,
-                                    batch_size=512,
+                                    lr=1e-4, weight_decay=1e-5,
+                                    batch_size=256,
                                     val_batch_size=val_batch_size,  # not important
                                     early_stop=True, final_model_path=final_model_path,
                                     checkpoint_model_path=checkpoint_model_path,
@@ -266,9 +279,9 @@ if __name__ == '__main__':
 
     # evaluate on test set
     if test_dataset is not None:
-        eval_model(model, test_dataset, val_batch_size, wandb=wandb, ranking=ranking, doplots=False)
+        eval_model(model, test_dataset, val_batch_size, wandb=None, ranking=ranking, doplots=False)
     if test_dataset_with_val is not None:
-        eval_model(model, test_dataset_with_val, val_batch_size, wandb=wandb, ranking=ranking, doplots=False, val_ratings_included=True)
+        eval_model(model, test_dataset_with_val, val_batch_size, wandb=None, ranking=ranking, doplots=False, val_ratings_included=True)
 
     # plot and save losses
     plot_train_val_losses(monitored_metrics['train_loss'], monitored_metrics['val_ndcg'] if ranking else monitored_metrics['val_loss'])
